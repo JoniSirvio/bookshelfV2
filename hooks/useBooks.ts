@@ -13,7 +13,7 @@ type BookAction =
     | { type: 'REMOVE_BOOK'; bookId: string }
     | { type: 'REMOVE_READ_BOOK'; bookId: string }
     | { type: 'MARK_AS_READ'; bookId: string; review?: string; rating?: number; readOrListened?: string }
-    | { type: 'REORDER_BOOKS'; fromIndex: number; toIndex: number; listType: 'myBooks' | 'readBooks' }
+    | { type: 'REORDER_BOOKS'; newList: FinnaSearchResult[]; listType: 'myBooks' | 'readBooks' }
 
     | { type: 'START_READING'; bookId: string };
 
@@ -58,11 +58,7 @@ function bookReducer(state: BookState, action: BookAction): BookState {
                 readBooks: [...state.readBooks, updatedBook],
             };
         case 'REORDER_BOOKS':
-            const listKey = action.listType;
-            const list = [...state[listKey]];
-            const [removed] = list.splice(action.fromIndex, 1);
-            list.splice(action.toIndex, 0, removed);
-            return { ...state, [listKey]: list };
+            return { ...state, [action.listType]: action.newList };
 
         case 'START_READING':
             const bookIndexToStart = state.myBooks.findIndex(b => b.id === action.bookId);
@@ -129,8 +125,8 @@ export const useBooks = () => {
         dispatch({ type: 'MARK_AS_READ', bookId, review, rating, readOrListened });
     };
 
-    const reorderBooks = (fromIndex: number, toIndex: number, listType: 'myBooks' | 'readBooks') => {
-        dispatch({ type: 'REORDER_BOOKS', fromIndex, toIndex, listType });
+    const reorderBooks = (newList: FinnaSearchResult[], listType: 'myBooks' | 'readBooks') => {
+        dispatch({ type: 'REORDER_BOOKS', newList, listType });
     };
 
 

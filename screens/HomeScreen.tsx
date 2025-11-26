@@ -8,7 +8,7 @@ import { useState } from "react";
 import { FinnaSearchResult } from "../api/finna";
 
 const HomeScreen: React.FC = () => {
-  const { myBooks, removeBook, markAsRead, startReading } = useBooksContext();
+  const { myBooks, removeBook, markAsRead, startReading, reorderBooks } = useBooksContext();
 
   // State for Review Modal
   const [isReviewModalVisible, setIsReviewModalVisible] = useState(false);
@@ -86,7 +86,9 @@ const HomeScreen: React.FC = () => {
         onTriggerDelete={handleOpenDeleteModal}
         onMarkAsRead={handleOpenReviewModal} // Swipe right opens review modal
         mode="home"
-
+        onReorder={(newList) => {
+          reorderBooks(newList, 'myBooks')
+        }}
         onBookPress={handleOpenOptionsModal}
       />
 

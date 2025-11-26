@@ -1,7 +1,8 @@
-import React, { useRef } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, FlatList } from 'react-native';
+import React, { useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { Swipeable } from 'react-native-gesture-handler';
+import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
+import SwipeableItem, { OpenDirection, useSwipeableItemParams } from 'react-native-swipeable-item';
 import { FinnaSearchResult } from '../api/finna';
 
 type Mode = 'search' | 'home' | 'read';
@@ -15,7 +16,58 @@ interface BookListProps {
   readIds?: string[];
   onAdd?: (book: FinnaSearchResult) => void;
   onBookPress?: (book: FinnaSearchResult) => void;
+  onReorder?: (data: FinnaSearchResult[]) => void;
 }
+
+const UnderlayLeft = ({ item, mode, toReadIds, readIds }: { item: FinnaSearchResult, mode: Mode, toReadIds?: string[], readIds?: string[] }) => {
+  let content = null;
+  let backgroundColor = '#636B2F'; // Green
+
+  if (mode === 'home') {
+    content = (
+      <>
+        <MaterialCommunityIcons name="check-all" size={30} color="white" />
+        <Text style={styles.actionText}>Luettu</Text>
+      </>
+    );
+  } else if (mode === 'search') {
+    const alreadyAdded = toReadIds?.includes(item.id) || readIds?.includes(item.id);
+    if (alreadyAdded) {
+      backgroundColor = '#9E9E9E'; // Gray
+      content = (
+        <>
+          <MaterialCommunityIcons name="check" size={30} color="white" />
+          <Text style={styles.actionText}>Lisätty!</Text>
+        </>
+      );
+    } else {
+      content = (
+        <>
+          <MaterialCommunityIcons name="plus-circle-outline" size={30} color="white" />
+          <Text style={styles.actionText}>Lisää</Text>
+        </>
+      );
+    }
+  }
+
+  return (
+    <View style={[styles.underlayLeft, { backgroundColor }]}>
+      {content}
+    </View>
+  );
+};
+
+// Underlay for Right Swipe (Delete)
+const UnderlayRight = () => {
+  return (
+    <View style={styles.underlayRight}>
+      <MaterialCommunityIcons name="trash-can-outline" size={30} color="white" />
+      <Text style={styles.actionText}>Poista</Text>
+    </View>
+  );
+};
+
+
 
 // This component renders the visible content of the book list item.
 const BookContent: React.FC<{
@@ -49,7 +101,7 @@ const BookContent: React.FC<{
       const start = new Date(item.startedReading).getTime();
       const now = new Date().getTime();
       const days = Math.ceil((now - start) / (1000 * 3600 * 24));
-      return days; // 1 day minimum if started today? or 0? "Aloita lukeminen" -> 1st day.
+      return days;
     }
     return null;
   };
@@ -110,128 +162,147 @@ const BookContent: React.FC<{
   );
 };
 
-// This component wraps the BookContent with Swipeable functionality.
+// This component wraps the BookContent with Drag and Swipe functionality.
 const BookListItem: React.FC<{
   item: FinnaSearchResult;
   mode: Mode;
-  onMarkAsRead?: (book: FinnaSearchResult) => void;
-  onTriggerDelete?: (book: FinnaSearchResult) => void;
   toReadIds?: string[];
   readIds?: string[];
-  onAdd?: (book: FinnaSearchResult) => void;
   onPress?: () => void;
-}> = ({ item, mode, onMarkAsRead, onTriggerDelete, toReadIds, readIds, onAdd, onPress }) => {
-  const swipeableRef = useRef<Swipeable>(null);
+  drag?: () => void;
+  isActive?: boolean;
+  onMarkAsRead?: (book: FinnaSearchResult) => void;
+  onTriggerDelete?: (book: FinnaSearchResult) => void;
+  onAdd?: (book: FinnaSearchResult) => void;
+}> = ({ item, mode, toReadIds, readIds, onPress, drag, isActive, onMarkAsRead, onTriggerDelete, onAdd }) => {
 
-  const handleRightSwipe = () => {
-    if (mode === 'home' && onMarkAsRead) onMarkAsRead(item);
-    if (mode === 'search' && onAdd && !toReadIds?.includes(item.id) && !readIds?.includes(item.id)) onAdd(item);
+  const itemRef = useRef<SwipeableItem>(null);
+  const snapPointsLeft = mode === 'home' || mode === 'search' ? [150] : [];
+  const snapPointsRight = mode === 'home' || mode === 'read' ? [150] : [];
 
-    setTimeout(() => {
-      swipeableRef.current?.close();
-    }, 1000);
-  };
-
-  const handleLeftSwipe = () => {
-    if (onTriggerDelete) onTriggerDelete(item);
-
-    setTimeout(() => {
-      swipeableRef.current?.close();
-    }, 1000);
-  };
-
-  const renderLeftActions = () => {
-    let content = null;
-    let style = styles.rightAction;
-
-    if (mode === 'home') {
-      content = (
-        <>
-          <MaterialCommunityIcons name="check-all" size={30} color="white" />
-          <Text style={styles.actionText}>Luettu</Text>
-        </>
-      );
-    } else if (mode === 'search') {
-      const alreadyAdded = toReadIds?.includes(item.id) || readIds?.includes(item.id);
-      if (alreadyAdded) {
-        style = styles.disabledAction;
-        content = (
-          <>
-            <MaterialCommunityIcons name="check" size={30} color="white" />
-            <Text style={styles.actionText}>Lisätty!</Text>
-          </>
-        );
+  const onChange = useCallback((params: { openDirection: OpenDirection, snapPoint: number }) => {
+    if (params.openDirection === OpenDirection.LEFT) {
+      // Swipe Right (Left Underlay revealed)
+      if (mode === 'home' && onMarkAsRead) {
+        onMarkAsRead(item);
+        itemRef.current?.close();
+      } else if (mode === 'search' && onAdd) {
+        if (!toReadIds?.includes(item.id) && !readIds?.includes(item.id)) {
+          onAdd(item);
+        }
+        itemRef.current?.close();
       }
-      else {
-        content = (
-          <>
-            <MaterialCommunityIcons name="plus-circle-outline" size={30} color="white" />
-            <Text style={styles.actionText}>Lisää</Text>
-          </>
-        );
+    } else if (params.openDirection === OpenDirection.RIGHT) {
+      // Swipe Left (Right Underlay revealed)
+      if ((mode === 'home' || mode === 'read') && onTriggerDelete) {
+        onTriggerDelete(item);
+        itemRef.current?.close();
       }
     }
-    if (!content) return null;
-    return <View style={style}>{content}</View>;
-  };
-
-  const renderRightActions = () => {
-    return (
-      <View style={styles.leftAction}>
-        <MaterialCommunityIcons name="trash-can-outline" size={30} color="white" />
-        <Text style={styles.actionText}>Poista</Text>
-      </View>
-    );
-  };
+  }, [mode, onMarkAsRead, onAdd, onTriggerDelete, item, toReadIds, readIds]);
 
   return (
-    <Swipeable
-      ref={swipeableRef}
-      friction={2}
-      overshootFriction={5}
-      renderLeftActions={renderLeftActions}
-      renderRightActions={renderRightActions}
-      onSwipeableRightWillOpen={handleLeftSwipe}
-      onSwipeableLeftWillOpen={handleRightSwipe}
+    <SwipeableItem
+      key={item.id}
+      ref={itemRef}
+      item={item}
+      renderUnderlayLeft={() => <UnderlayLeft item={item} mode={mode} toReadIds={toReadIds} readIds={readIds} />}
+      renderUnderlayRight={() => <UnderlayRight />}
+      snapPointsLeft={snapPointsLeft}
+      snapPointsRight={snapPointsRight}
+      onChange={onChange}
+      activationThreshold={20}
     >
-      <TouchableOpacity
-        onPress={onPress}
-        activeOpacity={0.7}
-      >
-        <BookContent item={item} mode={mode} toReadIds={toReadIds} readIds={readIds} />
-      </TouchableOpacity>
-    </Swipeable>
+      <ScaleDecorator>
+        <TouchableOpacity
+          onPress={onPress}
+          onLongPress={mode === 'home' ? drag : undefined}
+          disabled={isActive}
+          activeOpacity={1} // SwipeableItem handles opacity
+          style={[
+            styles.itemContainer,
+            isActive && { backgroundColor: '#f0f0f0', elevation: 5 }
+          ]}
+        >
+          <BookContent item={item} mode={mode} toReadIds={toReadIds} readIds={readIds} />
+        </TouchableOpacity>
+      </ScaleDecorator>
+    </SwipeableItem>
   );
 };
 
-export const BookList: React.FC<BookListProps> = ({ books, mode = 'search', ...props }) => {
+export const BookList: React.FC<BookListProps> = ({ books, mode = 'search', onReorder, ...props }) => {
+
+  const renderItem = useCallback(({ item, drag, isActive }: RenderItemParams<FinnaSearchResult>) => {
+    return (
+      <BookListItem
+        item={item}
+        mode={mode}
+        toReadIds={props.toReadIds}
+        readIds={props.readIds}
+        onPress={() => props.onBookPress && props.onBookPress(item)}
+        drag={drag}
+        isActive={isActive}
+        onMarkAsRead={props.onMarkAsRead}
+        onTriggerDelete={props.onTriggerDelete}
+        onAdd={props.onAdd}
+      />
+    );
+  }, [mode, props]);
+
   return (
-    <FlatList
-      style={styles.list}
+    <DraggableFlatList
       data={books}
+      onDragEnd={({ data }) => onReorder && onReorder(data)}
       keyExtractor={(item) => item.id}
-      renderItem={({ item }) => (
-        <BookListItem
-          item={item}
-          mode={mode}
-          onMarkAsRead={props.onMarkAsRead}
-          onTriggerDelete={props.onTriggerDelete}
-          onAdd={props.onAdd}
-          toReadIds={props.toReadIds}
-          readIds={props.readIds}
-          onPress={() => props.onBookPress && props.onBookPress(item)}
-        />
-      )}
-      ItemSeparatorComponent={() => <View style={styles.separator} />}
+      renderItem={renderItem}
       contentContainerStyle={styles.list}
+      activationDistance={20}
+      containerStyle={styles.flatListContainer}
     />
   );
 };
 
 const styles = StyleSheet.create({
+  flatListContainer: {
+    flex: 1,
+  },
   list: {
-    marginTop: 12,
     paddingBottom: 20,
+  },
+  itemContainer: {
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  underlayLeft: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingRight: 20,
+  },
+  underlayRight: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#d9534f', // Red
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingLeft: 20,
+  },
+  actionText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    paddingTop: 5,
   },
   listItem: {
     padding: 12,
@@ -262,34 +333,6 @@ const styles = StyleSheet.create({
   title: {
     fontWeight: 'bold',
     fontSize: 16,
-  },
-  separator: {
-    height: 1,
-    backgroundColor: '#eee',
-  },
-  leftAction: {
-    backgroundColor: '#d9534f', // Red
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: 100,
-  },
-  rightAction: {
-    backgroundColor: '#636B2F', // Green for 'Luettu'
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: 100,
-  },
-  disabledAction: {
-    backgroundColor: '#9E9E9E', // Gray for disabled actions
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: 100,
-  },
-  actionText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-    paddingTop: 5,
   },
   reviewDetails: {
     marginTop: 5,
