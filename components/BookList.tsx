@@ -1,9 +1,10 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
 import SwipeableItem, { OpenDirection, useSwipeableItemParams } from 'react-native-swipeable-item';
 import { FinnaSearchResult } from '../api/finna';
+import BookOptionsModal from './BookOptionsModal';
 
 type Mode = 'search' | 'home' | 'read';
 
@@ -145,6 +146,14 @@ const BookContent: React.FC<{
                   </Text>
                 </View>
               )}
+              {item.finishedReading && (
+                <View style={styles.dateContainer}>
+                  <MaterialCommunityIcons name="calendar-month-outline" size={16} color="#555" />
+                  <Text style={styles.dateText}>
+                    {new Date(item.finishedReading).toLocaleDateString('fi-FI')}
+                  </Text>
+                </View>
+              )}
               {renderStars(item.rating)}
               <Text style={styles.ratingText}>{item.rating}/5 tähteä</Text>
               {item.review && <Text style={styles.reviewText}>"{item.review}"</Text>}
@@ -231,7 +240,27 @@ const BookListItem: React.FC<{
   );
 };
 
+interface BookListProps {
+  books: FinnaSearchResult[];
+  mode?: Mode;
+  toReadIds?: string[];
+  readIds?: string[];
+  onMarkAsRead?: (book: FinnaSearchResult) => void;
+  onTriggerDelete?: (book: FinnaSearchResult) => void;
+  onAdd?: (book: FinnaSearchResult) => void;
+  onBookPress?: (book: FinnaSearchResult) => void;
+  onReorder?: (data: FinnaSearchResult[]) => void;
+  onStartReading?: (book: FinnaSearchResult) => void;
+}
+
 export const BookList: React.FC<BookListProps> = ({ books, mode = 'search', onReorder, ...props }) => {
+  const [selectedBook, setSelectedBook] = useState<FinnaSearchResult | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+
+  const handleBookPress = (book: FinnaSearchResult) => {
+    setSelectedBook(book);
+    setModalVisible(true);
+  };
 
   const renderItem = useCallback(({ item, drag, isActive }: RenderItemParams<FinnaSearchResult>) => {
     return (
@@ -240,7 +269,7 @@ export const BookList: React.FC<BookListProps> = ({ books, mode = 'search', onRe
         mode={mode}
         toReadIds={props.toReadIds}
         readIds={props.readIds}
-        onPress={() => props.onBookPress && props.onBookPress(item)}
+        onPress={() => handleBookPress(item)}
         drag={drag}
         isActive={isActive}
         onMarkAsRead={props.onMarkAsRead}
@@ -251,15 +280,30 @@ export const BookList: React.FC<BookListProps> = ({ books, mode = 'search', onRe
   }, [mode, props]);
 
   return (
-    <DraggableFlatList
-      data={books}
-      onDragEnd={({ data }) => onReorder && onReorder(data)}
-      keyExtractor={(item) => item.id}
-      renderItem={renderItem}
-      contentContainerStyle={styles.list}
-      activationDistance={20}
-      containerStyle={styles.flatListContainer}
-    />
+    <>
+      <DraggableFlatList
+        data={books}
+        onDragEnd={({ data }) => onReorder && onReorder(data)}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        contentContainerStyle={styles.list}
+        activationDistance={20}
+        containerStyle={styles.flatListContainer}
+      />
+      <BookOptionsModal
+        isVisible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        book={selectedBook}
+        mode={mode}
+        onMarkAsRead={props.onMarkAsRead}
+        onTriggerDelete={props.onTriggerDelete}
+        onAdd={props.onAdd}
+        onStartReading={props.onStartReading}
+        showStartReading={mode === 'home' && selectedBook ? !selectedBook.startedReading : false}
+        toReadIds={props.toReadIds}
+        readIds={props.readIds}
+      />
+    </>
   );
 };
 
@@ -388,5 +432,15 @@ const styles = StyleSheet.create({
     marginLeft: 5,
     color: '#636B2F',
     fontWeight: 'bold',
-  }
+  },
+  dateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  dateText: {
+    marginLeft: 6,
+    fontSize: 13,
+    color: '#555',
+  },
 });

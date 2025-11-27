@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Modal, View, Text, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SegmentedButtons } from 'react-native-paper';
 
 interface ReviewModalProps {
@@ -84,6 +84,12 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
               },
             ]}
             style={styles.segmentedButtons}
+            theme={{
+              colors: {
+                secondaryContainer: '#636B2F',
+                onSecondaryContainer: '#FFFFFF',
+              },
+            }}
           />
 
           <Text style={styles.label}>Tähdet (1-5):</Text>
@@ -117,7 +123,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
             <TouchableOpacity
               style={[styles.button, styles.secondaryButton]}
               onPress={handleMarkAsRead}
-            >              
+            >
               <Text style={styles.secondaryButtonText}>
                 Merkitse luetuksi{'\n'}(ilman arvostelua)
               </Text>

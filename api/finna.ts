@@ -26,19 +26,36 @@ export const searchFinna = async (query: string): Promise<FinnaSearchResult[]> =
             params: {
                 lookfor: query,
                 type: 'AllFields',
-                limit: 10,
+                limit: 30,
                 filter: ['format:0/Book/', 'language:fin', 'building:0/Outi/'],
             },
         });
 
 
-        return response.data.records.map((record: any) => ({
+ const results = response.data.records.map((record: any) => ({
             id: record.id,
             title: record.title,
             authors: record.nonPresenterAuthors?.map((a: any) => String(a.name || '')) ?? [],
             publicationYear: record.year,
-            images: record.images?.map((img: string) => ({ url: `https://api.finna.fi${img}` })) ?? [],
+            images: record.images?.map((img: string) => ({ 
+                url: img.startsWith('http') ? img : `https://api.finna.fi${img}` 
+            })) ?? [],
         }));
+
+        //Sort by image availability
+        const sortedResults = results.sort((a: FinnaSearchResult, b: FinnaSearchResult) => {
+            const aHasImage = a.images && a.images.length > 0;
+            const bHasImage = b.images && b.images.length > 0;
+
+            if (aHasImage && !bHasImage) return -1;
+            
+            if (!aHasImage && bHasImage) return 1;
+
+            return 0;
+        });
+
+        return sortedResults;
+
     } catch (error) {
         console.error('Error searching Finna:', JSON.stringify(error, null, 2));
         return [];

@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Appbar } from 'react-native-paper';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 
 interface AppBarProps {

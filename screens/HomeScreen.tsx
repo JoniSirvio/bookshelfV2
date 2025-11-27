@@ -18,9 +18,7 @@ const HomeScreen: React.FC = () => {
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [selectedBookForDeletion, setSelectedBookForDeletion] = useState<FinnaSearchResult | null>(null);
 
-  // State for Options Modal
-  const [isOptionsModalVisible, setIsOptionsModalVisible] = useState(false);
-  const [selectedBookForOptions, setSelectedBookForOptions] = useState<FinnaSearchResult | null>(null);
+
 
   // Handlers for Review Modal
   const handleOpenReviewModal = (book: FinnaSearchResult) => {
@@ -56,25 +54,7 @@ const HomeScreen: React.FC = () => {
     handleCloseDeleteModal();
   };
 
-  // Handlers for Options Modal
-  const handleOpenOptionsModal = (book: FinnaSearchResult) => {
-    setSelectedBookForOptions(book);
-    setIsOptionsModalVisible(true);
-  };
 
-  const handleCloseOptionsModal = () => {
-    setIsOptionsModalVisible(false);
-    setSelectedBookForOptions(null);
-  };
-
-
-
-  const handleStartReading = () => {
-    if (selectedBookForOptions) {
-      startReading(selectedBookForOptions.id);
-    }
-    handleCloseOptionsModal();
-  };
 
 
 
@@ -89,7 +69,7 @@ const HomeScreen: React.FC = () => {
         onReorder={(newList) => {
           reorderBooks(newList, 'myBooks')
         }}
-        onBookPress={handleOpenOptionsModal}
+        onStartReading={(book) => startReading(book.id)}
       />
 
       {selectedBookForReview && (
@@ -113,16 +93,6 @@ const HomeScreen: React.FC = () => {
           onClose={handleCloseDeleteModal}
           onConfirm={handleConfirmDelete}
           bookTitle={selectedBookForDeletion.title}
-        />
-      )}
-
-      {selectedBookForOptions && (
-        <BookOptionsModal
-          isVisible={isOptionsModalVisible}
-          onClose={handleCloseOptionsModal}
-          onStartReading={handleStartReading}
-          bookTitle={selectedBookForOptions.title}
-          showStartReading={!selectedBookForOptions.startedReading}
         />
       )}
     </View>
