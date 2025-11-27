@@ -30,9 +30,9 @@ export default function MyTabs() {
         name="Home"
         component={HomeScreen}
         options={{
-          tabBarLabel: 'Home',
+          tabBarLabel: 'Luettavat',
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="home-outline" color={color} size={size} />
+            <MaterialCommunityIcons name="book-open-variant-outline" color={color} size={size} />
           ),
         }}
       />
@@ -40,9 +40,9 @@ export default function MyTabs() {
         name="Books"
         component={SearchScreen}
         options={{
-          tabBarLabel: 'Search Books',
+          tabBarLabel: 'Haku',
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="book-search" color={color} size={size} />
+            <MaterialCommunityIcons name="book-search-outline" color={color} size={size} />
           ),
         }}
       />
@@ -50,7 +50,7 @@ export default function MyTabs() {
         name="Past Reads"
         component={PastReadScreen}
         options={{
-          tabBarLabel: 'Past Reads',
+          tabBarLabel: 'Luetut',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="book-check-outline" color={color} size={size} />
           ),
