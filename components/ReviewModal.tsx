@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, View, Text, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
+import { Modal, View, Text, TextInput, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SegmentedButtons } from 'react-native-paper';
 
@@ -154,14 +154,21 @@ const styles = StyleSheet.create({
     borderRadius: 15, // Slightly less rounded
     padding: 25, // Reduced padding
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4, // More pronounced shadow
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 8,
+    ...Platform.select({
+      web: {
+        boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.3)',
+      },
+      default: {
+        shadowColor: '#000',
+        shadowOffset: {
+          width: 0,
+          height: 4,
+        },
+        shadowOpacity: 0.3,
+        shadowRadius: 6,
+        elevation: 8,
+      },
+    }),
     width: '90%',
     maxWidth: 400, // Max width for larger screens
   },
