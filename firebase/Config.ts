@@ -4,12 +4,12 @@ import { getAuth, Auth } from "firebase/auth";
 
 
 const firebaseConfig = {
-    apiKey: "AIzaSyB1NBThUvOuKL6U42OwwABgjvTs0TvG84E",
-    authDomain: "bookshelf-d365f.firebaseapp.com",
-    projectId: "bookshelf-d365f",
-    storageBucket: "bookshelf-d365f.firebasestorage.app",
-    messagingSenderId: "115274595462",
-    appId: "1:115274595462:web:2ed15b7780f885fb9ca507"
+    apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+    authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID
 };
 
 const app = initializeApp(firebaseConfig);
