@@ -1,20 +1,27 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useReducer, useEffect, useRef } from 'react';
 import { FinnaSearchResult } from '../api/finna';
+import {
+    subscribeToBooks,
+    addBookToFirestore,
+    removeBookFromFirestore,
+    updateBookInFirestore,
+    updateBooksOrder,
+    FirestoreBook
+} from '../firebase/books';
+import { useAuth } from '../context/AuthContext';
 
 type BookState = {
-    myBooks: FinnaSearchResult[];
-    readBooks: FinnaSearchResult[];
+    myBooks: FirestoreBook[];
+    readBooks: FirestoreBook[];
 };
 
 type BookAction =
-    | { type: 'LOAD_BOOKS'; myBooks: FinnaSearchResult[]; readBooks: FinnaSearchResult[] }
-    | { type: 'ADD_BOOK'; book: FinnaSearchResult }
+    | { type: 'LOAD_BOOKS'; myBooks: FirestoreBook[]; readBooks: FirestoreBook[] }
+    | { type: 'ADD_BOOK'; book: FirestoreBook }
     | { type: 'REMOVE_BOOK'; bookId: string }
     | { type: 'REMOVE_READ_BOOK'; bookId: string }
     | { type: 'MARK_AS_READ'; bookId: string; review?: string; rating?: number; readOrListened?: string }
-    | { type: 'REORDER_BOOKS'; newList: FinnaSearchResult[]; listType: 'myBooks' | 'readBooks' }
-
+    | { type: 'REORDER_BOOKS'; newList: FirestoreBook[]; listType: 'myBooks' | 'readBooks' }
     | { type: 'START_READING'; bookId: string };
 
 const initialState: BookState = {
@@ -38,11 +45,14 @@ function bookReducer(state: BookState, action: BookAction): BookState {
         case 'REMOVE_READ_BOOK':
             return { ...state, readBooks: state.readBooks.filter(book => book.id !== action.bookId) };
         case 'MARK_AS_READ':
+            // Optimistic update logic if needed, but we rely on subscription mostly.
+            // However, for smooth UI, we can keep it.
             const bookToMark = state.myBooks.find(book => book.id === action.bookId);
             if (!bookToMark) return state;
 
-            const updatedBook = {
+            const updatedBook: FirestoreBook = {
                 ...bookToMark,
+                status: 'read',
                 review: action.review,
                 rating: action.rating,
                 readOrListened: action.readOrListened,
@@ -80,59 +90,92 @@ function bookReducer(state: BookState, action: BookAction): BookState {
 
 export const useBooks = () => {
     const [state, dispatch] = useReducer(bookReducer, initialState);
+    const { user } = useAuth();
 
     useEffect(() => {
-        (async () => {
-            try {
-                const storedMyBooks = await AsyncStorage.getItem('myBooks');
-                const storedReadBooks = await AsyncStorage.getItem('readBooks');
-
-                dispatch({
-                    type: 'LOAD_BOOKS',
-                    myBooks: storedMyBooks ? JSON.parse(storedMyBooks) : [],
-                    readBooks: storedReadBooks ? JSON.parse(storedReadBooks) : [],
-                });
-            } catch (err) {
-                console.log('Error loading books from storage', err);
-            }
-        })();
-    }, []);
-
-    const isFirstRendering = useRef(true);
-
-    useEffect(() => {
-        if (isFirstRendering.current) {
-            isFirstRendering.current = false;
+        if (!user) {
+            dispatch({ type: 'LOAD_BOOKS', myBooks: [], readBooks: [] });
             return;
         }
-        AsyncStorage.setItem('myBooks', JSON.stringify(state.myBooks));
-        AsyncStorage.setItem('readBooks', JSON.stringify(state.readBooks));
-    }, [state.myBooks, state.readBooks]);
 
-    const addBook = (book: FinnaSearchResult) => {
-        dispatch({ type: 'ADD_BOOK', book });
+        const unsubscribe = subscribeToBooks(user.uid, (books) => {
+            const myBooks = books.filter(b => b.status === 'unread');
+            const readBooks = books.filter(b => b.status === 'read');
+
+            dispatch({
+                type: 'LOAD_BOOKS',
+                myBooks,
+                readBooks
+            });
+        });
+
+        return () => unsubscribe();
+    }, [user]);
+
+    const addBook = async (book: FinnaSearchResult) => {
+        if (!user) return;
+        if (state.myBooks.find(b => b.id === book.id) || state.readBooks.find(b => b.id === book.id)) {
+            return;
+        }
+        await addBookToFirestore(user.uid, book);
     };
 
-    const removeBook = (bookId: string) => {
-        dispatch({ type: 'REMOVE_BOOK', bookId });
+    const removeBook = async (bookId: string) => {
+        if (!user) return;
+        dispatch({ type: 'REMOVE_BOOK', bookId }); // Optimistic
+        await removeBookFromFirestore(user.uid, bookId);
     };
 
-    const removeReadBook = (bookId: string) => {
-        dispatch({ type: 'REMOVE_READ_BOOK', bookId });
+    const removeReadBook = async (bookId: string) => {
+        if (!user) return;
+        dispatch({ type: 'REMOVE_READ_BOOK', bookId }); // Optimistic
+        await removeBookFromFirestore(user.uid, bookId);
     };
 
-    const markAsRead = (bookId: string, review?: string, rating?: number, readOrListened?: string) => {
-        dispatch({ type: 'MARK_AS_READ', bookId, review, rating, readOrListened });
+    const markAsRead = async (bookId: string, review?: string, rating?: number, readOrListened?: string) => {
+        if (!user) return;
+        const book = state.myBooks.find(b => b.id === bookId);
+        if (!book) return;
+
+        dispatch({ type: 'MARK_AS_READ', bookId, review, rating, readOrListened }); // Optimistic
+
+        const daysRead = book.startedReading
+            ? Math.ceil((new Date().getTime() - new Date(book.startedReading).getTime()) / (1000 * 3600 * 24))
+            : undefined;
+
+        const updateData: Partial<FirestoreBook> = {
+            status: 'read',
+            finishedReading: new Date().toISOString(),
+        };
+
+        if (review !== undefined) updateData.review = review;
+        if (rating !== undefined) updateData.rating = rating;
+        if (readOrListened !== undefined) updateData.readOrListened = readOrListened;
+        if (daysRead !== undefined) updateData.daysRead = daysRead;
+
+        await updateBookInFirestore(user.uid, bookId, updateData);
     };
 
-    const reorderBooks = (newList: FinnaSearchResult[], listType: 'myBooks' | 'readBooks') => {
-        dispatch({ type: 'REORDER_BOOKS', newList, listType });
+    const reorderBooks = async (newList: FirestoreBook[], listType: 'myBooks' | 'readBooks') => {
+        if (!user) return;
+        dispatch({ type: 'REORDER_BOOKS', newList, listType }); // Optimistic
+        await updateBooksOrder(user.uid, newList);
     };
 
+    const startReading = async (bookId: string) => {
+        if (!user) return;
+        dispatch({ type: 'START_READING', bookId }); // Optimistic
 
+        await updateBookInFirestore(user.uid, bookId, { startedReading: new Date().toISOString() });
 
-    const startReading = (bookId: string) => {
-        dispatch({ type: 'START_READING', bookId });
+        const bookIndex = state.myBooks.findIndex(b => b.id === bookId);
+        if (bookIndex !== -1) {
+            const bookToStart = { ...state.myBooks[bookIndex], startedReading: new Date().toISOString() };
+            const updatedMyBooks = [...state.myBooks];
+            updatedMyBooks.splice(bookIndex, 1);
+            updatedMyBooks.unshift(bookToStart);
+            await updateBooksOrder(user.uid, updatedMyBooks);
+        }
     };
 
     return {
@@ -143,7 +186,6 @@ export const useBooks = () => {
         removeReadBook,
         markAsRead,
         reorderBooks,
-
         startReading,
     };
 };

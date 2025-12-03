@@ -8,16 +8,17 @@ import BookOptionsModal from './BookOptionsModal';
 
 type Mode = 'search' | 'home' | 'read';
 
-interface BookListProps {
-  books: FinnaSearchResult[];
+interface BookListProps<T extends FinnaSearchResult> {
+  books: T[];
   mode?: Mode;
-  onMarkAsRead?: (book: FinnaSearchResult) => void;
-  onTriggerDelete?: (book: FinnaSearchResult) => void;
   toReadIds?: string[];
   readIds?: string[];
-  onAdd?: (book: FinnaSearchResult) => void;
-  onBookPress?: (book: FinnaSearchResult) => void;
-  onReorder?: (data: FinnaSearchResult[]) => void;
+  onMarkAsRead?: (book: T) => void;
+  onTriggerDelete?: (book: T) => void;
+  onAdd?: (book: T) => void;
+  onBookPress?: (book: T) => void;
+  onReorder?: (data: T[]) => void;
+  onStartReading?: (book: T) => void;
 }
 
 const UnderlayLeft = ({ item, mode, toReadIds, readIds }: { item: FinnaSearchResult, mode: Mode, toReadIds?: string[], readIds?: string[] }) => {
@@ -172,20 +173,31 @@ const BookContent: React.FC<{
 };
 
 // This component wraps the BookContent with Drag and Swipe functionality.
-const BookListItem: React.FC<{
-  item: FinnaSearchResult;
+function BookListItem<T extends FinnaSearchResult>({
+  item,
+  mode,
+  toReadIds,
+  readIds,
+  onPress,
+  drag,
+  isActive,
+  onMarkAsRead,
+  onTriggerDelete,
+  onAdd
+}: {
+  item: T;
   mode: Mode;
   toReadIds?: string[];
   readIds?: string[];
   onPress?: () => void;
   drag?: () => void;
   isActive?: boolean;
-  onMarkAsRead?: (book: FinnaSearchResult) => void;
-  onTriggerDelete?: (book: FinnaSearchResult) => void;
-  onAdd?: (book: FinnaSearchResult) => void;
-}> = ({ item, mode, toReadIds, readIds, onPress, drag, isActive, onMarkAsRead, onTriggerDelete, onAdd }) => {
+  onMarkAsRead?: (book: T) => void;
+  onTriggerDelete?: (book: T) => void;
+  onAdd?: (book: T) => void;
+}) {
 
-  const itemRef = useRef<SwipeableItem>(null);
+  const itemRef = useRef<any>(null);
   const snapPointsLeft = mode === 'home' || mode === 'search' ? [150] : [];
   const snapPointsRight = mode === 'home' || mode === 'read' ? [150] : [];
 
@@ -240,29 +252,16 @@ const BookListItem: React.FC<{
   );
 };
 
-interface BookListProps {
-  books: FinnaSearchResult[];
-  mode?: Mode;
-  toReadIds?: string[];
-  readIds?: string[];
-  onMarkAsRead?: (book: FinnaSearchResult) => void;
-  onTriggerDelete?: (book: FinnaSearchResult) => void;
-  onAdd?: (book: FinnaSearchResult) => void;
-  onBookPress?: (book: FinnaSearchResult) => void;
-  onReorder?: (data: FinnaSearchResult[]) => void;
-  onStartReading?: (book: FinnaSearchResult) => void;
-}
-
-export const BookList: React.FC<BookListProps> = ({ books, mode = 'search', onReorder, ...props }) => {
-  const [selectedBook, setSelectedBook] = useState<FinnaSearchResult | null>(null);
+export const BookList = <T extends FinnaSearchResult>({ books, mode = 'search', onReorder, ...props }: BookListProps<T>) => {
+  const [selectedBook, setSelectedBook] = useState<T | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
-  const handleBookPress = (book: FinnaSearchResult) => {
+  const handleBookPress = (book: T) => {
     setSelectedBook(book);
     setModalVisible(true);
   };
 
-  const renderItem = useCallback(({ item, drag, isActive }: RenderItemParams<FinnaSearchResult>) => {
+  const renderItem = useCallback(({ item, drag, isActive }: RenderItemParams<T>) => {
     return (
       <BookListItem
         item={item}
@@ -295,10 +294,10 @@ export const BookList: React.FC<BookListProps> = ({ books, mode = 'search', onRe
         onClose={() => setModalVisible(false)}
         book={selectedBook}
         mode={mode}
-        onMarkAsRead={props.onMarkAsRead}
-        onTriggerDelete={props.onTriggerDelete}
-        onAdd={props.onAdd}
-        onStartReading={props.onStartReading}
+        onMarkAsRead={props.onMarkAsRead as any} // Cast to any to avoid complex type issues with Modal props
+        onTriggerDelete={props.onTriggerDelete as any}
+        onAdd={props.onAdd as any}
+        onStartReading={props.onStartReading as any}
         showStartReading={mode === 'home' && selectedBook ? !selectedBook.startedReading : false}
         toReadIds={props.toReadIds}
         readIds={props.readIds}
