@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, View, Text, TextInput, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { Modal, View, Text, TextInput, StyleSheet, TouchableOpacity, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SegmentedButtons } from 'react-native-paper';
 
@@ -61,82 +61,84 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
       visible={isVisible}
       onRequestClose={onClose}
     >
-      <View style={styles.centeredView}>
-        <View style={styles.modalView}>
-          <Text style={styles.modalTitle}>
-            Arvostele "{bookTitle}"
-            {bookAuthors && bookAuthors.length > 0 ? ` - ${bookAuthors.join(', ')}` : ''}
-          </Text>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.centeredView}>
+          <View style={styles.modalView}>
+            <Text style={styles.modalTitle}>
+              Arvostele "{bookTitle}"
+              {bookAuthors && bookAuthors.length > 0 ? ` - ${bookAuthors.join(', ')}` : ''}
+            </Text>
 
-          <SegmentedButtons
-            value={readOrListened}
-            onValueChange={setReadOrListened}
-            buttons={[
-              {
-                value: 'read',
-                label: 'Luettu',
-                icon: 'book-open-page-variant-outline',
-              },
-              {
-                value: 'listened',
-                label: 'Kuunneltu',
-                icon: 'headphones',
-              },
-            ]}
-            style={styles.segmentedButtons}
-            theme={{
-              colors: {
-                secondaryContainer: '#636B2F',
-                onSecondaryContainer: '#FFFFFF',
-              },
-            }}
-          />
-
-          <Text style={styles.label}>Tähdet (1-5):</Text>
-          {renderStars()}
-          <Text style={styles.currentRatingText}>Valittu: {rating}/5 tähteä</Text>
-
-          <Text style={styles.label}>Arvostelu:</Text>
-          <TextInput
-            style={styles.reviewInput}
-            multiline
-            placeholder="Kirjoita lyhyt arvostelu..."
-            value={reviewText}
-            onChangeText={setReviewText}
-          />
-
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[
-                styles.button,
-                styles.primaryButton,
-                (rating === 0 && reviewText.trim().length === 0) && styles.disabledButton
+            <SegmentedButtons
+              value={readOrListened}
+              onValueChange={setReadOrListened}
+              buttons={[
+                {
+                  value: 'read',
+                  label: 'Luettu',
+                  icon: 'book-open-page-variant-outline',
+                },
+                {
+                  value: 'listened',
+                  label: 'Kuunneltu',
+                  icon: 'headphones',
+                },
               ]}
-              onPress={handleSave}
-              disabled={rating === 0 && reviewText.trim().length === 0}
-            >
-              <View style={styles.buttonContent}>
-                <MaterialCommunityIcons name="content-save-outline" size={20} color="white" style={styles.buttonIcon} />
-                <Text style={styles.primaryButtonText}>Tallenna arvostelu</Text>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, styles.secondaryButton]}
-              onPress={handleMarkAsRead}
-            >
-              <Text style={styles.secondaryButtonText}>
-                Merkitse luetuksi{'\n'}(ilman arvostelua)
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, styles.cancelButton]}
-              onPress={onClose}
-            >
-              <Text style={styles.cancelButtonText}>Peruuta</Text>
-            </TouchableOpacity>
+              style={styles.segmentedButtons}
+              theme={{
+                colors: {
+                  secondaryContainer: '#636B2F',
+                  onSecondaryContainer: '#FFFFFF',
+                },
+              }}
+            />
+
+            <Text style={styles.label}>Tähdet (1-5):</Text>
+            {renderStars()}
+            <Text style={styles.currentRatingText}>Valittu: {rating}/5 tähteä</Text>
+
+            <Text style={styles.label}>Arvostelu:</Text>
+            <TextInput
+              style={styles.reviewInput}
+              multiline
+              placeholder="Kirjoita lyhyt arvostelu..."
+              value={reviewText}
+              onChangeText={setReviewText}
+            />
+
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.button,
+                  styles.primaryButton,
+                  (rating === 0 && reviewText.trim().length === 0) && styles.disabledButton
+                ]}
+                onPress={handleSave}
+                disabled={rating === 0 && reviewText.trim().length === 0}
+              >
+                <View style={styles.buttonContent}>
+                  <MaterialCommunityIcons name="content-save-outline" size={20} color="white" style={styles.buttonIcon} />
+                  <Text style={styles.primaryButtonText}>Tallenna arvostelu</Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.secondaryButton]}
+                onPress={handleMarkAsRead}
+              >
+                <Text style={styles.secondaryButtonText}>
+                  Merkitse luetuksi{'\n'}(ilman arvostelua)
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.cancelButton]}
+                onPress={onClose}
+              >
+                <Text style={styles.cancelButtonText}>Peruuta</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
+      </TouchableWithoutFeedback>
     </Modal>
   );
 };
