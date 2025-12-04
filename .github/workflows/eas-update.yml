@@ -26,5 +26,8 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Create .env file
+        run: echo "${{ secrets.ENV }}" > .env
+
       - name: Publish update
         run: eas update --auto
