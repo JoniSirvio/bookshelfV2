@@ -26,8 +26,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Build bundle
+        run: CI=1 npx expo export --output-dir dist
+
       - name: Publish update
-        run: CI=1 eas update --auto
+        run: CI=1 eas update --skip-bundler --auto --input-dir dist
         env:
           EXPO_PUBLIC_FIREBASE_API_KEY: ${{ secrets.EXPO_PUBLIC_FIREBASE_API_KEY }}
           EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN }}
