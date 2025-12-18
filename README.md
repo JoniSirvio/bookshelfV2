@@ -48,7 +48,7 @@ A React Native mobile application for managing your personal book collection. Se
 
 3.  **Start the application**:
     ```bash
-    npx expo start -c
+    npx expo start
     ```
 
 4.  **Run on device/emulator**:
@@ -73,11 +73,3 @@ A React Native mobile application for managing your personal book collection. Se
 ### Read History
 -   View a list of all books you have finished.
 -   See your ratings, reviews, and reading duration.
-
-## Contributing
-
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
-
-## License
-
-[MIT](https://choosealicense.com/licenses/mit/)
