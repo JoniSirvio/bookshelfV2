@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore, Firestore, collection, addDoc, serverTimestamp } from "firebase/firestore";
 // @ts-ignore
-import { initializeAuth, getReactNativePersistence, Auth } from "firebase/auth";
+import { initializeAuth, getAuth, Auth } from "firebase/auth";
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 
 
@@ -16,9 +16,8 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const firestore: Firestore = getFirestore(app);
-const auth: Auth = initializeAuth(app, {
-    persistence: getReactNativePersistence(ReactNativeAsyncStorage)
-});
+const auth: Auth = getAuth(app);
+
 
 const BOOKCOLLECTION = collection(firestore, 'books');
 
