@@ -10,7 +10,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useFonts } from 'expo-font';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as SplashScreen from 'expo-splash-screen';
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 
 // Keep the splash screen visible while we fetch resources
@@ -49,6 +49,12 @@ export default function App() {
   const [fontsLoaded] = useFonts({
     ...MaterialCommunityIcons.font,
   });
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
 
   const onLayoutRootView = useCallback(async () => {
     if (fontsLoaded) {

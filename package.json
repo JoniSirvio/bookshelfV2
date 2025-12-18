@@ -37,6 +37,7 @@
     "react-native-web": "^0.21.2"
   },
   "devDependencies": {
+    "@expo/metro-config": "^54.0.12",
     "@types/react": "~19.1.0",
     "babel-preset-expo": "^54.0.7",
     "typescript": "~5.9.2"
