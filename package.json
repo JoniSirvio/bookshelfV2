@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
+    "@expo/metro-config": "^54.0.12",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-navigation/bottom-tabs": "^7.8.4",
     "@react-navigation/elements": "^2.8.1",
@@ -37,7 +38,6 @@
     "react-native-web": "^0.21.2"
   },
   "devDependencies": {
-    "@expo/metro-config": "^54.0.12",
     "@types/react": "~19.1.0",
     "babel-preset-expo": "^54.0.7",
     "typescript": "~5.9.2"
