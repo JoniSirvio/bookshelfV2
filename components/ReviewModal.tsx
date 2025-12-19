@@ -102,6 +102,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
               style={styles.reviewInput}
               multiline
               placeholder="Kirjoita lyhyt arvostelu..."
+              placeholderTextColor="#666"
               value={reviewText}
               onChangeText={setReviewText}
             />
