@@ -14,10 +14,11 @@ import { firestore } from "./Config";
 import { FinnaSearchResult } from "../api/finna";
 
 export interface FirestoreBook extends FinnaSearchResult {
-    status: 'unread' | 'read';
+    status: 'unread' | 'read' | 'recommendation';
     order: number;
     addedAt: any; // Timestamp or FieldValue
     firestoreId?: string; // To store the document ID if different from Finna ID
+    recommendationReason?: string; // Added for AI recommendations
 }
 
 const getUserBookCollection = (userId: string) => collection(firestore, 'users', userId, 'books');
@@ -36,7 +37,7 @@ export const subscribeToBooks = (userId: string, onUpdate: (books: FirestoreBook
     return unsubscribe;
 };
 
-export const addBookToFirestore = async (userId: string, book: FinnaSearchResult) => {
+export const addBookToFirestore = async (userId: string, book: FinnaSearchResult, status: 'unread' | 'read' | 'recommendation' = 'unread', recommendationReason?: string) => {
     try {
         const bookRef = doc(getUserBookCollection(userId), book.id);
 
@@ -44,10 +45,14 @@ export const addBookToFirestore = async (userId: string, book: FinnaSearchResult
 
         const newBook: FirestoreBook = {
             ...book,
-            status: 'unread',
+            status: status,
             order: order,
             addedAt: serverTimestamp(),
         };
+
+        if (recommendationReason) {
+            newBook.recommendationReason = recommendationReason;
+        }
 
         await setDoc(bookRef, newBook);
     } catch (error) {

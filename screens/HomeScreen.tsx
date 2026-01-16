@@ -1,14 +1,17 @@
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator } from "react-native";
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { BookList } from "../components/BookList";
 import { useBooksContext } from "../context/BooksContext";
 import ReviewModal from '../components/ReviewModal';
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
 import BookOptionsModal from '../components/BookOptionsModal';
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { FinnaSearchResult } from "../api/finna";
 
 const HomeScreen: React.FC = () => {
-  const { myBooks, removeBook, markAsRead, startReading, reorderBooks } = useBooksContext();
+  const { myBooks, removeBook, markAsRead, startReading, reorderBooks, recommendations, generateRecommendations, removeRecommendation, addBook } = useBooksContext();
+  const [generating, setGenerating] = useState(false);
+  const [userWishes, setUserWishes] = useState("");
 
   // State for Review Modal
   const [isReviewModalVisible, setIsReviewModalVisible] = useState(false);
@@ -49,19 +52,88 @@ const HomeScreen: React.FC = () => {
 
   const handleConfirmDelete = () => {
     if (selectedBookForDeletion) {
-      removeBook(selectedBookForDeletion.id);
+      // Check if it's a recommendation or normal book
+      if ((selectedBookForDeletion as any).status === 'recommendation') {
+        removeRecommendation(selectedBookForDeletion.id);
+      } else {
+        removeBook(selectedBookForDeletion.id);
+      }
     }
     handleCloseDeleteModal();
   };
 
+  // Prevent accidental multiple taps
+  const lastCallTime = useRef(0);
+
+  const handleGenerateRecommendations = async () => {
+    const now = Date.now();
+    if (now - lastCallTime.current < 2000) {
+      return; // Ignore if clicked within 2 seconds
+    }
+    lastCallTime.current = now;
+
+    setGenerating(true);
+    try {
+      await generateRecommendations(userWishes);
+    } catch (error: any) {
+      alert(`Virhe suositusten haussa: ${error.message || 'Tuntematon virhe'}`);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+
+  const renderHeader = () => (
+    <View>
+      <Text style={styles.title}>Luettavien hylly</Text>
+    </View>
+  );
+
+  const renderFooter = () => (
+    <View style={styles.footerContainer}>
+      <Text style={styles.sectionTitle}>Mitä lukea seuraavaksi?</Text>
+      <Text style={styles.sectionSubtitle}>Anna tekoälyn etsiä uutta luettavaa historiasi perusteella.</Text>
+
+      <TextInput
+        style={styles.wishesInput}
+        placeholder="Esim. 'Haluaisin lyhyitä scifi-kirjoja' (valinnainen)"
+        placeholderTextColor="#999"
+        value={userWishes}
+        onChangeText={setUserWishes}
+        editable={!generating}
+        multiline
+      />
+
+      <TouchableOpacity onPress={handleGenerateRecommendations} disabled={generating} style={styles.generateButton}>
+        {generating ? (
+          <ActivityIndicator size="small" color="#33691E" style={{ marginRight: 8 }} />
+        ) : null}
+        <Text style={styles.generateButtonText}>{generating ? 'Haetaan...' : 'Hae suosituksia'}</Text>
+        {!generating && <MaterialCommunityIcons name="robot" size={20} color="#636B2F" style={{ marginLeft: 8 }} />}
+      </TouchableOpacity>
+
+      {recommendations.length > 0 && (
+        <View style={styles.recommendationsList}>
+          <BookList
+            books={recommendations}
+            mode="recommendation"
+            onAdd={(book) => addBook(book)} // Add to shelf
+            onTriggerDelete={handleOpenDeleteModal} // Remove recommendation
+            scrollEnabled={false}
+          />
+        </View>
+      )}
+    </View>
+  );
 
 
 
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Luettavien hylly</Text>
       <BookList
+        ListHeaderComponent={renderHeader()}
+        ListFooterComponent={renderFooter()}
         books={myBooks}
         onTriggerDelete={handleOpenDeleteModal}
         onMarkAsRead={handleOpenReviewModal} // Swipe right opens review modal
@@ -109,6 +181,63 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 16,
+  },
+  wishesInput: {
+    backgroundColor: '#FAFAFA',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 16,
+    minHeight: 60,
+    textAlignVertical: 'top',
+  },
+  footerContainer: {
+    marginTop: 24,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    paddingBottom: 40,
+  },
+  recommendationHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  generateButton: {
+    borderColor: '#636B2F',
+    borderWidth: 1.5,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F1F8E9',
+    alignSelf: 'stretch',
+    marginBottom: 24,
+  },
+  generateButtonText: {
+    color: '#33691E',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  recommendationsList: {
+    backgroundColor: '#FFF',
   }
 });
 
