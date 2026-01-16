@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { FinnaSearchResult } from '../api/finna';
 
-type Mode = 'search' | 'home' | 'read';
+type Mode = 'search' | 'home' | 'read' | 'recommendation';
 
 interface BookOptionsModalProps {
     isVisible: boolean;
@@ -109,6 +109,23 @@ const BookOptionsModal: React.FC<BookOptionsModalProps> = ({
                             <MaterialCommunityIcons name="trash-can-outline" size={24} color="#d9534f" />
                             <Text style={[styles.optionText, { color: '#d9534f' }]}>Poista historiasta</Text>
                         </TouchableOpacity>
+                    )}
+                    {/* Recommendation Mode Actions */}
+                    {mode === 'recommendation' && (
+                        <>
+                            {onAdd && (
+                                <TouchableOpacity style={styles.option} onPress={() => { onAdd(book); onClose(); }}>
+                                    <MaterialCommunityIcons name="plus-circle-outline" size={24} color="#636B2F" />
+                                    <Text style={styles.optionText}>Lisää hyllyyn</Text>
+                                </TouchableOpacity>
+                            )}
+                            {onTriggerDelete && (
+                                <TouchableOpacity style={styles.option} onPress={() => { onTriggerDelete(book); onClose(); }}>
+                                    <MaterialCommunityIcons name="trash-can-outline" size={24} color="#d9534f" />
+                                    <Text style={[styles.optionText, { color: '#d9534f' }]}>Poista suositus</Text>
+                                </TouchableOpacity>
+                            )}
+                        </>
                     )}
 
                 </View>

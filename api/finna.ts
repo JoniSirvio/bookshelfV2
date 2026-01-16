@@ -32,13 +32,18 @@ export const searchFinna = async (query: string): Promise<FinnaSearchResult[]> =
         });
 
 
- const results = response.data.records.map((record: any) => ({
+        if (!response.data || !response.data.records) {
+            console.log('No records found from Finna for query:', query);
+            return [];
+        }
+
+        const results = response.data.records.map((record: any) => ({
             id: record.id,
             title: record.title,
             authors: record.nonPresenterAuthors?.map((a: any) => String(a.name || '')) ?? [],
             publicationYear: record.year,
-            images: record.images?.map((img: string) => ({ 
-                url: img.startsWith('http') ? img : `https://api.finna.fi${img}` 
+            images: record.images?.map((img: string) => ({
+                url: img.startsWith('http') ? img : `https://api.finna.fi${img}`
             })) ?? [],
         }));
 
@@ -48,7 +53,7 @@ export const searchFinna = async (query: string): Promise<FinnaSearchResult[]> =
             const bHasImage = b.images && b.images.length > 0;
 
             if (aHasImage && !bHasImage) return -1;
-            
+
             if (!aHasImage && bHasImage) return 1;
 
             return 0;
@@ -56,8 +61,8 @@ export const searchFinna = async (query: string): Promise<FinnaSearchResult[]> =
 
         return sortedResults;
 
-    } catch (error) {
-        console.error('Error searching Finna:', JSON.stringify(error, null, 2));
+    } catch (error: any) {
+        console.warn('Finna search failed (silenced):', error.message);
         return [];
     }
 };

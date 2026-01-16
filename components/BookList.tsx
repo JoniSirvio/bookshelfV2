@@ -6,7 +6,7 @@ import SwipeableItem, { OpenDirection, useSwipeableItemParams } from 'react-nati
 import { FinnaSearchResult } from '../api/finna';
 import BookOptionsModal from './BookOptionsModal';
 
-type Mode = 'search' | 'home' | 'read';
+type Mode = 'search' | 'home' | 'read' | 'recommendation';
 
 interface BookListProps<T extends FinnaSearchResult> {
   books: T[];
@@ -19,6 +19,9 @@ interface BookListProps<T extends FinnaSearchResult> {
   onBookPress?: (book: T) => void;
   onReorder?: (data: T[]) => void;
   onStartReading?: (book: T) => void;
+  ListHeaderComponent?: React.ReactElement | null;
+  ListFooterComponent?: React.ReactElement | null;
+  scrollEnabled?: boolean;
 }
 
 const UnderlayLeft = ({ item, mode, toReadIds, readIds }: { item: FinnaSearchResult, mode: Mode, toReadIds?: string[], readIds?: string[] }) => {
@@ -50,6 +53,13 @@ const UnderlayLeft = ({ item, mode, toReadIds, readIds }: { item: FinnaSearchRes
         </>
       );
     }
+  } else if (mode === 'recommendation') {
+    content = (
+      <>
+        <MaterialCommunityIcons name="plus-circle-outline" size={30} color="white" />
+        <Text style={styles.actionText}>Lisää</Text>
+      </>
+    );
   }
 
   return (
@@ -132,6 +142,13 @@ const BookContent: React.FC<{
             </View>
           )}
 
+          {mode === 'recommendation' && (item as any).recommendationReason && (
+            <View style={styles.recommendationContainer}>
+              <MaterialCommunityIcons name="robot-outline" size={16} color="#636B2F" />
+              <Text style={styles.recommendationText}>"{(item as any).recommendationReason}"</Text>
+            </View>
+          )}
+
           {mode === 'read' && item.rating !== undefined && (
             <View style={styles.reviewDetails}>
               {item.readOrListened && (
@@ -198,27 +215,28 @@ function BookListItem<T extends FinnaSearchResult>({
 }) {
 
   const itemRef = useRef<any>(null);
-  const snapPointsLeft = mode === 'home' || mode === 'search' ? [150] : [];
-  const snapPointsRight = mode === 'home' || mode === 'read' ? [150] : [];
+  const snapPointsLeft = mode === 'home' || mode === 'search' || mode === 'recommendation' ? [150] : [];
+  const snapPointsRight = mode === 'home' || mode === 'read' || mode === 'recommendation' ? [150] : [];
 
   const onChange = useCallback((params: { openDirection: OpenDirection, snapPoint: number }) => {
     if (params.openDirection === OpenDirection.LEFT) {
       // Swipe Right (Left Underlay revealed)
       if (mode === 'home' && onMarkAsRead) {
         onMarkAsRead(item);
-        itemRef.current?.close();
       } else if (mode === 'search' && onAdd) {
         if (!toReadIds?.includes(item.id) && !readIds?.includes(item.id)) {
           onAdd(item);
         }
-        itemRef.current?.close();
+      } else if (mode === 'recommendation' && onAdd) {
+        onAdd(item);
       }
+      itemRef.current?.close(); // Close after action
     } else if (params.openDirection === OpenDirection.RIGHT) {
       // Swipe Left (Right Underlay revealed)
-      if ((mode === 'home' || mode === 'read') && onTriggerDelete) {
+      if ((mode === 'home' || mode === 'read' || mode === 'recommendation') && onTriggerDelete) {
         onTriggerDelete(item);
-        itemRef.current?.close();
       }
+      itemRef.current?.close(); // Close after action
     }
   }, [mode, onMarkAsRead, onAdd, onTriggerDelete, item, toReadIds, readIds]);
 
@@ -288,6 +306,9 @@ export const BookList = <T extends FinnaSearchResult>({ books, mode = 'search', 
         contentContainerStyle={styles.list}
         activationDistance={20}
         containerStyle={styles.flatListContainer}
+        ListHeaderComponent={(props as any).ListHeaderComponent}
+        ListFooterComponent={(props as any).ListFooterComponent}
+        scrollEnabled={props.scrollEnabled}
       />
       <BookOptionsModal
         isVisible={modalVisible}
@@ -442,4 +463,19 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#555',
   },
+  recommendationContainer: {
+    flexDirection: 'row',
+    marginTop: 8,
+    backgroundColor: '#F1F8E9',
+    padding: 8,
+    borderRadius: 8,
+    alignItems: 'flex-start',
+  },
+  recommendationText: {
+    marginLeft: 6,
+    color: '#33691E',
+    fontStyle: 'italic',
+    fontSize: 13,
+    flex: 1,
+  }
 });

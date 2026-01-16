@@ -13,13 +13,16 @@ import { useAuth } from '../context/AuthContext';
 type BookState = {
     myBooks: FirestoreBook[];
     readBooks: FirestoreBook[];
+    recommendations: FirestoreBook[];
 };
 
 type BookAction =
-    | { type: 'LOAD_BOOKS'; myBooks: FirestoreBook[]; readBooks: FirestoreBook[] }
+    | { type: 'LOAD_BOOKS'; myBooks: FirestoreBook[]; readBooks: FirestoreBook[]; recommendations: FirestoreBook[] }
     | { type: 'ADD_BOOK'; book: FirestoreBook }
     | { type: 'REMOVE_BOOK'; bookId: string }
+    | { type: 'REMOVE_BOOK'; bookId: string }
     | { type: 'REMOVE_READ_BOOK'; bookId: string }
+    | { type: 'REMOVE_RECOMMENDATION'; bookId: string }
     | { type: 'MARK_AS_READ'; bookId: string; review?: string; rating?: number; readOrListened?: string }
     | { type: 'REORDER_BOOKS'; newList: FirestoreBook[]; listType: 'myBooks' | 'readBooks' }
     | { type: 'START_READING'; bookId: string };
@@ -27,6 +30,7 @@ type BookAction =
 const initialState: BookState = {
     myBooks: [],
     readBooks: [],
+    recommendations: [],
 };
 
 function bookReducer(state: BookState, action: BookAction): BookState {
@@ -36,6 +40,7 @@ function bookReducer(state: BookState, action: BookAction): BookState {
                 ...state,
                 myBooks: action.myBooks,
                 readBooks: action.readBooks,
+                recommendations: action.recommendations,
             };
         case 'ADD_BOOK':
             if (state.myBooks.find(b => b.id === action.book.id)) return state;
@@ -44,6 +49,8 @@ function bookReducer(state: BookState, action: BookAction): BookState {
             return { ...state, myBooks: state.myBooks.filter(book => book.id !== action.bookId) };
         case 'REMOVE_READ_BOOK':
             return { ...state, readBooks: state.readBooks.filter(book => book.id !== action.bookId) };
+        case 'REMOVE_RECOMMENDATION':
+            return { ...state, recommendations: state.recommendations.filter(book => book.id !== action.bookId) };
         case 'MARK_AS_READ':
             // Optimistic update logic if needed, but we rely on subscription mostly.
             // However, for smooth UI, we can keep it.
@@ -94,18 +101,20 @@ export const useBooks = () => {
 
     useEffect(() => {
         if (!user) {
-            dispatch({ type: 'LOAD_BOOKS', myBooks: [], readBooks: [] });
+            dispatch({ type: 'LOAD_BOOKS', myBooks: [], readBooks: [], recommendations: [] });
             return;
         }
 
         const unsubscribe = subscribeToBooks(user.uid, (books) => {
             const myBooks = books.filter(b => b.status === 'unread');
             const readBooks = books.filter(b => b.status === 'read');
+            const recommendations = books.filter(b => b.status === 'recommendation');
 
             dispatch({
                 type: 'LOAD_BOOKS',
                 myBooks,
-                readBooks
+                readBooks,
+                recommendations
             });
         });
 
@@ -114,6 +123,18 @@ export const useBooks = () => {
 
     const addBook = async (book: FinnaSearchResult) => {
         if (!user) return;
+
+        // If it's already in recommendations, we update it to unread
+        const existingRec = state.recommendations.find(b => b.id === book.id);
+        if (existingRec) {
+            dispatch({ type: 'REMOVE_RECOMMENDATION', bookId: book.id }); // Remove from recs in UI
+            // Add to myBooks in UI (will be reloaded by listener anyway, but for optimism)
+            // dispatch({ type: 'ADD_BOOK', book: { ...book, status: 'unread' } as FirestoreBook }); 
+            // Actually simpler to just update firestore
+            await updateBookInFirestore(user.uid, book.id, { status: 'unread', addedAt: new Date() });
+            return;
+        }
+
         if (state.myBooks.find(b => b.id === book.id) || state.readBooks.find(b => b.id === book.id)) {
             return;
         }
@@ -178,15 +199,56 @@ export const useBooks = () => {
         }
     };
 
+    const removeRecommendation = async (bookId: string) => {
+        if (!user) return;
+        dispatch({ type: 'REMOVE_RECOMMENDATION', bookId });
+        await removeBookFromFirestore(user.uid, bookId);
+    };
+
+    const generateRecommendations = async (userWishes?: string) => {
+        if (!user) return;
+
+        // delete old recommendations
+        const deletePromises = state.recommendations.map(r => removeBookFromFirestore(user.uid, r.id));
+        await Promise.all(deletePromises);
+
+        const readBookTitles = state.readBooks.map(b => `${b.title} by ${b.authors.join(', ')}`);
+
+        const { getBookRecommendations } = await import('../api/gemini');
+        const { searchFinna } = await import('../api/finna');
+
+        // If no read books, maybe pass empty array or handle inside api
+        const recommendations = await getBookRecommendations(readBookTitles, userWishes);
+
+        for (const rec of recommendations) {
+            const query = `${rec.title} ${rec.author}`;
+            const searchResults = await searchFinna(query);
+
+            const bestMatch = searchResults[0];
+
+            if (bestMatch) {
+                const alreadyExists = [...state.myBooks, ...state.readBooks, ...state.recommendations].some(b => b.id === bestMatch.id);
+                if (!alreadyExists) {
+                    await addBookToFirestore(user.uid, bestMatch, 'recommendation', rec.reason);
+                }
+            }
+        }
+    };
+
+
+
     return {
         myBooks: state.myBooks,
         readBooks: state.readBooks,
+        recommendations: state.recommendations,
         addBook,
         removeBook,
         removeReadBook,
+        removeRecommendation,
         markAsRead,
         reorderBooks,
         startReading,
+        generateRecommendations,
     };
 };
 
