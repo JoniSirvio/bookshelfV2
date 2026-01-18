@@ -23,7 +23,7 @@ type BookAction =
     | { type: 'REMOVE_BOOK'; bookId: string }
     | { type: 'REMOVE_READ_BOOK'; bookId: string }
     | { type: 'REMOVE_RECOMMENDATION'; bookId: string }
-    | { type: 'MARK_AS_READ'; bookId: string; review?: string; rating?: number; readOrListened?: string }
+    | { type: 'MARK_AS_READ'; bookId: string; review?: string; rating?: number; readOrListened?: string; finishedDate?: string }
     | { type: 'REORDER_BOOKS'; newList: FirestoreBook[]; listType: 'myBooks' | 'readBooks' }
     | { type: 'START_READING'; bookId: string };
 
@@ -63,7 +63,7 @@ function bookReducer(state: BookState, action: BookAction): BookState {
                 review: action.review,
                 rating: action.rating,
                 readOrListened: action.readOrListened,
-                finishedReading: new Date().toISOString(),
+                finishedReading: action.finishedDate || new Date().toISOString(),
                 daysRead: bookToMark.startedReading
                     ? Math.ceil((new Date().getTime() - new Date(bookToMark.startedReading).getTime()) / (1000 * 3600 * 24))
                     : undefined,
@@ -121,24 +121,30 @@ export const useBooks = () => {
         return () => unsubscribe();
     }, [user]);
 
-    const addBook = async (book: FinnaSearchResult) => {
+    const addBook = async (book: FinnaSearchResult, status: 'unread' | 'read' = 'unread', finishedDate?: string) => {
         if (!user) return;
 
-        // If it's already in recommendations, we update it to unread
+        // If it's already in recommendations, we update it to new status
         const existingRec = state.recommendations.find(b => b.id === book.id);
         if (existingRec) {
             dispatch({ type: 'REMOVE_RECOMMENDATION', bookId: book.id }); // Remove from recs in UI
             // Add to myBooks in UI (will be reloaded by listener anyway, but for optimism)
             // dispatch({ type: 'ADD_BOOK', book: { ...book, status: 'unread' } as FirestoreBook }); 
             // Actually simpler to just update firestore
-            await updateBookInFirestore(user.uid, book.id, { status: 'unread', addedAt: new Date() });
+
+            const updatePayload: any = { status: status, addedAt: new Date() };
+            if (status === 'read') {
+                updatePayload.finishedReading = finishedDate || new Date().toISOString();
+            }
+
+            await updateBookInFirestore(user.uid, book.id, updatePayload);
             return;
         }
 
         if (state.myBooks.find(b => b.id === book.id) || state.readBooks.find(b => b.id === book.id)) {
             return;
         }
-        await addBookToFirestore(user.uid, book);
+        await addBookToFirestore(user.uid, book, status, undefined, finishedDate);
     };
 
     const removeBook = async (bookId: string) => {
@@ -153,20 +159,26 @@ export const useBooks = () => {
         await removeBookFromFirestore(user.uid, bookId);
     };
 
-    const markAsRead = async (bookId: string, review?: string, rating?: number, readOrListened?: string) => {
+    const markAsRead = async (bookId: string, review?: string, rating?: number, readOrListened?: string, finishedDate?: string) => {
         if (!user) return;
         const book = state.myBooks.find(b => b.id === bookId);
         if (!book) return;
 
-        dispatch({ type: 'MARK_AS_READ', bookId, review, rating, readOrListened }); // Optimistic
+        dispatch({ type: 'MARK_AS_READ', bookId, review, rating, readOrListened, finishedDate }); // Optimistic
 
         const daysRead = book.startedReading
             ? Math.ceil((new Date().getTime() - new Date(book.startedReading).getTime()) / (1000 * 3600 * 24))
             : undefined;
 
+        const currentMinOrder = state.readBooks.length > 0
+            ? Math.min(...state.readBooks.map(b => b.order || 0))
+            : Date.now();
+        const newOrder = currentMinOrder - 1000;
+
         const updateData: Partial<FirestoreBook> = {
             status: 'read',
-            finishedReading: new Date().toISOString(),
+            finishedReading: finishedDate || new Date().toISOString(),
+            order: newOrder
         };
 
         if (review !== undefined) updateData.review = review;

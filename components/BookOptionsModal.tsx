@@ -17,6 +17,7 @@ interface BookOptionsModalProps {
     showStartReading?: boolean;
     toReadIds?: string[];
     readIds?: string[];
+    onRateAndReview?: (book: FinnaSearchResult) => void;
 }
 
 const BookOptionsModal: React.FC<BookOptionsModalProps> = ({
@@ -31,6 +32,7 @@ const BookOptionsModal: React.FC<BookOptionsModalProps> = ({
     showStartReading,
     toReadIds,
     readIds,
+    onRateAndReview,
 }) => {
     if (!book) return null;
 
@@ -68,7 +70,13 @@ const BookOptionsModal: React.FC<BookOptionsModalProps> = ({
                             {onMarkAsRead && (
                                 <TouchableOpacity style={styles.option} onPress={() => { onMarkAsRead(book); onClose(); }}>
                                     <MaterialCommunityIcons name="check-all" size={24} color="#636B2F" />
-                                    <Text style={styles.optionText}>Merkitse luetuksi</Text>
+                                    <Text style={styles.optionText}>Lisää luetuksi{'\n'}(ilman arvostelua)</Text>
+                                </TouchableOpacity>
+                            )}
+                            {onRateAndReview && (
+                                <TouchableOpacity style={styles.option} onPress={() => { onRateAndReview(book); onClose(); }}>
+                                    <MaterialCommunityIcons name="star-outline" size={24} color="#636B2F" />
+                                    <Text style={styles.optionText}>Arvostele ja merkitse luetuksi</Text>
                                 </TouchableOpacity>
                             )}
                             {onTriggerDelete && (
@@ -82,25 +90,41 @@ const BookOptionsModal: React.FC<BookOptionsModalProps> = ({
 
                     {/* Search Mode Actions */}
                     {mode === 'search' && onAdd && (
-                        <TouchableOpacity
-                            style={[styles.option, alreadyAdded && styles.disabledOption]}
-                            onPress={() => {
-                                if (!alreadyAdded) {
-                                    onAdd(book);
-                                    onClose();
-                                }
-                            }}
-                            disabled={alreadyAdded}
-                        >
-                            <MaterialCommunityIcons
-                                name={alreadyAdded ? "check" : "plus-circle-outline"}
-                                size={24}
-                                color={alreadyAdded ? "#9E9E9E" : "#636B2F"}
-                            />
-                            <Text style={[styles.optionText, alreadyAdded && { color: '#9E9E9E' }]}>
-                                {alreadyAdded ? "Hyllyssä" : "Lisää hyllyyn"}
-                            </Text>
-                        </TouchableOpacity>
+                        <>
+                            {onMarkAsRead && !alreadyAdded && (
+                                <TouchableOpacity style={styles.option} onPress={() => { onMarkAsRead(book); onClose(); }}>
+                                    <MaterialCommunityIcons name="check-all" size={24} color="#636B2F" />
+                                    <Text style={styles.optionText}>Lisää luetuksi{'\n'}(ilman arvostelua)</Text>
+                                </TouchableOpacity>
+                            )}
+
+                            {onRateAndReview && !alreadyAdded && (
+                                <TouchableOpacity style={styles.option} onPress={() => { onRateAndReview(book); onClose(); }}>
+                                    <MaterialCommunityIcons name="star-outline" size={24} color="#636B2F" />
+                                    <Text style={styles.optionText}>Arvostele ja merkitse luetuksi</Text>
+                                </TouchableOpacity>
+                            )}
+
+                            <TouchableOpacity
+                                style={[styles.option, alreadyAdded && styles.disabledOption]}
+                                onPress={() => {
+                                    if (!alreadyAdded) {
+                                        onAdd(book);
+                                        onClose();
+                                    }
+                                }}
+                                disabled={alreadyAdded}
+                            >
+                                <MaterialCommunityIcons
+                                    name={alreadyAdded ? "check" : "plus-circle-outline"}
+                                    size={24}
+                                    color={alreadyAdded ? "#9E9E9E" : "#636B2F"}
+                                />
+                                <Text style={[styles.optionText, alreadyAdded && { color: '#9E9E9E' }]}>
+                                    {alreadyAdded ? "Hyllyssä" : "Lisää hyllyyn"}
+                                </Text>
+                            </TouchableOpacity>
+                        </>
                     )}
 
                     {/* Read Mode Actions */}

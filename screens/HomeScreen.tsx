@@ -24,7 +24,7 @@ const HomeScreen: React.FC = () => {
 
 
   // Handlers for Review Modal
-  const handleOpenReviewModal = (book: FinnaSearchResult) => {
+  const handleRateAndReview = (book: FinnaSearchResult) => {
     setSelectedBookForReview(book);
     setIsReviewModalVisible(true);
   };
@@ -34,8 +34,8 @@ const HomeScreen: React.FC = () => {
     setSelectedBookForReview(null);
   };
 
-  const handleSaveReview = (bookId: string, review: string, rating: number, readOrListened: string) => {
-    markAsRead(bookId, review, rating, readOrListened);
+  const handleSaveReview = (bookId: string, review: string, rating: number, readOrListened: string, finishedDate?: string) => {
+    markAsRead(bookId, review, rating, readOrListened, finishedDate);
     handleCloseReviewModal();
   };
 
@@ -136,7 +136,8 @@ const HomeScreen: React.FC = () => {
         ListFooterComponent={renderFooter()}
         books={myBooks}
         onTriggerDelete={handleOpenDeleteModal}
-        onMarkAsRead={handleOpenReviewModal} // Swipe right opens review modal
+        onMarkAsRead={(book) => markAsRead(book.id)} // Click/Swipe Immediate
+        onRateAndReview={handleRateAndReview} // Click Menu Review
         mode="home"
         onReorder={(newList) => {
           reorderBooks(newList, 'myBooks')
@@ -149,8 +150,8 @@ const HomeScreen: React.FC = () => {
           isVisible={isReviewModalVisible}
           onClose={handleCloseReviewModal}
           onSaveReview={handleSaveReview}
-          onMarkAsReadWithoutReview={(bookId, readOrListened) => {
-            markAsRead(bookId, undefined, undefined, readOrListened);
+          onMarkAsReadWithoutReview={(bookId, readOrListened, finishedDate) => {
+            markAsRead(bookId, undefined, undefined, readOrListened, finishedDate);
             handleCloseReviewModal();
           }}
           bookId={selectedBookForReview.id}

@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { Modal, View, Text, TextInput, StyleSheet, TouchableOpacity, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { Modal, View, Text, TextInput, StyleSheet, TouchableOpacity, Platform, TouchableWithoutFeedback, Keyboard, Switch, ScrollView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SegmentedButtons } from 'react-native-paper';
 
 interface ReviewModalProps {
   isVisible: boolean;
   onClose: () => void;
-  onSaveReview: (bookId: string, review: string, rating: number, readOrListened: string) => void;
-  onMarkAsReadWithoutReview: (bookId: string, readOrListened: string) => void;
+  onSaveReview: (bookId: string, review: string, rating: number, readOrListened: string, finishedDate?: string) => void;
+  onMarkAsReadWithoutReview: (bookId: string, readOrListened: string, finishedDate?: string) => void;
   bookId: string;
   bookTitle: string;
   bookAuthors?: string[];
@@ -25,17 +25,46 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
   const [reviewText, setReviewText] = useState('');
   const [rating, setRating] = useState(0); // 0-5
   const [readOrListened, setReadOrListened] = useState('read');
+  const [useCustomDate, setUseCustomDate] = useState(false);
+
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth() + 1; // 1-12
+  const [selectedYear, setSelectedYear] = useState(currentYear.toString());
+  const [selectedMonth, setSelectedMonth] = useState((new Date().getMonth() + 1).toString());
+
+  const months = [
+    { label: 'Tammi', value: '1' }, { label: 'Helmi', value: '2' }, { label: 'Maalis', value: '3' },
+    { label: 'Huhti', value: '4' }, { label: 'Touko', value: '5' }, { label: 'Kesä', value: '6' },
+    { label: 'Heinä', value: '7' }, { label: 'Elo', value: '8' }, { label: 'Syys', value: '9' },
+    { label: 'Loka', value: '10' }, { label: 'Marras', value: '11' }, { label: 'Joulu', value: '12' }
+  ];
+
+  const getFinishedDate = () => {
+    if (!useCustomDate) return undefined;
+    // Default to 1st of the month, or current day if current month/year
+    // Actually, if backdating, just picking a valid date in that month is enough.
+    // Let's stick to 12:00 PM to avoid timezone jumping issues with simple dates
+    const monthIndex = parseInt(selectedMonth) - 1;
+    const date = new Date(parseInt(selectedYear), monthIndex, 1, 12, 0, 0);
+    return date.toISOString();
+  };
 
   const handleSave = () => {
-    onSaveReview(bookId, reviewText, rating, readOrListened);
-    setReviewText('');
-    setRating(0);
+    onSaveReview(bookId, reviewText, rating, readOrListened, getFinishedDate());
+    resetState();
   };
 
   const handleMarkAsRead = () => {
-    onMarkAsReadWithoutReview(bookId, readOrListened);
+    onMarkAsReadWithoutReview(bookId, readOrListened, getFinishedDate());
+    resetState();
+  };
+
+  const resetState = () => {
     setReviewText('');
     setRating(0);
+    setUseCustomDate(false);
+    setSelectedYear(currentYear.toString());
+    setSelectedMonth((new Date().getMonth() + 1).toString());
   };
 
   const renderStars = () => {
@@ -64,79 +93,125 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.centeredView}>
           <View style={styles.modalView}>
-            <Text style={styles.modalTitle}>
-              Arvostele "{bookTitle}"
-              {bookAuthors && bookAuthors.length > 0 ? ` - ${bookAuthors.join(', ')}` : ''}
-            </Text>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+              <Text style={styles.modalTitle}>
+                Arvostele "{bookTitle}"
+                {bookAuthors && bookAuthors.length > 0 ? ` - ${bookAuthors.join(', ')}` : ''}
+              </Text>
 
-            <SegmentedButtons
-              value={readOrListened}
-              onValueChange={setReadOrListened}
-              buttons={[
-                {
-                  value: 'read',
-                  label: 'Luettu',
-                  icon: 'book-open-page-variant-outline',
-                },
-                {
-                  value: 'listened',
-                  label: 'Kuunneltu',
-                  icon: 'headphones',
-                },
-              ]}
-              style={styles.segmentedButtons}
-              theme={{
-                colors: {
-                  secondaryContainer: '#636B2F',
-                  onSecondaryContainer: '#FFFFFF',
-                },
-              }}
-            />
-
-            <Text style={styles.label}>Tähdet (1-5):</Text>
-            {renderStars()}
-            <Text style={styles.currentRatingText}>Valittu: {rating}/5 tähteä</Text>
-
-            <Text style={styles.label}>Arvostelu:</Text>
-            <TextInput
-              style={styles.reviewInput}
-              multiline
-              placeholder="Kirjoita lyhyt arvostelu..."
-              placeholderTextColor="#666"
-              value={reviewText}
-              onChangeText={setReviewText}
-            />
-
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.button,
-                  styles.primaryButton,
-                  (rating === 0 && reviewText.trim().length === 0) && styles.disabledButton
+              <SegmentedButtons
+                value={readOrListened}
+                onValueChange={setReadOrListened}
+                buttons={[
+                  {
+                    value: 'read',
+                    label: 'Luettu',
+                    icon: 'book-open-page-variant-outline',
+                  },
+                  {
+                    value: 'listened',
+                    label: 'Kuunneltu',
+                    icon: 'headphones',
+                  },
                 ]}
-                onPress={handleSave}
-                disabled={rating === 0 && reviewText.trim().length === 0}
-              >
-                <View style={styles.buttonContent}>
-                  <MaterialCommunityIcons name="content-save-outline" size={20} color="white" style={styles.buttonIcon} />
-                  <Text style={styles.primaryButtonText}>Tallenna arvostelu</Text>
+                style={styles.segmentedButtons}
+                theme={{
+                  colors: {
+                    secondaryContainer: '#636B2F',
+                    onSecondaryContainer: '#FFFFFF',
+                  },
+                }}
+              />
+
+              <View style={styles.dateOptionContainer}>
+                <View style={styles.switchContainer}>
+                  <Text style={styles.switchLabel}>Valitse ajankohta</Text>
+                  <Switch
+                    trackColor={{ false: "#767577", true: "#a5d6a7" }}
+                    thumbColor={useCustomDate ? "#636B2F" : "#f4f3f4"}
+                    ios_backgroundColor="#3e3e3e"
+                    onValueChange={setUseCustomDate}
+                    value={useCustomDate}
+                  />
                 </View>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.secondaryButton]}
-                onPress={handleMarkAsRead}
-              >
-                <Text style={styles.secondaryButtonText}>
-                  Merkitse luetuksi{'\n'}(ilman arvostelua)
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.cancelButton]}
-                onPress={onClose}
-              >
-                <Text style={styles.cancelButtonText}>Peruuta</Text>
-              </TouchableOpacity>
-            </View>
+
+                {useCustomDate && (
+                  <View style={styles.datePickerContainer}>
+                    <View style={styles.yearContainer}>
+                      <TouchableOpacity onPress={() => setSelectedYear((parseInt(selectedYear) - 1).toString())}>
+                        <MaterialCommunityIcons name="chevron-left" size={24} color="#333" />
+                      </TouchableOpacity>
+                      <Text style={styles.yearText}>{selectedYear}</Text>
+                      <TouchableOpacity
+                        onPress={() => setSelectedYear((parseInt(selectedYear) + 1).toString())}
+                        disabled={parseInt(selectedYear) >= currentYear}
+                        style={{ opacity: parseInt(selectedYear) >= currentYear ? 0.3 : 1 }}
+                      >
+                        <MaterialCommunityIcons name="chevron-right" size={24} color="#333" />
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.monthsGrid}>
+                      {months.map((m) => {
+                        const isFuture = parseInt(selectedYear) === currentYear && parseInt(m.value) > currentMonth;
+                        return (
+                          <TouchableOpacity
+                            key={m.value}
+                            style={[
+                              styles.monthChip,
+                              selectedMonth === m.value && styles.selectedMonthChip,
+                              isFuture && styles.disabledMonthChip
+                            ]}
+                            onPress={() => !isFuture && setSelectedMonth(m.value)}
+                            disabled={isFuture}
+                          >
+                            <Text style={[
+                              styles.monthText,
+                              selectedMonth === m.value && styles.selectedMonthText,
+                              isFuture && styles.disabledMonthText
+                            ]}>{m.label}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                )}
+              </View>
+
+              <Text style={styles.label}>Tähdet (1-5):</Text>
+              {renderStars()}
+              <Text style={styles.currentRatingText}>Valittu: {rating}/5 tähteä</Text>
+
+              <Text style={styles.label}>Arvostelu:</Text>
+              <TextInput
+                style={styles.reviewInput}
+                multiline
+                placeholder="Kirjoita lyhyt arvostelu..."
+                placeholderTextColor="#666"
+                value={reviewText}
+                onChangeText={setReviewText}
+              />
+
+              <View style={styles.buttonContainer}>
+                <TouchableOpacity
+                  style={[
+                    styles.button,
+                    styles.primaryButton
+                  ]}
+                  onPress={handleSave}
+                >
+                  <View style={styles.buttonContent}>
+                    <MaterialCommunityIcons name="content-save-outline" size={20} color="white" style={styles.buttonIcon} />
+                    <Text style={styles.primaryButtonText}>Tallenna arvostelu</Text>
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.button, styles.cancelButton]}
+                  onPress={onClose}
+                >
+                  <Text style={styles.cancelButtonText}>Peruuta</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
           </View>
         </View>
       </TouchableWithoutFeedback>
@@ -154,8 +229,8 @@ const styles = StyleSheet.create({
   modalView: {
     margin: 20,
     backgroundColor: 'white',
-    borderRadius: 15, // Slightly less rounded
-    padding: 25, // Reduced padding
+    borderRadius: 15,
+    padding: 20, // Reduced padding
     alignItems: 'center',
     ...Platform.select({
       web: {
@@ -173,12 +248,17 @@ const styles = StyleSheet.create({
       },
     }),
     width: '90%',
-    maxWidth: 400, // Max width for larger screens
+    maxWidth: 400,
+    maxHeight: '85%', // Prevent overflow
+  },
+  scrollContent: {
+    alignItems: 'center',
+    paddingBottom: 10,
   },
   modalTitle: {
-    fontSize: 22, // Slightly larger title
+    fontSize: 20, // Slightly smaller title to save space
     fontWeight: 'bold',
-    marginBottom: 20, // More space below title
+    marginBottom: 15,
     textAlign: 'center',
     color: '#333',
   },
@@ -186,36 +266,36 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginTop: 10,
-    marginBottom: 8, // More space below label
+    marginBottom: 5,
     color: '#555',
   },
   starContainer: {
     flexDirection: 'row',
-    marginBottom: 15, // More space below stars
+    marginBottom: 10,
   },
   starButton: {
-    paddingHorizontal: 4, // Padding for better touch area
+    paddingHorizontal: 4,
   },
   currentRatingText: {
-    marginBottom: 20, // More space below rating text
+    marginBottom: 10,
     fontSize: 15,
     color: '#777',
   },
   reviewInput: {
-    height: 120, // Taller input
-    borderColor: '#ddd', // Lighter border
+    height: 100,
+    borderColor: '#ddd',
     borderWidth: 1,
-    borderRadius: 8, // Rounded input
+    borderRadius: 8,
     width: '100%',
     padding: 12,
-    marginBottom: 25, // More space below input
+    marginBottom: 15,
     textAlignVertical: 'top',
     fontSize: 16,
     color: '#333',
   },
   buttonContainer: {
     width: '100%',
-    gap: 12, // Space between buttons
+    gap: 10,
   },
   button: {
     paddingVertical: 12,
@@ -237,7 +317,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ccc',
   },
   primaryButton: {
-    backgroundColor: '#636B2F', // Green for primary action
+    backgroundColor: '#636B2F',
   },
   primaryButtonText: {
     color: 'white',
@@ -245,7 +325,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   secondaryButton: {
-    backgroundColor: '#2196F3', // Blue for secondary action
+    backgroundColor: '#2196F3',
   },
   secondaryButtonText: {
     color: 'white',
@@ -254,7 +334,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   cancelButton: {
-    backgroundColor: '#F44336', // Red for cancel action
+    backgroundColor: '#F44336',
   },
   cancelButtonText: {
     color: 'white',
@@ -262,7 +342,83 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   segmentedButtons: {
-    marginBottom: 20,
+    marginBottom: 15, // Reduced margin
+  },
+  dateOptionContainer: {
+    width: '100%',
+    marginBottom: 15,
+    padding: 12, // Increased padding
+    backgroundColor: '#FAFAFA',
+    borderRadius: 10,
+  },
+  switchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between', // Push switch to right
+    marginBottom: 5,
+  },
+  switchLabel: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  checkboxLabel: {
+    marginLeft: 8,
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
+  datePickerContainer: {
+    marginTop: 10, // Added margin top
+  },
+  yearContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    paddingHorizontal: 20,
+  },
+  yearText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  monthsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 5,
+  },
+  monthChip: {
+    width: '30%',
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  selectedMonthChip: {
+    backgroundColor: '#636B2F',
+  },
+  disabledMonthChip: {
+    opacity: 0.3,
+    backgroundColor: '#e0e0e0',
+  },
+  monthText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  selectedMonthText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  disabledMonthText: {
+    color: '#999',
   },
 });
 
