@@ -50,6 +50,10 @@ export const addBookToFirestore = async (userId: string, book: FinnaSearchResult
             addedAt: serverTimestamp(),
         };
 
+        if (status === 'read') {
+            newBook.finishedReading = new Date().toISOString();
+        }
+
         if (recommendationReason) {
             newBook.recommendationReason = recommendationReason;
         }

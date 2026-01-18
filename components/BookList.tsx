@@ -22,6 +22,7 @@ interface BookListProps<T extends FinnaSearchResult> {
   ListHeaderComponent?: React.ReactElement | null;
   ListFooterComponent?: React.ReactElement | null;
   scrollEnabled?: boolean;
+  onRateAndReview?: (book: T) => void;
 }
 
 const UnderlayLeft = ({ item, mode, toReadIds, readIds }: { item: FinnaSearchResult, mode: Mode, toReadIds?: string[], readIds?: string[] }) => {
@@ -322,6 +323,7 @@ export const BookList = <T extends FinnaSearchResult>({ books, mode = 'search', 
         showStartReading={mode === 'home' && selectedBook ? !selectedBook.startedReading : false}
         toReadIds={props.toReadIds}
         readIds={props.readIds}
+        onRateAndReview={props.onRateAndReview as any}
       />
     </>
   );

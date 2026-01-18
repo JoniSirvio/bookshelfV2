@@ -24,7 +24,7 @@ const HomeScreen: React.FC = () => {
 
 
   // Handlers for Review Modal
-  const handleOpenReviewModal = (book: FinnaSearchResult) => {
+  const handleRateAndReview = (book: FinnaSearchResult) => {
     setSelectedBookForReview(book);
     setIsReviewModalVisible(true);
   };
@@ -136,7 +136,8 @@ const HomeScreen: React.FC = () => {
         ListFooterComponent={renderFooter()}
         books={myBooks}
         onTriggerDelete={handleOpenDeleteModal}
-        onMarkAsRead={handleOpenReviewModal} // Swipe right opens review modal
+        onMarkAsRead={(book) => markAsRead(book.id)} // Click/Swipe Immediate
+        onRateAndReview={handleRateAndReview} // Click Menu Review
         mode="home"
         onReorder={(newList) => {
           reorderBooks(newList, 'myBooks')

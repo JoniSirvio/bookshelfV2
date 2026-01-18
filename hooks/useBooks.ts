@@ -121,24 +121,30 @@ export const useBooks = () => {
         return () => unsubscribe();
     }, [user]);
 
-    const addBook = async (book: FinnaSearchResult) => {
+    const addBook = async (book: FinnaSearchResult, status: 'unread' | 'read' = 'unread') => {
         if (!user) return;
 
-        // If it's already in recommendations, we update it to unread
+        // If it's already in recommendations, we update it to new status
         const existingRec = state.recommendations.find(b => b.id === book.id);
         if (existingRec) {
             dispatch({ type: 'REMOVE_RECOMMENDATION', bookId: book.id }); // Remove from recs in UI
             // Add to myBooks in UI (will be reloaded by listener anyway, but for optimism)
             // dispatch({ type: 'ADD_BOOK', book: { ...book, status: 'unread' } as FirestoreBook }); 
             // Actually simpler to just update firestore
-            await updateBookInFirestore(user.uid, book.id, { status: 'unread', addedAt: new Date() });
+
+            const updatePayload: any = { status: status, addedAt: new Date() };
+            if (status === 'read') {
+                updatePayload.finishedReading = new Date().toISOString();
+            }
+
+            await updateBookInFirestore(user.uid, book.id, updatePayload);
             return;
         }
 
         if (state.myBooks.find(b => b.id === book.id) || state.readBooks.find(b => b.id === book.id)) {
             return;
         }
-        await addBookToFirestore(user.uid, book);
+        await addBookToFirestore(user.uid, book, status);
     };
 
     const removeBook = async (bookId: string) => {
