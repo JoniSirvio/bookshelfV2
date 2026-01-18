@@ -34,8 +34,8 @@ const HomeScreen: React.FC = () => {
     setSelectedBookForReview(null);
   };
 
-  const handleSaveReview = (bookId: string, review: string, rating: number, readOrListened: string) => {
-    markAsRead(bookId, review, rating, readOrListened);
+  const handleSaveReview = (bookId: string, review: string, rating: number, readOrListened: string, finishedDate?: string) => {
+    markAsRead(bookId, review, rating, readOrListened, finishedDate);
     handleCloseReviewModal();
   };
 
@@ -150,8 +150,8 @@ const HomeScreen: React.FC = () => {
           isVisible={isReviewModalVisible}
           onClose={handleCloseReviewModal}
           onSaveReview={handleSaveReview}
-          onMarkAsReadWithoutReview={(bookId, readOrListened) => {
-            markAsRead(bookId, undefined, undefined, readOrListened);
+          onMarkAsReadWithoutReview={(bookId, readOrListened, finishedDate) => {
+            markAsRead(bookId, undefined, undefined, readOrListened, finishedDate);
             handleCloseReviewModal();
           }}
           bookId={selectedBookForReview.id}

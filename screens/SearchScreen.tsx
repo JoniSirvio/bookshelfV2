@@ -26,9 +26,9 @@ export default function SearchScreen() {
         setIsReviewModalVisible(true);
     };
 
-    const handleSaveReview = (bookId: string, review: string, rating: number, readOrListened: string) => {
+    const handleSaveReview = (bookId: string, review: string, rating: number, readOrListened: string, finishedDate?: string) => {
         if (selectedBookForReview) {
-            addBook({ ...selectedBookForReview, review, rating, readOrListened }, 'read');
+            addBook({ ...selectedBookForReview, review, rating, readOrListened }, 'read', finishedDate);
         }
         setIsReviewModalVisible(false);
         setSelectedBookForReview(null);
@@ -59,9 +59,9 @@ export default function SearchScreen() {
                         setSelectedBookForReview(null);
                     }}
                     onSaveReview={handleSaveReview}
-                    onMarkAsReadWithoutReview={(bookId, readOrListened) => {
+                    onMarkAsReadWithoutReview={(bookId, readOrListened, finishedDate) => {
                         if (selectedBookForReview) {
-                            addBook({ ...selectedBookForReview, readOrListened }, 'read');
+                            addBook({ ...selectedBookForReview, readOrListened }, 'read', finishedDate);
                         }
                         setIsReviewModalVisible(false);
                         setSelectedBookForReview(null);

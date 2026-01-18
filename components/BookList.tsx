@@ -150,7 +150,7 @@ const BookContent: React.FC<{
             </View>
           )}
 
-          {mode === 'read' && item.rating !== undefined && (
+          {mode === 'read' && (
             <View style={styles.reviewDetails}>
               {item.readOrListened && (
                 <View style={styles.readFormatContainer}>
@@ -169,12 +169,21 @@ const BookContent: React.FC<{
                 <View style={styles.dateContainer}>
                   <MaterialCommunityIcons name="calendar-month-outline" size={16} color="#555" />
                   <Text style={styles.dateText}>
-                    {new Date(item.finishedReading).toLocaleDateString('fi-FI')}
+                    {(() => {
+                      const date = new Date(item.finishedReading);
+                      const dateString = date.toLocaleDateString('fi-FI', { month: 'long', year: 'numeric' });
+                      return dateString.charAt(0).toUpperCase() + dateString.slice(1);
+                    })()}
                   </Text>
                 </View>
               )}
-              {renderStars(item.rating)}
-              <Text style={styles.ratingText}>{item.rating}/5 tähteä</Text>
+
+              {item.rating !== undefined && item.rating > 0 && (
+                <>
+                  {renderStars(item.rating)}
+                  <Text style={styles.ratingText}>{item.rating}/5 tähteä</Text>
+                </>
+              )}
               {item.review && <Text style={styles.reviewText}>"{item.review}"</Text>}
             </View>
           )}
@@ -201,7 +210,8 @@ function BookListItem<T extends FinnaSearchResult>({
   isActive,
   onMarkAsRead,
   onTriggerDelete,
-  onAdd
+  onAdd,
+  onRateAndReview
 }: {
   item: T;
   mode: Mode;
@@ -213,6 +223,7 @@ function BookListItem<T extends FinnaSearchResult>({
   onMarkAsRead?: (book: T) => void;
   onTriggerDelete?: (book: T) => void;
   onAdd?: (book: T) => void;
+  onRateAndReview?: (book: T) => void;
 }) {
 
   const itemRef = useRef<any>(null);
@@ -222,8 +233,8 @@ function BookListItem<T extends FinnaSearchResult>({
   const onChange = useCallback((params: { openDirection: OpenDirection, snapPoint: number }) => {
     if (params.openDirection === OpenDirection.LEFT) {
       // Swipe Right (Left Underlay revealed)
-      if (mode === 'home' && onMarkAsRead) {
-        onMarkAsRead(item);
+      if (mode === 'home' && onRateAndReview) {
+        onRateAndReview(item);
       } else if (mode === 'search' && onAdd) {
         if (!toReadIds?.includes(item.id) && !readIds?.includes(item.id)) {
           onAdd(item);
@@ -239,7 +250,7 @@ function BookListItem<T extends FinnaSearchResult>({
       }
       itemRef.current?.close(); // Close after action
     }
-  }, [mode, onMarkAsRead, onAdd, onTriggerDelete, item, toReadIds, readIds]);
+  }, [mode, onMarkAsRead, onAdd, onTriggerDelete, item, toReadIds, readIds, onRateAndReview]);
 
   return (
     <SwipeableItem
@@ -256,7 +267,7 @@ function BookListItem<T extends FinnaSearchResult>({
       <ScaleDecorator>
         <TouchableOpacity
           onPress={onPress}
-          onLongPress={mode === 'home' ? drag : undefined}
+          onLongPress={(mode === 'home' || mode === 'read') ? drag : undefined}
           disabled={isActive}
           activeOpacity={1} // SwipeableItem handles opacity
           style={[
@@ -293,6 +304,7 @@ export const BookList = <T extends FinnaSearchResult>({ books, mode = 'search', 
         onMarkAsRead={props.onMarkAsRead}
         onTriggerDelete={props.onTriggerDelete}
         onAdd={props.onAdd}
+        onRateAndReview={props.onRateAndReview}
       />
     );
   }, [mode, props]);
@@ -479,5 +491,11 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     fontSize: 13,
     flex: 1,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    marginBottom: 4,
   }
 });

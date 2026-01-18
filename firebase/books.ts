@@ -37,7 +37,7 @@ export const subscribeToBooks = (userId: string, onUpdate: (books: FirestoreBook
     return unsubscribe;
 };
 
-export const addBookToFirestore = async (userId: string, book: FinnaSearchResult, status: 'unread' | 'read' | 'recommendation' = 'unread', recommendationReason?: string) => {
+export const addBookToFirestore = async (userId: string, book: FinnaSearchResult, status: 'unread' | 'read' | 'recommendation' = 'unread', recommendationReason?: string, finishedDate?: string) => {
     try {
         const bookRef = doc(getUserBookCollection(userId), book.id);
 
@@ -51,7 +51,7 @@ export const addBookToFirestore = async (userId: string, book: FinnaSearchResult
         };
 
         if (status === 'read') {
-            newBook.finishedReading = new Date().toISOString();
+            newBook.finishedReading = finishedDate || new Date().toISOString();
         }
 
         if (recommendationReason) {
