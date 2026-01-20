@@ -182,14 +182,17 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
               <Text style={styles.currentRatingText}>Valittu: {rating}/5 tähteä</Text>
 
               <Text style={styles.label}>Arvostelu:</Text>
-              <TextInput
-                style={styles.reviewInput}
-                multiline
-                placeholder="Kirjoita lyhyt arvostelu..."
-                placeholderTextColor="#666"
-                value={reviewText}
-                onChangeText={setReviewText}
-              />
+              <View style={styles.reviewInputWrapper}>
+                <TextInput
+                  style={styles.reviewInput}
+                  multiline
+                  scrollEnabled={true}
+                  placeholder="Kirjoita lyhyt arvostelu..."
+                  placeholderTextColor="#666"
+                  value={reviewText}
+                  onChangeText={setReviewText}
+                />
+              </View>
 
               <View style={styles.buttonContainer}>
                 <TouchableOpacity
@@ -281,17 +284,21 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#777',
   },
-  reviewInput: {
+  reviewInputWrapper: {
     height: 100,
+    width: '100%',
+    marginBottom: 15,
     borderColor: '#ddd',
     borderWidth: 1,
     borderRadius: 8,
-    width: '100%',
     padding: 12,
-    marginBottom: 15,
+  },
+  reviewInput: {
+    flex: 1, // Fill the wrapper
     textAlignVertical: 'top',
     fontSize: 16,
     color: '#333',
+    padding: 0, // Remove padding from input itself to avoid scroll issues
   },
   buttonContainer: {
     width: '100%',
