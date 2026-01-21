@@ -380,10 +380,7 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#888',
     },
-    formContent: {
-        alignItems: 'center',
-        width: '100%',
-    },
+
     title: {
         fontSize: 24,
         fontWeight: 'bold',

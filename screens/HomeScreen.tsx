@@ -8,10 +8,21 @@ import BookOptionsModal from '../components/BookOptionsModal';
 import { useState, useRef } from "react";
 import { FinnaSearchResult } from "../api/finna";
 
+import { useABSInProgress } from "../hooks/useABSInProgress";
+
 const HomeScreen: React.FC = () => {
-  const { myBooks, removeBook, markAsRead, startReading, reorderBooks, recommendations, generateRecommendations, removeRecommendation, addBook } = useBooksContext();
+  const { myBooks, readBooks, removeBook, markAsRead, startReading, reorderBooks, recommendations, generateRecommendations, removeRecommendation, addBook } = useBooksContext();
+  const { inProgressBooks, loading: absLoading } = useABSInProgress(readBooks); // Fetch ABS items
+
   const [generating, setGenerating] = useState(false);
   const [userWishes, setUserWishes] = useState("");
+
+  // Combine ABS books with My Books
+  // We put ABS books at the top for visibility
+  const combinedBooks = [
+    ...inProgressBooks,
+    ...myBooks
+  ];
 
   // State for Review Modal
   const [isReviewModalVisible, setIsReviewModalVisible] = useState(false);
@@ -20,8 +31,6 @@ const HomeScreen: React.FC = () => {
   // State for Delete Confirmation Modal
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [selectedBookForDeletion, setSelectedBookForDeletion] = useState<FinnaSearchResult | null>(null);
-
-
 
   // Handlers for Review Modal
   const handleRateAndReview = (book: FinnaSearchResult) => {
@@ -35,7 +44,12 @@ const HomeScreen: React.FC = () => {
   };
 
   const handleSaveReview = (bookId: string, review: string, rating: number, readOrListened: string, finishedDate?: string) => {
-    markAsRead(bookId, review, rating, readOrListened, finishedDate);
+    // If it's the currently selected book (which might be ABS), pass the whole object
+    if (selectedBookForReview && selectedBookForReview.id === bookId) {
+      markAsRead(selectedBookForReview, review, rating, readOrListened, finishedDate);
+    } else {
+      markAsRead(bookId, review, rating, readOrListened, finishedDate);
+    }
     handleCloseReviewModal();
   };
 
@@ -82,7 +96,6 @@ const HomeScreen: React.FC = () => {
     }
   };
 
-
   const renderHeader = () => (
     <View>
       <Text style={styles.title}>Luettavien hylly</Text>
@@ -126,27 +139,41 @@ const HomeScreen: React.FC = () => {
     </View>
   );
 
-
-
+  const returnAlert = (msg: string) => alert(msg);
 
   return (
     <View style={styles.container}>
       <BookList
         ListHeaderComponent={renderHeader()}
         ListFooterComponent={renderFooter()}
-        books={myBooks}
+        books={combinedBooks} // Use merged list
         onTriggerDelete={handleOpenDeleteModal}
-        onMarkAsRead={(book) => markAsRead(book.id)} // Click/Swipe Immediate
-        onRateAndReview={handleRateAndReview} // Click Menu Review
+        onMarkAsRead={(book) => {
+          // Allow marking ABS books as read now
+          if (book.id.startsWith('abs-')) {
+            // Open review modal directly
+            handleRateAndReview(book);
+            return;
+          }
+          markAsRead(book.id)
+        }}
+        onRateAndReview={handleRateAndReview}
         mode="home"
         onReorder={(newList) => {
-          reorderBooks(newList, 'myBooks')
+          // Reordering might be tricky with mixed sources. 
+          // For now, filter out ABS books before saving order?
+          // or just disable reorder if ABS books are present?
+          // Let's filter:
+          const localBooksOnly = newList.filter(b => !b.id.startsWith('abs-'));
+          reorderBooks(localBooksOnly as any, 'myBooks')
         }}
-        onStartReading={(book) => startReading(book.id)}
+        onStartReading={(book) => !book.id.startsWith('abs-') && startReading(book.id)}
       />
+
 
       {selectedBookForReview && (
         <ReviewModal
+          key={selectedBookForReview.id} // Force re-render to reset state like readOrListened
           isVisible={isReviewModalVisible}
           onClose={handleCloseReviewModal}
           onSaveReview={handleSaveReview}
@@ -157,6 +184,7 @@ const HomeScreen: React.FC = () => {
           bookId={selectedBookForReview.id}
           bookTitle={selectedBookForReview.title}
           bookAuthors={selectedBookForReview.authors}
+          initialReadOrListened={selectedBookForReview.id.startsWith('abs-') ? 'listened' : 'read'}
         />
       )}
 

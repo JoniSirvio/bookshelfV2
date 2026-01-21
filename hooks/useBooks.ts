@@ -65,7 +65,7 @@ function bookReducer(state: BookState, action: BookAction): BookState {
                 readOrListened: action.readOrListened,
                 finishedReading: action.finishedDate || new Date().toISOString(),
                 daysRead: bookToMark.startedReading
-                    ? Math.ceil((new Date().getTime() - new Date(bookToMark.startedReading).getTime()) / (1000 * 3600 * 24))
+                    ? Math.ceil((new Date(action.finishedDate || new Date().toISOString()).getTime() - new Date(bookToMark.startedReading).getTime()) / (1000 * 3600 * 24))
                     : undefined,
             };
 
@@ -159,16 +159,32 @@ export const useBooks = () => {
         await removeBookFromFirestore(user.uid, bookId);
     };
 
-    const markAsRead = async (bookId: string, review?: string, rating?: number, readOrListened?: string, finishedDate?: string) => {
+    const markAsRead = async (bookOrId: string | FinnaSearchResult, review?: string, rating?: number, readOrListened?: string, finishedDate?: string) => {
         if (!user) return;
-        const book = state.myBooks.find(b => b.id === bookId);
-        if (!book) return;
 
-        dispatch({ type: 'MARK_AS_READ', bookId, review, rating, readOrListened, finishedDate }); // Optimistic
+        const bookId = typeof bookOrId === 'string' ? bookOrId : bookOrId.id;
+        let book = state.myBooks.find(b => b.id === bookId);
+
+        // If not in myBooks, maybe we provided the full book object (e.g. from Search or ABS)
+        if (!book && typeof bookOrId !== 'string') {
+            // Create a FirestoreBook from the passed object
+            book = {
+                ...bookOrId,
+                status: 'unread', // Temporary status before marking read
+                addedAt: new Date(),
+                authors: bookOrId.authors || [],
+            } as FirestoreBook;
+        }
+
+        if (!book) return; // Still not found
+
+        const actualFinishedDate = finishedDate || book.finishedReading || new Date().toISOString();
 
         const daysRead = book.startedReading
-            ? Math.ceil((new Date().getTime() - new Date(book.startedReading).getTime()) / (1000 * 3600 * 24))
+            ? Math.ceil((new Date(actualFinishedDate).getTime() - new Date(book.startedReading).getTime()) / (1000 * 3600 * 24))
             : undefined;
+
+        dispatch({ type: 'MARK_AS_READ', bookId, review, rating, readOrListened, finishedDate: actualFinishedDate }); // Optimistic
 
         const currentMinOrder = state.readBooks.length > 0
             ? Math.min(...state.readBooks.map(b => b.order || 0))
@@ -177,7 +193,7 @@ export const useBooks = () => {
 
         const updateData: Partial<FirestoreBook> = {
             status: 'read',
-            finishedReading: finishedDate || new Date().toISOString(),
+            finishedReading: actualFinishedDate,
             order: newOrder
         };
 
@@ -186,7 +202,17 @@ export const useBooks = () => {
         if (readOrListened !== undefined) updateData.readOrListened = readOrListened;
         if (daysRead !== undefined) updateData.daysRead = daysRead;
 
-        await updateBookInFirestore(user.uid, bookId, updateData);
+        // If it was already in myBooks, update it. If it's new (ABS/Search), add it directly as read.
+        if (state.myBooks.find(b => b.id === bookId)) {
+            await updateBookInFirestore(user.uid, bookId, updateData);
+        } else {
+            // It's a new book, add it directly to 'read' collection (or books collection with read status)
+            // updateBookInFirestore might fail if doc doesn't exist? updateBookInFirestore uses updateDoc.
+            // We need setDoc or addBookToFirestore logic.
+            // safest is to use addBookToFirestore with all data merged.
+            const newBookData = { ...book, ...updateData };
+            await addBookToFirestore(user.uid, newBookData, 'read', undefined, finishedDate);
+        }
     };
 
     const reorderBooks = async (newList: FirestoreBook[], listType: 'myBooks' | 'readBooks') => {

@@ -11,6 +11,7 @@ interface ReviewModalProps {
   bookId: string;
   bookTitle: string;
   bookAuthors?: string[];
+  initialReadOrListened?: string;
 }
 
 const ReviewModal: React.FC<ReviewModalProps> = ({
@@ -21,10 +22,11 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
   bookId,
   bookTitle,
   bookAuthors,
+  initialReadOrListened = 'read',
 }) => {
   const [reviewText, setReviewText] = useState('');
   const [rating, setRating] = useState(0); // 0-5
-  const [readOrListened, setReadOrListened] = useState('read');
+  const [readOrListened, setReadOrListened] = useState(initialReadOrListened);
   const [useCustomDate, setUseCustomDate] = useState(false);
 
   const currentYear = new Date().getFullYear();

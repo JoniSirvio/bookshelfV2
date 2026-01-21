@@ -15,7 +15,15 @@ export interface FinnaSearchResult {
     readOrListened?: string; // Added for read or listened status
     startedReading?: string; // ISO Date string
     finishedReading?: string; // ISO Date string
+    finishedReading?: string; // ISO Date string
     daysRead?: number;
+    absProgress?: {
+        percentage: number;
+        timeLeft: string;
+        duration: number;
+        currentTime: number;
+        isFinished?: boolean;
+    };
 }
 
 const FINNA_API_BASE_URL = 'https://api.finna.fi/api/v1/';
