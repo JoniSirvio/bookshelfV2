@@ -5,6 +5,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import HomeScreen from '../screens/HomeScreen';
 import SearchScreen from '../screens/SearchScreen';
 import PastReadScreen from '../screens/PastReadScreen';
+import ABSLibraryScreen from '../screens/ABSLibraryScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -26,6 +27,16 @@ export default function MyTabs() {
         tabBarActiveTintColor: '#636B2F',
       }}
     >
+      <Tab.Screen
+        name="Kirjasto"
+        component={ABSLibraryScreen}
+        options={{
+          tabBarLabel: 'ABS',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="bookshelf" size={size} color={color} />
+          ),
+        }}
+      />
       <Tab.Screen
         name="Home"
         component={HomeScreen}

@@ -1,49 +1,102 @@
 import React from "react";
-import { View, TextInput, StyleSheet } from "react-native";
+import { View, TextInput as NativeTextInput, StyleSheet, TouchableOpacity } from "react-native";
 import { Button } from "react-native-paper";
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface SearchBarProps {
-    query: string;
-    setQuery: (text: string) => void;
-    onSearch: () => void;
+    value?: string;
+    onChangeText?: (text: string) => void;
+    query?: string;
+    setQuery?: (text: string) => void;
+    onSearch?: () => void;
     loading?: boolean;
+    placeholder?: string;
 }
 
-export default function SearchBar({ query, setQuery, onSearch, loading }: SearchBarProps) {
+export default function SearchBar({
+    value,
+    onChangeText,
+    query,
+    setQuery,
+    onSearch,
+    loading,
+    placeholder
+}: SearchBarProps) {
+    // Resolve props to handle both usages
+    const effectiveValue = value ?? query ?? "";
+    const effectiveOnChange = onChangeText ?? setQuery;
+
     return (
-        <View style={styles.searchRow}>
-            <TextInput
-                placeholder="Etsi kirjaa..."
-                value={query}
-                onChangeText={setQuery}
-                style={styles.input}
-            />
-            <Button
-                icon="magnify"
-                mode="contained"
-                onPress={onSearch}
-                disabled={loading}
-                buttonColor="#636B2F"
-                textColor="#000"
-            >
-                Hae
-            </Button>
+        <View style={styles.container}>
+            <View style={styles.searchBar}>
+                <MaterialCommunityIcons
+                    name="magnify"
+                    size={20}
+                    color="#666"
+                    style={styles.searchIcon}
+                />
+                <NativeTextInput
+                    placeholder={placeholder || "Etsi kirjaa..."}
+                    placeholderTextColor="#999"
+                    value={effectiveValue}
+                    onChangeText={effectiveOnChange}
+                    style={styles.searchInput}
+                    selectionColor="#636B2F"
+                    onSubmitEditing={onSearch} // Allow keyboard submit
+                    returnKeyType="search"
+                />
+                {effectiveValue.length > 0 && (
+                    <TouchableOpacity onPress={() => effectiveOnChange?.('')}>
+                        <MaterialCommunityIcons name="close-circle" size={20} color="#999" />
+                    </TouchableOpacity>
+                )}
+            </View>
+            {onSearch && (
+                <Button
+                    mode="contained"
+                    onPress={onSearch}
+                    loading={loading}
+                    disabled={loading}
+                    buttonColor="#636B2F"
+                    textColor="#fff"
+                    style={styles.searchButton}
+                    contentStyle={{ height: 45 }}
+                >
+                    Hae
+                </Button>
+            )}
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    searchRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginBottom: 12,
-        gap: 8,
+    container: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 10,
+        gap: 10,
     },
-    input: {
+    searchBar: {
         flex: 1,
-        borderWidth: 1,
-        borderColor: "#ccc",
-        borderRadius: 8,
-        padding: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f5f5f5',
+        borderRadius: 10,
+        paddingHorizontal: 10,
+        height: 45,
+    },
+    searchIcon: {
+        marginRight: 8,
+    },
+    searchInput: {
+        flex: 1,
+        height: 45,
+        backgroundColor: 'transparent',
+        fontSize: 16,
+        color: '#333',
+    },
+    searchButton: {
+        borderRadius: 10,
+        justifyContent: 'center',
     },
 });

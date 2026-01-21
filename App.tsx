@@ -12,6 +12,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as SplashScreen from 'expo-splash-screen';
 import { useCallback, useEffect } from 'react';
 import { View, ActivityIndicator } from 'react-native';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { queryClient, clientPersister } from './utils/queryClient';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -74,9 +76,11 @@ export default function App() {
           icon: (props) => <MaterialCommunityIcons {...props} />,
         }}
       >
-        <AuthProvider>
-          <AppContent />
-        </AuthProvider>
+        <PersistQueryClientProvider client={queryClient} persistOptions={{ persister: clientPersister }}>
+          <AuthProvider>
+            <AppContent />
+          </AuthProvider>
+        </PersistQueryClientProvider>
       </PaperProvider>
     </GestureHandlerRootView>
   );
