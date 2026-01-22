@@ -5,6 +5,7 @@ import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-nativ
 import SwipeableItem, { OpenDirection, useSwipeableItemParams } from 'react-native-swipeable-item';
 import { FinnaSearchResult } from '../api/finna';
 import BookOptionsModal from './BookOptionsModal';
+import { BookCoverPlaceholder } from './BookCoverPlaceholder';
 
 type Mode = 'search' | 'home' | 'read' | 'recommendation';
 
@@ -137,14 +138,23 @@ const BookContent: React.FC<{
         {item.images?.length ? (
           <Image source={{ uri: item.images[0].url }} style={styles.coverImage} />
         ) : (
-          <View style={styles.coverPlaceholder}>
-            <MaterialCommunityIcons name="book-outline" size={40} />
+          <View style={[styles.coverImage, { overflow: 'hidden' }]}>
+            <BookCoverPlaceholder
+              id={item.id}
+              title={item.title}
+              authors={item.authors}
+              format={item.absProgress ? 'audiobook' : ((item as any).format || 'book')}
+            />
           </View>
         )}
         <View style={styles.itemText}>
           <Text style={styles.title}>{item.title || ''}</Text>
           <Text>{item.authors && item.authors.length > 0 ? item.authors.join(', ') : ''}</Text>
-          <Text>{item.publicationYear || ''}</Text>
+          <Text>{(() => {
+            if (!item.publicationYear) return '';
+            const y = item.publicationYear.split('-')[0];
+            return y.toLowerCase().includes('tuntematon') ? '' : y;
+          })()}</Text>
 
           {mode === 'home' && item.startedReading && !item.finishedReading && !item.absProgress && (
             <View style={styles.readingStatusContainer}>
@@ -571,5 +581,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     fontWeight: '500',
+  },
+  placeholderTitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#555',
+    textAlign: 'center',
+    padding: 4
   }
 });

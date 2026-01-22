@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, ScrollView, Dimensions } from "react-native";
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { BookList } from "../components/BookList";
 import { useBooksContext } from "../context/BooksContext";
@@ -7,6 +7,8 @@ import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
 import BookOptionsModal from '../components/BookOptionsModal';
 import { useState, useRef } from "react";
 import { FinnaSearchResult } from "../api/finna";
+import { BookGridItem } from "../components/BookGridItem";
+import { FlashList } from "@shopify/flash-list";
 
 import { useABSInProgress } from "../hooks/useABSInProgress";
 
@@ -16,6 +18,11 @@ const HomeScreen: React.FC = () => {
 
   const [generating, setGenerating] = useState(false);
   const [userWishes, setUserWishes] = useState("");
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+
+  // State for Options Modal (Grid View)
+  const [selectedBookForOptions, setSelectedBookForOptions] = useState<FinnaSearchResult | null>(null);
+  const [isOptionsModalVisible, setIsOptionsModalVisible] = useState(false);
 
   // Combine ABS books with My Books
   // We put ABS books at the top for visibility
@@ -97,8 +104,11 @@ const HomeScreen: React.FC = () => {
   };
 
   const renderHeader = () => (
-    <View>
+    <View style={styles.headerContainer}>
       <Text style={styles.title}>Luettavien hylly</Text>
+      <TouchableOpacity onPress={() => setViewMode(prev => prev === 'list' ? 'grid' : 'list')}>
+        <MaterialCommunityIcons name={viewMode === 'list' ? 'view-grid' : 'view-list'} size={28} color="#333" />
+      </TouchableOpacity>
     </View>
   );
 
@@ -143,37 +153,55 @@ const HomeScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <BookList
-        ListHeaderComponent={renderHeader()}
-        ListFooterComponent={renderFooter()}
-        books={combinedBooks} // Use merged list
-        onTriggerDelete={handleOpenDeleteModal}
-        onMarkAsRead={(book) => {
-          // Allow marking ABS books as read now
-          if (book.id.startsWith('abs-')) {
-            // Open review modal directly
-            handleRateAndReview(book);
-            return;
-          }
-          markAsRead(book.id)
-        }}
-        onRateAndReview={handleRateAndReview}
-        mode="home"
-        onReorder={(newList) => {
-          // Reordering might be tricky with mixed sources. 
-          // For now, filter out ABS books before saving order?
-          // or just disable reorder if ABS books are present?
-          // Let's filter:
-          const localBooksOnly = newList.filter(b => !b.id.startsWith('abs-'));
-          reorderBooks(localBooksOnly as any, 'myBooks')
-        }}
-        onStartReading={(book) => !book.id.startsWith('abs-') && startReading(book.id)}
-      />
-
+      {viewMode === 'list' ? (
+        <BookList
+          ListHeaderComponent={renderHeader()}
+          ListFooterComponent={renderFooter()}
+          books={combinedBooks}
+          onTriggerDelete={handleOpenDeleteModal}
+          onMarkAsRead={(book) => {
+            if (book.id.startsWith('abs-')) {
+              handleRateAndReview(book);
+              return;
+            }
+            markAsRead(book.id)
+          }}
+          onRateAndReview={handleRateAndReview}
+          mode="home"
+          onReorder={(newList) => {
+            const localBooksOnly = newList.filter(b => !b.id.startsWith('abs-'));
+            reorderBooks(localBooksOnly as any, 'myBooks')
+          }}
+          onStartReading={(book) => !book.id.startsWith('abs-') && startReading(book.id)}
+        />
+      ) : (
+        <FlashList
+          data={combinedBooks}
+          renderItem={({ item }) => (
+            <BookGridItem
+              id={item.id}
+              title={item.title}
+              authors={item.authors}
+              coverUrl={item.images?.[0]?.url}
+              publicationYear={item.publicationYear}
+              format={item.id.startsWith('abs-') ? 'audiobook' : 'book'}
+              onPress={() => {
+                setSelectedBookForOptions(item);
+                setIsOptionsModalVisible(true);
+              }}
+            />
+          )}
+          numColumns={3}
+          estimatedItemSize={200}
+          ListHeaderComponent={renderHeader()}
+          ListFooterComponent={renderFooter()}
+          contentContainerStyle={{ paddingBottom: 20 }}
+        />
+      )}
 
       {selectedBookForReview && (
         <ReviewModal
-          key={selectedBookForReview.id} // Force re-render to reset state like readOrListened
+          key={selectedBookForReview.id}
           isVisible={isReviewModalVisible}
           onClose={handleCloseReviewModal}
           onSaveReview={handleSaveReview}
@@ -196,6 +224,26 @@ const HomeScreen: React.FC = () => {
           bookTitle={selectedBookForDeletion.title}
         />
       )}
+
+      {selectedBookForOptions && (
+        <BookOptionsModal
+          isVisible={isOptionsModalVisible}
+          onClose={() => setIsOptionsModalVisible(false)}
+          book={selectedBookForOptions}
+          mode="home"
+          onTriggerDelete={handleOpenDeleteModal}
+          onMarkAsRead={(book) => {
+            if (book.id.startsWith('abs-')) {
+              handleRateAndReview(book);
+              return;
+            }
+            markAsRead(book.id);
+          }}
+          onStartReading={(book) => !book.id.startsWith('abs-') && startReading(book.id)}
+          onRateAndReview={handleRateAndReview}
+          showStartReading={!selectedBookForOptions.startedReading}
+        />
+      )}
     </View>
   );
 };
@@ -206,10 +254,15 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: "#fff",
   },
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   title: {
     fontSize: 24,
     fontWeight: "bold",
-    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 22,

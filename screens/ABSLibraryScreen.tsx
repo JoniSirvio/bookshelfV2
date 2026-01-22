@@ -6,6 +6,7 @@ import { FlashList } from '@shopify/flash-list';
 import { useABSCredentials } from '../hooks/useABSCredentials';
 import { fetchABSLibraries, fetchABSLibraryItems, getABSCoverUrl, loginToABS, ABSItem, ABSLibrary } from '../api/abs';
 import { BookList } from '../components/BookList'; // Import BookList
+import { BookGridItem } from '../components/BookGridItem';
 import { useBooksContext } from '../context/BooksContext'; // Import context
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -73,24 +74,25 @@ export default function ABSLibraryScreen() {
         if (!url || !token) return null;
         const coverUrl = getABSCoverUrl(url, token, item.id);
 
+        // Robust Format Detection
+        const currentLib = libraries?.find(l => l.id === selectedLibraryId);
+        const isAudio =
+            item.mediaType === 'audiobook' ||
+            currentLib?.mediaType === 'audiobook' ||
+            currentLib?.name?.toLowerCase().includes('audio');
+
         return (
-            <View style={styles.bookItem}>
-                <View style={styles.coverContainer}>
-                    {item.media.coverPath ? (
-                        <Image
-                            source={{ uri: coverUrl }}
-                            style={styles.coverImage}
-                            resizeMode="cover"
-                        />
-                    ) : (
-                        <View style={[styles.coverImage, styles.placeholderCover]}>
-                            <MaterialCommunityIcons name="book-open-page-variant" size={30} color="#ccc" />
-                        </View>
-                    )}
-                </View>
-                <Text style={styles.bookTitle} numberOfLines={2}>{item.media.metadata.title}</Text>
-                <Text style={styles.bookAuthor} numberOfLines={1}>{item.media.metadata.authorName}</Text>
-            </View>
+            <BookGridItem
+                id={item.id}
+                title={item.media.metadata.title}
+                authors={item.media.metadata.authors?.map(a => a.name) || [item.media.metadata.authorName || '']}
+                coverUrl={item.media.coverPath ? coverUrl : undefined}
+                publicationYear={item.media.metadata.publishedYear}
+                format={isAudio ? 'audiobook' : 'ebook'}
+                onPress={() => {
+                    // Future interaction
+                }}
+            />
         );
     };
 
@@ -223,13 +225,16 @@ export default function ABSLibraryScreen() {
     }) || [];
 
     // Adapter for BookList (ABS)
+    const currentLib = libraries?.find(l => l.id === selectedLibraryId);
+
     const bookListItems = filteredItems.map(item => ({
         id: item.id,
         title: item.media.metadata.title,
-        authors: item.media.metadata.authors?.map(a => a.name) || [item.media.metadata.authorName || 'Tuntematon'],
+        authors: item.media.metadata.authors?.map(a => a.name) || [item.media.metadata.authorName || ''],
         images: item.media.coverPath ? [{ url: getABSCoverUrl(url!, token!, item.id) }] : [],
         publicationYear: item.media.metadata.publishedYear, // Assuming prop exists or optional
-        description: item.media.metadata.description
+        description: item.media.metadata.description,
+        format: (item.mediaType === 'audiobook' || currentLib?.mediaType === 'audiobook' || currentLib?.name?.toLowerCase().includes('audio')) ? 'audiobook' : 'ebook'
     }));
 
     const toReadIds = myBooks.map(b => b.id);
@@ -497,14 +502,17 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     // ... (Styles)
-    input: {
-        width: '100%',
-        marginBottom: 15,
-        backgroundColor: 'white',
-    },
+
     saveButton: {
         width: '100%',
         marginTop: 10,
         paddingVertical: 5,
     },
+    placeholderTitle: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        color: '#555',
+        textAlign: 'center',
+        padding: 4
+    }
 });

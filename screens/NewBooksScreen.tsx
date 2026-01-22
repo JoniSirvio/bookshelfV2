@@ -9,11 +9,14 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import SearchBar from '../components/SearchBar';
 import ReviewModal from '../components/ReviewModal';
 import { setLastSeenNewBooksTime, getLastSeenNewBooksTime } from '../utils/notificationsStore';
+import { BookGridItem } from '../components/BookGridItem';
+import { FlashList } from '@shopify/flash-list';
 
 export default function NewBooksScreen() {
     const { url, token, loading: credsLoading } = useABSCredentials();
     const { myBooks, readBooks, addBook } = useBooksContext();
     const [selectedType, setSelectedType] = useState<'all' | 'audio' | 'ebook'>('all');
+    const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
     const [searchQuery, setSearchQuery] = useState('');
 
     // Review Modal State
@@ -156,11 +159,12 @@ export default function NewBooksScreen() {
     const bookListItems = filteredItems.map(item => ({
         id: item.id,
         title: item.media.metadata.title,
-        authors: item.media.metadata.authors?.map(a => a.name) || [item.media.metadata.authorName || 'Tuntematon'],
+        authors: item.media.metadata.authors?.map(a => a.name) || [item.media.metadata.authorName || ''],
         images: item.media.coverPath ? [{ url: getABSCoverUrl(url!, token!, item.id) }] : [],
         publicationYear: item.media.metadata.publishedYear,
         description: item.media.metadata.description,
-        addedAt: item.addedAt
+        addedAt: item.addedAt,
+        format: (libraryMediaTypeMap[item.libraryId] === 'audiobook' || (item.media?.duration || 0) > 0) ? 'audiobook' : 'ebook'
     }));
 
     const toReadIds = myBooks.map(b => b.id);
@@ -169,7 +173,12 @@ export default function NewBooksScreen() {
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>Uudet lisäykset</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <Text style={[styles.headerTitle, { marginBottom: 0 }]}>Uudet lisäykset</Text>
+                    <TouchableOpacity onPress={() => setViewMode(prev => prev === 'list' ? 'grid' : 'list')}>
+                        <MaterialCommunityIcons name={viewMode === 'list' ? 'view-grid' : 'view-list'} size={28} color="#333" />
+                    </TouchableOpacity>
+                </View>
 
                 {/* Type Toggles */}
                 <View style={styles.toggles}>
@@ -190,17 +199,38 @@ export default function NewBooksScreen() {
                 </View>
             </View>
 
-            <BookList
-                books={bookListItems as any}
-                mode="search"
-                toReadIds={toReadIds}
-                readIds={readIds}
-                onAdd={addBook}
-                onMarkAsRead={handleMarkAsRead}
-                onRateAndReview={handleRateAndReview}
-                ListHeaderComponent={<SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Suodata uutuuksia..." />}
-                scrollEnabled={true}
-            />
+            {viewMode === 'list' ? (
+                <BookList
+                    books={bookListItems as any}
+                    mode="search"
+                    toReadIds={toReadIds}
+                    readIds={readIds}
+                    onAdd={addBook}
+                    onMarkAsRead={handleMarkAsRead}
+                    onRateAndReview={handleRateAndReview}
+                    ListHeaderComponent={<SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Suodata uutuuksia..." />}
+                    scrollEnabled={true}
+                />
+            ) : (
+                <FlashList
+                    data={bookListItems}
+                    renderItem={({ item }) => (
+                        <BookGridItem
+                            id={item.id}
+                            title={item.title}
+                            authors={item.authors}
+                            coverUrl={item.images?.[0]?.url}
+                            publicationYear={item.publicationYear}
+                            format={(item as any).format}
+                            onPress={() => handleRateAndReview(item)}
+                        />
+                    )}
+                    numColumns={3}
+                    estimatedItemSize={200}
+                    ListHeaderComponent={<SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Suodata uutuuksia..." />}
+                    contentContainerStyle={{ paddingBottom: 20 }}
+                />
+            )}
 
             {/* Review Modal */}
             {selectedBookForReview && (
