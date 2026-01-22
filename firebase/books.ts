@@ -1,5 +1,6 @@
 import {
     onSnapshot,
+    getDocs,
     deleteDoc,
     doc,
     updateDoc,
@@ -22,6 +23,21 @@ export interface FirestoreBook extends FinnaSearchResult {
 }
 
 const getUserBookCollection = (userId: string) => collection(firestore, 'users', userId, 'books');
+
+export const fetchBooks = async (userId: string): Promise<FirestoreBook[]> => {
+    try {
+        const q = query(getUserBookCollection(userId), orderBy('order', 'asc'));
+        const snapshot = await getDocs(q);
+        const books: FirestoreBook[] = [];
+        snapshot.forEach((doc) => {
+            books.push({ ...doc.data(), firestoreId: doc.id } as FirestoreBook);
+        });
+        return books;
+    } catch (error) {
+        console.error("Error fetching books from Firestore: ", error);
+        return [];
+    }
+};
 
 export const subscribeToBooks = (userId: string, onUpdate: (books: FirestoreBook[]) => void) => {
     const q = query(getUserBookCollection(userId), orderBy('order', 'asc'));
