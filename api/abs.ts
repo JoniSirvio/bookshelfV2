@@ -8,6 +8,9 @@ export interface ABSLibrary {
 
 export interface ABSItem {
     id: string;
+    libraryId: string;
+    mediaType: string; // 'book', 'podcast'
+    addedAt: number; // Timestamp
     media: {
         metadata: {
             title: string;
@@ -18,6 +21,12 @@ export interface ABSItem {
             description?: string;
         };
         coverPath?: string;
+        duration?: number;
+        numAudioFiles?: number;
+        numPages?: number;
+        ebookFile?: any;
+        tracks?: any[];
+        audioFiles?: any[];
     };
     userMedia?: {
         currentTime: number;

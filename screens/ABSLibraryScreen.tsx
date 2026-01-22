@@ -18,18 +18,29 @@ const COLUMN_COUNT = 3;
 const ITEM_WIDTH = SCREEN_WIDTH / COLUMN_COUNT;
 
 import SearchBar from '../components/SearchBar'; // Shared component
+import { useFinnaSearchResults } from '../hooks/useBooks';
+import ReviewModal from '../components/ReviewModal';
 
 export default function ABSLibraryScreen() {
     const { url, token, loading: credsLoading } = useABSCredentials();
     const [selectedLibraryId, setSelectedLibraryId] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [searchQuery, setSearchQuery] = useState('');
-    const { myBooks, readBooks } = useBooksContext();
+    const { myBooks, readBooks, addBook } = useBooksContext();
     const { user } = useAuth();
     const [inputUrl, setInputUrl] = useState('');
     const [inputUsername, setInputUsername] = useState('');
     const [inputPassword, setInputPassword] = useState('');
     const [savingCreds, setSavingCreds] = useState(false);
+
+    // Finna State
+    const [searchSource, setSearchSource] = useState<'abs' | 'finna'>('abs');
+    const { results: finnaResults, loading: finnaLoading, searchBooks: searchFinna } = useFinnaSearchResults();
+    const [finnaQuery, setFinnaQuery] = useState('');
+
+    // Review Modal State
+    const [isReviewModalVisible, setIsReviewModalVisible] = useState(false);
+    const [selectedBookForReview, setSelectedBookForReview] = useState<any | null>(null);
 
     // 1. Fetch Libraries
     const { data: libraries, isLoading: librariesLoading } = useQuery({
@@ -116,6 +127,25 @@ export default function ABSLibraryScreen() {
         }
     };
 
+    // Finna Handlers
+    const handleMarkAsRead = (book: any) => {
+        addBook(book, 'read');
+    };
+
+    const handleRateAndReview = (book: any) => {
+        setSelectedBookForReview(book);
+        setIsReviewModalVisible(true);
+    };
+
+    const handleSaveReview = (bookId: string, review: string, rating: number, readOrListened: string, finishedDate?: string) => {
+        if (selectedBookForReview) {
+            addBook({ ...selectedBookForReview, review, rating, readOrListened }, 'read', finishedDate);
+        }
+        setIsReviewModalVisible(false);
+        setSelectedBookForReview(null);
+    };
+
+
     if (credsLoading) {
         return <View style={styles.center}><ActivityIndicator size="large" color="#636B2F" /></View>;
     }
@@ -182,7 +212,7 @@ export default function ABSLibraryScreen() {
         );
     }
 
-    // Filter items based on search query
+    // Filter items based on search query (ABS)
     const filteredItems = items?.filter(item => {
         if (!searchQuery) return true;
         const q = searchQuery.toLowerCase();
@@ -192,7 +222,7 @@ export default function ABSLibraryScreen() {
         return title.includes(q) || author.includes(q) || authors.includes(q);
     }) || [];
 
-    // Adapter for BookList
+    // Adapter for BookList (ABS)
     const bookListItems = filteredItems.map(item => ({
         id: item.id,
         title: item.media.metadata.title,
@@ -208,59 +238,132 @@ export default function ABSLibraryScreen() {
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <View style={styles.headerTop}>
-                    <Text style={styles.headerTitle}>Audiobookshelf</Text>
-                </View>
-
-                <View style={styles.tabsRow}>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.libraryTabs}>
-                        {libraries?.map(lib => (
-                            <TouchableOpacity
-                                key={lib.id}
-                                style={[styles.tab, selectedLibraryId === lib.id && styles.activeTab]}
-                                onPress={() => setSelectedLibraryId(lib.id)}
-                            >
-                                <Text style={[styles.tabText, selectedLibraryId === lib.id && styles.activeTabText]}>
-                                    {lib.name}
-                                    {selectedLibraryId === lib.id && filteredItems ? ` (${filteredItems.length})` : ''}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-
-                    <TouchableOpacity onPress={() => setViewMode(prev => prev === 'grid' ? 'list' : 'grid')} style={styles.viewToggle}>
+                <View style={[styles.headerTop, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+                    <Text style={styles.headerTitle}>
+                        {searchSource === 'abs' ? 'Audiobookshelf' : 'Finna-haku'}
+                    </Text>
+                    <TouchableOpacity
+                        onPress={() => setSearchSource(prev => prev === 'abs' ? 'finna' : 'abs')}
+                        style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            backgroundColor: '#F1F8E9',
+                            paddingHorizontal: 12,
+                            paddingVertical: 6,
+                            borderRadius: 20,
+                            borderWidth: 1,
+                            borderColor: '#C5E1A5'
+                        }}
+                    >
+                        <Text style={{ marginRight: 6, color: '#33691E', fontWeight: 'bold' }}>
+                            {searchSource === 'abs' ? 'Hae Finnasta' : 'Oma kirjasto'}
+                        </Text>
                         <MaterialCommunityIcons
-                            name={viewMode === 'grid' ? "view-list" : "view-grid"}
-                            size={28}
-                            color="#333"
+                            name={searchSource === 'abs' ? 'book-search' : 'bookshelf'}
+                            size={20}
+                            color="#33691E"
                         />
                     </TouchableOpacity>
                 </View>
+
+                {searchSource === 'abs' && (
+                    <View style={styles.tabsRow}>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.libraryTabs}>
+                            {libraries?.map(lib => (
+                                <TouchableOpacity
+                                    key={lib.id}
+                                    style={[styles.tab, selectedLibraryId === lib.id && styles.activeTab]}
+                                    onPress={() => setSelectedLibraryId(lib.id)}
+                                >
+                                    <Text style={[styles.tabText, selectedLibraryId === lib.id && styles.activeTabText]}>
+                                        {(lib.mediaType === 'audiobook' || lib.name.toLowerCase().includes('audio')) ? 'Äänikirjat' : (lib.mediaType === 'book' ? 'E-kirjat' : lib.name)}
+                                        {selectedLibraryId === lib.id && filteredItems ? ` (${filteredItems.length})` : ''}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+
+                        <TouchableOpacity onPress={() => setViewMode(prev => prev === 'grid' ? 'list' : 'grid')} style={styles.viewToggle}>
+                            <MaterialCommunityIcons
+                                name={viewMode === 'grid' ? "view-list" : "view-grid"}
+                                size={28}
+                                color="#333"
+                            />
+                        </TouchableOpacity>
+                    </View>
+                )}
             </View>
 
-            {itemsLoading && !items ? (
-                <View style={styles.center}><ActivityIndicator size="large" color="#636B2F" /></View>
-            ) : (
-                viewMode === 'grid' ? (
-                    <FlashList
-                        data={filteredItems}
-                        renderItem={renderItem}
-                        estimatedItemSize={200}
-                        numColumns={COLUMN_COUNT}
-                        contentContainerStyle={styles.listContent}
-                        onRefresh={handleRefresh}
-                        refreshing={itemsLoading}
-                        ListHeaderComponent={<SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Hae kirjaa tai kirjailijaa..." />}
-                        keyboardShouldPersistTaps="handled"
-                    />
+            {searchSource === 'abs' ? (
+                itemsLoading && !items ? (
+                    <View style={styles.center}><ActivityIndicator size="large" color="#636B2F" /></View>
                 ) : (
+                    viewMode === 'grid' ? (
+                        <FlashList
+                            data={filteredItems}
+                            renderItem={renderItem}
+                            estimatedItemSize={200}
+                            numColumns={COLUMN_COUNT}
+                            contentContainerStyle={styles.listContent}
+                            onRefresh={handleRefresh}
+                            refreshing={itemsLoading}
+                            ListHeaderComponent={<SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Hae kirjaa tai kirjailijaa..." />}
+                            keyboardShouldPersistTaps="handled"
+                        />
+                    ) : (
+                        <BookList
+                            books={bookListItems as any}
+                            mode="search"
+                            scrollEnabled={true}
+                            ListHeaderComponent={<SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Hae kirjaa tai kirjailijaa..." />}
+                        />
+                    )
+                )
+            ) : (
+                // Finna Search UI
+                <>
+                    <SearchBar
+                        query={finnaQuery}
+                        setQuery={setFinnaQuery}
+                        onSearch={() => searchFinna(finnaQuery)}
+                        loading={finnaLoading}
+                        placeholder="Hae Finnasta..."
+                        value={finnaQuery}
+                        onChangeText={setFinnaQuery}
+                    />
                     <BookList
-                        books={bookListItems as any}
+                        books={finnaResults}
+                        toReadIds={toReadIds}
+                        readIds={readIds}
+                        onAdd={addBook}
+                        onMarkAsRead={handleMarkAsRead}
+                        onRateAndReview={handleRateAndReview}
                         mode="search"
                         scrollEnabled={true}
-                        ListHeaderComponent={<SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Hae kirjaa tai kirjailijaa..." />}
                     />
-                )
+                </>
+            )}
+
+            {/* Review Modal for Finna items */}
+            {selectedBookForReview && (
+                <ReviewModal
+                    isVisible={isReviewModalVisible}
+                    onClose={() => {
+                        setIsReviewModalVisible(false);
+                        setSelectedBookForReview(null);
+                    }}
+                    onSaveReview={handleSaveReview}
+                    onMarkAsReadWithoutReview={(bookId, readOrListened, finishedDate) => {
+                        if (selectedBookForReview) {
+                            addBook({ ...selectedBookForReview, readOrListened }, 'read', finishedDate);
+                        }
+                        setIsReviewModalVisible(false);
+                        setSelectedBookForReview(null);
+                    }}
+                    bookId={selectedBookForReview.id}
+                    bookTitle={selectedBookForReview.title}
+                    bookAuthors={selectedBookForReview.authors}
+                />
             )}
         </View>
     );

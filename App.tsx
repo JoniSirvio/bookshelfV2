@@ -24,6 +24,11 @@ const theme = {
   version: 3 as const,
 };
 
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import NewBooksScreen from './screens/NewBooksScreen';
+
+const Stack = createNativeStackNavigator();
+
 const AppContent = () => {
   const { user, loading } = useAuth();
 
@@ -39,7 +44,23 @@ const AppContent = () => {
     <>
       <BooksProvider>
         <NavigationContainer>
-          <BottomNavi />
+          <Stack.Navigator>
+            <Stack.Screen
+              name="Main"
+              component={BottomNavi}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="NewBooks"
+              component={NewBooksScreen}
+              options={{
+                headerTitle: 'Uudet lisäykset',
+                headerStyle: { backgroundColor: '#636B2F' },
+                headerTintColor: '#fff',
+                headerBackTitle: 'Takaisin'
+              }}
+            />
+          </Stack.Navigator>
         </NavigationContainer>
       </BooksProvider>
       <LoginModal visible={!user} />
