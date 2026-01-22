@@ -5,9 +5,13 @@ import { useState, useMemo } from "react";
 import { FinnaSearchResult } from "../api/finna";
 import ConfirmDeleteModal from "../components/ConfirmDeleteModal";
 import BookOptionsModal from "../components/BookOptionsModal";
+import { BookGridItem } from "../components/BookGridItem";
+import { FlashList } from "@shopify/flash-list";
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function PastReadScreen() {
   const { readBooks, removeReadBook, reorderBooks } = useBooksContext();
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [selectedBookForDeletion, setSelectedBookForDeletion] = useState<FinnaSearchResult | null>(null);
@@ -92,7 +96,12 @@ export default function PastReadScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Luettujen hylly</Text>
+      <View style={styles.headerContainer}>
+        <Text style={styles.title}>Luettujen hylly</Text>
+        <TouchableOpacity onPress={() => setViewMode(prev => prev === 'list' ? 'grid' : 'list')}>
+          <MaterialCommunityIcons name={viewMode === 'list' ? 'view-grid' : 'view-list'} size={28} color="#333" />
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.filterContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContent}>
@@ -118,13 +127,33 @@ export default function PastReadScreen() {
         </ScrollView>
       </View>
 
-      <BookList
-        books={filteredBooks}
-        mode="read"
-        onTriggerDelete={handleOpenDeleteModal}
-        onReorder={(newList) => reorderBooks(newList, 'readBooks')}
-        onBookPress={handleOpenOptionsModal}
-      />
+      {viewMode === 'list' ? (
+        <BookList
+          books={filteredBooks}
+          mode="read"
+          onTriggerDelete={handleOpenDeleteModal}
+          onReorder={(newList) => reorderBooks(newList, 'readBooks')}
+          onBookPress={handleOpenOptionsModal}
+        />
+      ) : (
+        <FlashList
+          data={filteredBooks}
+          renderItem={({ item }) => (
+            <BookGridItem
+              id={item.id}
+              title={item.title}
+              authors={item.authors}
+              coverUrl={item.images?.[0]?.url}
+              publicationYear={item.publicationYear}
+              format={item.id.startsWith('abs-') ? 'audiobook' : 'book'}
+              onPress={() => handleOpenOptionsModal(item)}
+            />
+          )}
+          numColumns={3}
+          estimatedItemSize={200}
+          contentContainerStyle={{ paddingBottom: 20 }}
+        />
+      )}
       {selectedBookForDeletion && (
         <ConfirmDeleteModal
           isVisible={isDeleteModalVisible}
@@ -153,10 +182,15 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: "#fff",
   },
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   title: {
     fontSize: 24,
     fontWeight: "bold",
-    marginBottom: 8, // Reduced from 16 to fit total count close
   },
   totalCount: {
     fontSize: 16,

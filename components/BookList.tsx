@@ -5,6 +5,7 @@ import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-nativ
 import SwipeableItem, { OpenDirection, useSwipeableItemParams } from 'react-native-swipeable-item';
 import { FinnaSearchResult } from '../api/finna';
 import BookOptionsModal from './BookOptionsModal';
+import { BookCoverPlaceholder } from './BookCoverPlaceholder';
 
 type Mode = 'search' | 'home' | 'read' | 'recommendation';
 
@@ -109,17 +110,27 @@ const BookContent: React.FC<{
   const shelfLabel = isInToRead ? 'Luettavien hyllyssä' : 'Luettujen hyllyssä';
   const shelfIcon = isInToRead ? 'bookshelf' : 'book-check';
 
-  const getDaysRead = () => {
-    if (item.startedReading && !item.finishedReading) {
-      const start = new Date(item.startedReading).getTime();
-      const now = new Date().getTime();
-      const days = Math.ceil((now - start) / (1000 * 3600 * 24));
-      return days;
+  const calculateDuration = () => {
+    if (!item.startedReading) return null;
+    const start = new Date(item.startedReading).getTime();
+
+    // If finished, calculate total duration
+    if (item.finishedReading) {
+      const end = new Date(item.finishedReading).getTime();
+      return Math.ceil((end - start) / (1000 * 3600 * 24));
     }
+
+    // If in progress (and not ABS finished), calculate time since start
+    if (!item.absProgress?.isFinished) {
+      const now = new Date().getTime();
+      return Math.ceil((now - start) / (1000 * 3600 * 24));
+    }
+
+    // Fallback for ABS finished but not yet marked locally (technically handled by first case if mapped correctly, but just safe-guard)
     return null;
   };
 
-  const currentDaysRead = getDaysRead();
+  const currentDaysRead = calculateDuration();
 
   return (
     <View style={styles.listItem}>
@@ -127,19 +138,65 @@ const BookContent: React.FC<{
         {item.images?.length ? (
           <Image source={{ uri: item.images[0].url }} style={styles.coverImage} />
         ) : (
-          <View style={styles.coverPlaceholder}>
-            <MaterialCommunityIcons name="book-outline" size={40} />
+          <View style={[styles.coverImage, { overflow: 'hidden' }]}>
+            <BookCoverPlaceholder
+              id={item.id}
+              title={item.title}
+              authors={item.authors}
+              format={item.absProgress ? 'audiobook' : ((item as any).format || 'book')}
+            />
           </View>
         )}
         <View style={styles.itemText}>
           <Text style={styles.title}>{item.title || ''}</Text>
           <Text>{item.authors && item.authors.length > 0 ? item.authors.join(', ') : ''}</Text>
-          <Text>{item.publicationYear || ''}</Text>
+          <Text>{(() => {
+            if (!item.publicationYear) return '';
+            const y = item.publicationYear.split('-')[0];
+            return y.toLowerCase().includes('tuntematon') ? '' : y;
+          })()}</Text>
 
-          {mode === 'home' && item.startedReading && !item.finishedReading && (
+          {mode === 'home' && item.startedReading && !item.finishedReading && !item.absProgress && (
             <View style={styles.readingStatusContainer}>
               <MaterialCommunityIcons name="book-open-page-variant" size={16} color="#636B2F" />
               <Text style={styles.readingStatusText}>Luetaan ({currentDaysRead} pv)</Text>
+            </View>
+          )}
+
+          {mode === 'home' && item.startedReading && !item.finishedReading && item.absProgress && !item.absProgress.isFinished && (
+            <View style={styles.readingStatusContainer}>
+              <MaterialCommunityIcons name="headphones" size={16} color="#636B2F" />
+              <Text style={styles.readingStatusText}>Kuunnellaan ({currentDaysRead} pv)</Text>
+            </View>
+          )}
+
+          {mode !== 'read' && item.absProgress && (
+            <View style={styles.absProgressContainer}>
+              {item.absProgress.isFinished ? (
+                <View style={[styles.absProgressBarBackground, { backgroundColor: '#E8F5E9' }]}>
+                  <View style={[styles.absProgressBarFill, { width: '100%', backgroundColor: '#636B2F' }]} />
+                </View>
+              ) : (
+                <View style={styles.absProgressBarBackground}>
+                  <View style={[styles.absProgressBarFill, { width: `${item.absProgress.percentage}%` }]} />
+                </View>
+              )}
+
+              <View style={styles.absProgressMeta}>
+                {item.absProgress.isFinished ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <MaterialCommunityIcons name="check-circle" size={14} color="#636B2F" style={{ marginRight: 4 }} />
+                    <Text style={[styles.absProgressText, { color: '#636B2F', fontWeight: 'bold' }]}>
+                      Kuunneltu ({currentDaysRead} pv) - Arvostele kirja
+                    </Text>
+                  </View>
+                ) : (
+                  <>
+                    <Text style={styles.absProgressText}>{Math.round(item.absProgress.percentage)}%</Text>
+                    <Text style={styles.absProgressText}>{item.absProgress.timeLeft} jäljellä</Text>
+                  </>
+                )}
+              </View>
             </View>
           )}
 
@@ -161,7 +218,9 @@ const BookContent: React.FC<{
                   />
                   <Text style={styles.readFormatText}>
                     {item.readOrListened === 'listened' ? 'Kuunneltu' : 'Luettu'}
-                    {item.daysRead !== undefined ? ` ${item.daysRead} päivässä` : ''}
+                    {(typeof item.daysRead === 'number' || currentDaysRead !== null)
+                      ? ` ${item.daysRead ?? currentDaysRead} päivässä`
+                      : ''}
                   </Text>
                 </View>
               )}
@@ -497,5 +556,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexWrap: 'wrap',
     marginBottom: 4,
+  },
+  absProgressContainer: {
+    marginTop: 8,
+    width: '100%',
+  },
+  absProgressBarBackground: {
+    height: 4,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 2,
+    marginBottom: 4,
+    overflow: 'hidden',
+  },
+  absProgressBarFill: {
+    height: '100%',
+    backgroundColor: '#636B2F',
+    borderRadius: 2,
+  },
+  absProgressMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  absProgressText: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
+  },
+  placeholderTitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#555',
+    textAlign: 'center',
+    padding: 4
   }
 });

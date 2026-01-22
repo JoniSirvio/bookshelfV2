@@ -12,6 +12,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as SplashScreen from 'expo-splash-screen';
 import { useCallback, useEffect } from 'react';
 import { View, ActivityIndicator } from 'react-native';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { queryClient, clientPersister } from './utils/queryClient';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -21,6 +23,11 @@ const theme = {
   // version 2 is the default, version 3 is the new MD3 theme
   version: 3 as const,
 };
+
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import NewBooksScreen from './screens/NewBooksScreen';
+
+const Stack = createNativeStackNavigator();
 
 const AppContent = () => {
   const { user, loading } = useAuth();
@@ -37,7 +44,23 @@ const AppContent = () => {
     <>
       <BooksProvider>
         <NavigationContainer>
-          <BottomNavi />
+          <Stack.Navigator>
+            <Stack.Screen
+              name="Main"
+              component={BottomNavi}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="NewBooks"
+              component={NewBooksScreen}
+              options={{
+                headerTitle: 'Uudet lisäykset',
+                headerStyle: { backgroundColor: '#636B2F' },
+                headerTintColor: '#fff',
+                headerBackTitle: 'Takaisin'
+              }}
+            />
+          </Stack.Navigator>
         </NavigationContainer>
       </BooksProvider>
       <LoginModal visible={!user} />
@@ -74,9 +97,11 @@ export default function App() {
           icon: (props) => <MaterialCommunityIcons {...props} />,
         }}
       >
-        <AuthProvider>
-          <AppContent />
-        </AuthProvider>
+        <PersistQueryClientProvider client={queryClient} persistOptions={{ persister: clientPersister }}>
+          <AuthProvider>
+            <AppContent />
+          </AuthProvider>
+        </PersistQueryClientProvider>
       </PaperProvider>
     </GestureHandlerRootView>
   );
