@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions } from 'react-native'; // Existing import, just context
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { BookCoverPlaceholder } from './BookCoverPlaceholder';
 
 const COLUMN_COUNT = 3;
@@ -14,9 +15,16 @@ interface BookGridItemProps {
     onPress?: () => void;
     publicationYear?: string;
     format?: 'audiobook' | 'ebook' | 'book';
+    absProgress?: {
+        percentage: number;
+        timeLeft: string;
+        duration: number;
+        currentTime: number;
+        isFinished?: boolean;
+    };
 }
 
-export const BookGridItem: React.FC<BookGridItemProps> = ({ id, title, authors, coverUrl, onPress, publicationYear, format = 'book' }) => {
+export const BookGridItem: React.FC<BookGridItemProps> = ({ id, title, authors, coverUrl, onPress, publicationYear, format = 'book', absProgress }) => {
     // Format year to just YYYY if it contains dashes
     let formattedYear = publicationYear ? publicationYear.split('-')[0] : undefined;
 
@@ -30,7 +38,10 @@ export const BookGridItem: React.FC<BookGridItemProps> = ({ id, title, authors, 
 
     return (
         <TouchableOpacity style={styles.bookItem} onPress={onPress} activeOpacity={0.7}>
-            <View style={styles.coverContainer}>
+            <View style={[
+                styles.coverContainer,
+                !coverUrl && { borderColor: '#636B2F', borderWidth: 2 }
+            ]}>
                 {coverUrl ? (
                     <Image
                         source={{ uri: coverUrl }}
@@ -46,6 +57,42 @@ export const BookGridItem: React.FC<BookGridItemProps> = ({ id, title, authors, 
                             format={format}
                         />
                     </View>
+                )}
+
+                {/* Progress / Finished Overlays */}
+                {absProgress && (
+                    <>
+                        {absProgress.isFinished ? (
+                            /* Finished Badge (Pill) */
+                            <View style={styles.finishedBadge}>
+                                <MaterialCommunityIcons name="check-circle" size={12} color="#FFFFFF" />
+                                <Text style={styles.finishedText}>Kuunneltu</Text>
+                            </View>
+                        ) : absProgress.percentage > 0 && (
+                            /* Active Progress Overlay */
+                            <>
+                                {/* Time Badge (Above Bar) */}
+                                {absProgress.timeLeft && (
+                                    <View style={styles.timeBadge}>
+                                        <Text style={styles.timeBadgeText}>{absProgress.timeLeft}</Text>
+                                    </View>
+                                )}
+
+                                {/* Progress Bar (Bottom) */}
+                                <View style={[styles.progressBarTrack, !coverUrl && { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
+                                    <View
+                                        style={[
+                                            styles.progressBarFill,
+                                            {
+                                                width: `${absProgress.percentage}%`,
+                                                backgroundColor: !coverUrl ? '#FFFFFF' : '#636B2F'
+                                            }
+                                        ]}
+                                    />
+                                </View>
+                            </>
+                        )}
+                    </>
                 )}
             </View>
             <Text style={styles.bookTitle} numberOfLines={2}>{title}</Text>
@@ -95,5 +142,52 @@ const styles = StyleSheet.create({
         fontSize: 11,
         color: '#999',
         marginTop: 2
+    },
+    /* Overlays */
+    finishedBadge: {
+        position: 'absolute',
+        bottom: 8,
+        right: 4,
+        backgroundColor: 'rgba(0, 0, 0, 0.75)',
+        paddingVertical: 2,
+        paddingHorizontal: 6,
+        borderRadius: 4,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4
+    },
+    finishedText: {
+        color: '#FFFFFF',
+        fontSize: 10,
+        fontWeight: 'bold',
+    },
+    progressBarTrack: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 6, // Increased height
+        backgroundColor: 'rgba(0,0,0,0.5)', // Darker track
+        width: '100%',
+    },
+    progressBarFill: {
+        height: '100%',
+        // Background color is handled inline based on placeholder status
+    },
+    timeBadge: {
+        position: 'absolute',
+        bottom: 10, // Slightly above the 6px bar
+        right: 4,
+        backgroundColor: 'rgba(0, 0, 0, 0.75)',
+        paddingVertical: 2,
+        paddingHorizontal: 4,
+        borderRadius: 4,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    timeBadgeText: {
+        color: '#FFFFFF',
+        fontSize: 10,
+        fontWeight: '600',
     }
 });

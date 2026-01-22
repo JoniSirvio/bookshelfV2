@@ -156,16 +156,47 @@ export default function NewBooksScreen() {
         return title.includes(q) || author.includes(q);
     });
 
-    const bookListItems = filteredItems.map(item => ({
-        id: item.id,
-        title: item.media.metadata.title,
-        authors: item.media.metadata.authors?.map(a => a.name) || [item.media.metadata.authorName || ''],
-        images: item.media.coverPath ? [{ url: getABSCoverUrl(url!, token!, item.id) }] : [],
-        publicationYear: item.media.metadata.publishedYear,
-        description: item.media.metadata.description,
-        addedAt: item.addedAt,
-        format: (libraryMediaTypeMap[item.libraryId] === 'audiobook' || (item.media?.duration || 0) > 0) ? 'audiobook' : 'ebook'
-    }));
+    const bookListItems = filteredItems.map(item => {
+        let absProgress = undefined;
+        if (item.userMedia && item.userMedia.duration > 0) {
+            const duration = item.userMedia.duration;
+            const currentTime = item.userMedia.currentTime || 0;
+            const percentage = (currentTime / duration) * 100;
+
+            const timeLeftSeconds = duration - currentTime;
+            let timeLeft = "";
+            const hoursLeft = Math.floor(timeLeftSeconds / 3600);
+            const minutesLeft = Math.floor((timeLeftSeconds % 3600) / 60);
+
+            if (hoursLeft > 0) timeLeft += `${hoursLeft}h `;
+            timeLeft += `${minutesLeft}min`;
+            if (timeLeftSeconds < 60) timeLeft = "Alle 1min";
+            if (timeLeftSeconds <= 0) timeLeft = "Valmis";
+
+            // Heuristic for finished if explicit flag missing
+            const isFinished = percentage >= 99 || timeLeftSeconds <= 0;
+
+            absProgress = {
+                percentage,
+                timeLeft,
+                duration,
+                currentTime,
+                isFinished
+            };
+        }
+
+        return {
+            id: item.id,
+            title: item.media.metadata.title,
+            authors: item.media.metadata.authors?.map(a => a.name) || [item.media.metadata.authorName || ''],
+            images: item.media.coverPath ? [{ url: getABSCoverUrl(url!, token!, item.id) }] : [],
+            publicationYear: item.media.metadata.publishedYear,
+            description: item.media.metadata.description,
+            addedAt: item.addedAt,
+            format: (libraryMediaTypeMap[item.libraryId] === 'audiobook' || (item.media?.duration || 0) > 0) ? 'audiobook' : 'ebook',
+            absProgress
+        };
+    });
 
     const toReadIds = myBooks.map(b => b.id);
     const readIds = readBooks.map(b => b.id);
@@ -222,6 +253,7 @@ export default function NewBooksScreen() {
                             coverUrl={item.images?.[0]?.url}
                             publicationYear={item.publicationYear}
                             format={(item as any).format}
+                            absProgress={(item as any).absProgress}
                             onPress={() => handleRateAndReview(item)}
                         />
                     )}

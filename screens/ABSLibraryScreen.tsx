@@ -74,12 +74,38 @@ export default function ABSLibraryScreen() {
         if (!url || !token) return null;
         const coverUrl = getABSCoverUrl(url, token, item.id);
 
-        // Robust Format Detection
         const currentLib = libraries?.find(l => l.id === selectedLibraryId);
         const isAudio =
             item.mediaType === 'audiobook' ||
             currentLib?.mediaType === 'audiobook' ||
             currentLib?.name?.toLowerCase().includes('audio');
+
+        let absProgress = undefined;
+        if (item.userMedia && item.userMedia.duration > 0) {
+            const duration = item.userMedia.duration;
+            const currentTime = item.userMedia.currentTime || 0;
+            const percentage = (currentTime / duration) * 100;
+
+            const timeLeftSeconds = duration - currentTime;
+            let timeLeft = "";
+            const hoursLeft = Math.floor(timeLeftSeconds / 3600);
+            const minutesLeft = Math.floor((timeLeftSeconds % 3600) / 60);
+
+            if (hoursLeft > 0) timeLeft += `${hoursLeft}h `;
+            timeLeft += `${minutesLeft}min`;
+            if (timeLeftSeconds < 60) timeLeft = "Alle 1min";
+            if (timeLeftSeconds <= 0) timeLeft = "Valmis";
+
+            const isFinished = percentage >= 99 || timeLeftSeconds <= 0;
+
+            absProgress = {
+                percentage,
+                timeLeft,
+                duration,
+                currentTime,
+                isFinished
+            };
+        }
 
         return (
             <BookGridItem
@@ -89,6 +115,7 @@ export default function ABSLibraryScreen() {
                 coverUrl={item.media.coverPath ? coverUrl : undefined}
                 publicationYear={item.media.metadata.publishedYear}
                 format={isAudio ? 'audiobook' : 'ebook'}
+                absProgress={absProgress}
                 onPress={() => {
                     // Future interaction
                 }}
@@ -227,15 +254,45 @@ export default function ABSLibraryScreen() {
     // Adapter for BookList (ABS)
     const currentLib = libraries?.find(l => l.id === selectedLibraryId);
 
-    const bookListItems = filteredItems.map(item => ({
-        id: item.id,
-        title: item.media.metadata.title,
-        authors: item.media.metadata.authors?.map(a => a.name) || [item.media.metadata.authorName || ''],
-        images: item.media.coverPath ? [{ url: getABSCoverUrl(url!, token!, item.id) }] : [],
-        publicationYear: item.media.metadata.publishedYear, // Assuming prop exists or optional
-        description: item.media.metadata.description,
-        format: (item.mediaType === 'audiobook' || currentLib?.mediaType === 'audiobook' || currentLib?.name?.toLowerCase().includes('audio')) ? 'audiobook' : 'ebook'
-    }));
+    const bookListItems = filteredItems.map(item => {
+        let absProgress = undefined;
+        if (item.userMedia && item.userMedia.duration > 0) {
+            const duration = item.userMedia.duration;
+            const currentTime = item.userMedia.currentTime || 0;
+            const percentage = (currentTime / duration) * 100;
+
+            const timeLeftSeconds = duration - currentTime;
+            let timeLeft = "";
+            const hoursLeft = Math.floor(timeLeftSeconds / 3600);
+            const minutesLeft = Math.floor((timeLeftSeconds % 3600) / 60);
+
+            if (hoursLeft > 0) timeLeft += `${hoursLeft}h `;
+            timeLeft += `${minutesLeft}min`;
+            if (timeLeftSeconds < 60) timeLeft = "Alle 1min";
+            if (timeLeftSeconds <= 0) timeLeft = "Valmis";
+
+            const isFinished = percentage >= 99 || timeLeftSeconds <= 0;
+
+            absProgress = {
+                percentage,
+                timeLeft,
+                duration,
+                currentTime,
+                isFinished
+            };
+        }
+
+        return {
+            id: item.id,
+            title: item.media.metadata.title,
+            authors: item.media.metadata.authors?.map(a => a.name) || [item.media.metadata.authorName || ''],
+            images: item.media.coverPath ? [{ url: getABSCoverUrl(url!, token!, item.id) }] : [],
+            publicationYear: item.media.metadata.publishedYear, // Assuming prop exists or optional
+            description: item.media.metadata.description,
+            format: (item.mediaType === 'audiobook' || currentLib?.mediaType === 'audiobook' || currentLib?.name?.toLowerCase().includes('audio')) ? 'audiobook' : 'ebook',
+            absProgress
+        };
+    });
 
     const toReadIds = myBooks.map(b => b.id);
     const readIds = readBooks.map(b => b.id);

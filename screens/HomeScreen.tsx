@@ -185,6 +185,7 @@ const HomeScreen: React.FC = () => {
               coverUrl={item.images?.[0]?.url}
               publicationYear={item.publicationYear}
               format={item.id.startsWith('abs-') ? 'audiobook' : 'book'}
+              absProgress={item.absProgress}
               onPress={() => {
                 setSelectedBookForOptions(item);
                 setIsOptionsModalVisible(true);
