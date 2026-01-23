@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions } from 'react-native'; // Existing import, just context
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { BookCoverPlaceholder } from './BookCoverPlaceholder';
+import { FormatBadge } from './FormatBadge';
 
 const COLUMN_COUNT = 3;
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -58,6 +59,9 @@ export const BookGridItem: React.FC<BookGridItemProps> = ({ id, title, authors, 
                         />
                     </View>
                 )}
+
+                {/* Format Badge for Cover Images */}
+                {coverUrl && <FormatBadge format={format} />}
 
                 {/* Progress / Finished Overlays */}
                 {absProgress && (
