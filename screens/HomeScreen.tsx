@@ -8,6 +8,7 @@ import BookOptionsModal from '../components/BookOptionsModal';
 import { useState, useRef } from "react";
 import { FinnaSearchResult } from "../api/finna";
 import { BookGridItem } from "../components/BookGridItem";
+import { useViewMode } from "../hooks/useViewMode";
 import { FlashList } from "@shopify/flash-list";
 
 import { useABSInProgress } from "../hooks/useABSInProgress";
@@ -18,7 +19,7 @@ const HomeScreen: React.FC = () => {
 
   const [generating, setGenerating] = useState(false);
   const [userWishes, setUserWishes] = useState("");
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [viewMode, setViewMode] = useViewMode('home_view_mode', 'list');
 
   // State for Options Modal (Grid View)
   const [selectedBookForOptions, setSelectedBookForOptions] = useState<FinnaSearchResult | null>(null);

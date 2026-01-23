@@ -7,6 +7,7 @@ interface BookCoverPlaceholderProps {
     title: string;
     authors?: string[];
     format?: 'audiobook' | 'ebook' | 'book';
+    compact?: boolean; // New prop for small thumbnails
 }
 
 // Brand Colors
@@ -34,7 +35,7 @@ const getVariant = (id: string): Variant => {
     return 'accent';
 };
 
-export const BookCoverPlaceholder: React.FC<BookCoverPlaceholderProps> = ({ id, title, authors, format = 'book' }) => {
+export const BookCoverPlaceholder: React.FC<BookCoverPlaceholderProps> = ({ id, title, authors, format = 'book', compact = false }) => {
     // User Request: Only Green background, remove watermark.
     const bgColor = COLORS.bgAccent;
     const titleColor = COLORS.textLight;
@@ -46,25 +47,43 @@ export const BookCoverPlaceholder: React.FC<BookCoverPlaceholderProps> = ({ id, 
 
             {/* Format Indicator */}
             <View style={styles.formatIndicator}>
-                <MaterialCommunityIcons
-                    name={format === 'audiobook' ? 'headphones' : 'book'}
-                    size={20}
-                    color={iconColor}
-                />
+                {!compact && ( // Hide built-in format indicator in compact mode if we are using external badge, 
+                    // OR just scale it down. The user showed a screenshot where it was overlapping or large.
+                    // Let's scale it down or keep it if it fits. 
+                    // Actually, in the modal, we MIGHT overlay our new FormatBadge, 
+                    // but BookOptionsModal is NOT overlaying FormatBadge on placeholder (it's commented out/logic is separate).
+                    // So we DO need it here.
+                    <MaterialCommunityIcons
+                        name={format === 'audiobook' ? 'headphones' : 'book'}
+                        size={compact ? 14 : 20}
+                        color={iconColor}
+                    />
+                )}
             </View>
 
             {/* Content */}
             <View style={styles.content}>
                 <Text
-                    style={[styles.title, { color: titleColor }]}
-                    numberOfLines={4}
-                    adjustsFontSizeToFit
+                    style={[
+                        styles.title,
+                        { color: titleColor },
+                        compact && { fontSize: 10, lineHeight: 12, marginBottom: 2 } // Compact styles
+                    ]}
+                    numberOfLines={compact ? 3 : 4}
+                    adjustsFontSizeToFit={!compact} // Disable on tiny ones to prevent microscopic text, just truncation is better or fixed small size
                     minimumFontScale={0.8}
                 >
                     {title}
                 </Text>
                 {authors && authors.length > 0 && (
-                    <Text style={[styles.author, { color: authorColor }]} numberOfLines={1}>
+                    <Text
+                        style={[
+                            styles.author,
+                            { color: authorColor },
+                            compact && { fontSize: 8 }
+                        ]}
+                        numberOfLines={1}
+                    >
                         {authors[0]}
                     </Text>
                 )}

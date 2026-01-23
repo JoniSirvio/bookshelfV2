@@ -7,6 +7,7 @@ import { useABSCredentials } from '../hooks/useABSCredentials';
 import { fetchABSLibraries, fetchABSLibraryItems, getABSCoverUrl, loginToABS, ABSItem, ABSLibrary } from '../api/abs';
 import { BookList } from '../components/BookList'; // Import BookList
 import { BookGridItem } from '../components/BookGridItem';
+import { useViewMode } from '../hooks/useViewMode';
 import { useBooksContext } from '../context/BooksContext'; // Import context
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -28,7 +29,7 @@ import { FilterSortModal, SortOption, SortDirection, StatusFilter } from '../com
 export default function ABSLibraryScreen() {
     const { url, token, loading: credsLoading } = useABSCredentials();
     const [selectedLibraryId, setSelectedLibraryId] = useState<string | null>(null);
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const [viewMode, setViewMode] = useViewMode('library_view_mode', 'grid');
     const [searchQuery, setSearchQuery] = useState('');
     const { myBooks, readBooks, addBook, markAsRead } = useBooksContext();
     const { user } = useAuth();
