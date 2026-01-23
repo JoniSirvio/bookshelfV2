@@ -22,17 +22,30 @@ import SearchBar from '../components/SearchBar'; // Shared component
 import { useFinnaSearchResults } from '../hooks/useBooks';
 import ReviewModal from '../components/ReviewModal';
 
+import BookOptionsModal from '../components/BookOptionsModal';
+import { FilterSortModal, SortOption, SortDirection, StatusFilter } from '../components/FilterSortModal';
+
 export default function ABSLibraryScreen() {
     const { url, token, loading: credsLoading } = useABSCredentials();
     const [selectedLibraryId, setSelectedLibraryId] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [searchQuery, setSearchQuery] = useState('');
-    const { myBooks, readBooks, addBook } = useBooksContext();
+    const { myBooks, readBooks, addBook, markAsRead } = useBooksContext();
     const { user } = useAuth();
     const [inputUrl, setInputUrl] = useState('');
     const [inputUsername, setInputUsername] = useState('');
     const [inputPassword, setInputPassword] = useState('');
     const [savingCreds, setSavingCreds] = useState(false);
+
+    // Options Modal State (for ABS items)
+    const [isOptionsModalVisible, setIsOptionsModalVisible] = useState(false);
+    const [selectedBookForOptions, setSelectedBookForOptions] = useState<any | null>(null);
+
+    // Filter/Sort State
+    const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
+    const [sortOption, setSortOption] = useState<SortOption>('added');
+    const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+    const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
     // Finna State
     const [searchSource, setSearchSource] = useState<'abs' | 'finna'>('abs');
@@ -70,58 +83,27 @@ export default function ABSLibraryScreen() {
         await refetch();
     };
 
-    const renderItem = ({ item }: { item: ABSItem }) => {
-        if (!url || !token) return null;
-        const coverUrl = getABSCoverUrl(url, token, item.id);
-
-        const currentLib = libraries?.find(l => l.id === selectedLibraryId);
-        const isAudio =
-            item.mediaType === 'audiobook' ||
-            currentLib?.mediaType === 'audiobook' ||
-            currentLib?.name?.toLowerCase().includes('audio');
-
-        let absProgress = undefined;
-        if (item.userMedia && item.userMedia.duration > 0) {
-            const duration = item.userMedia.duration;
-            const currentTime = item.userMedia.currentTime || 0;
-            const percentage = (currentTime / duration) * 100;
-
-            const timeLeftSeconds = duration - currentTime;
-            let timeLeft = "";
-            const hoursLeft = Math.floor(timeLeftSeconds / 3600);
-            const minutesLeft = Math.floor((timeLeftSeconds % 3600) / 60);
-
-            if (hoursLeft > 0) timeLeft += `${hoursLeft}h `;
-            timeLeft += `${minutesLeft}min`;
-            if (timeLeftSeconds < 60) timeLeft = "Alle 1min";
-            if (timeLeftSeconds <= 0) timeLeft = "Valmis";
-
-            const isFinished = percentage >= 99 || timeLeftSeconds <= 0;
-
-            absProgress = {
-                percentage,
-                timeLeft,
-                duration,
-                currentTime,
-                isFinished
-            };
-        }
-
-        return (
-            <BookGridItem
-                id={item.id}
-                title={item.media.metadata.title}
-                authors={item.media.metadata.authors?.map(a => a.name) || [item.media.metadata.authorName || '']}
-                coverUrl={item.media.coverPath ? coverUrl : undefined}
-                publicationYear={item.media.metadata.publishedYear}
-                format={isAudio ? 'audiobook' : 'ebook'}
-                absProgress={absProgress}
-                onPress={() => {
-                    // Future interaction
-                }}
-            />
-        );
+    const handleBookPress = (book: any) => {
+        setSelectedBookForOptions(book);
+        setIsOptionsModalVisible(true);
     };
+
+    const renderGridItem = useCallback(({ item }: { item: any }) => {
+        return (
+            <View style={styles.bookItemWrapper}>
+                <BookGridItem
+                    id={item.id}
+                    title={item.title}
+                    authors={item.authors}
+                    coverUrl={item.images?.[0]?.url}
+                    publicationYear={item.publicationYear}
+                    format={item.format}
+                    absProgress={item.absProgress}
+                    onPress={() => handleBookPress(item)}
+                />
+            </View>
+        );
+    }, [handleBookPress]);
 
     // Credential state is now at top
     // Handlers
@@ -157,8 +139,9 @@ export default function ABSLibraryScreen() {
     };
 
     // Finna Handlers
+    // Finna Handlers
     const handleMarkAsRead = (book: any) => {
-        addBook(book, 'read');
+        markAsRead(book);
     };
 
     const handleRateAndReview = (book: any) => {
@@ -168,12 +151,130 @@ export default function ABSLibraryScreen() {
 
     const handleSaveReview = (bookId: string, review: string, rating: number, readOrListened: string, finishedDate?: string) => {
         if (selectedBookForReview) {
-            addBook({ ...selectedBookForReview, review, rating, readOrListened }, 'read', finishedDate);
+            markAsRead(selectedBookForReview, review, rating, readOrListened, finishedDate);
         }
         setIsReviewModalVisible(false);
         setSelectedBookForReview(null);
     };
 
+
+
+    // Filter and Sort Items (Moved up to prevent hook errors)
+    const processedItems = React.useMemo(() => {
+        if (!items) return [];
+
+        // 1. Filter
+        let result = items.filter(item => {
+            // Search Query
+            if (searchQuery) {
+                const q = searchQuery.toLowerCase();
+                const title = item.media.metadata.title?.toLowerCase() || '';
+                const author = item.media.metadata.authorName?.toLowerCase() || '';
+                const authors = item.media.metadata.authors?.map(a => a.name.toLowerCase()).join(' ') || '';
+                if (!title.includes(q) && !author.includes(q) && !authors.includes(q)) return false;
+            }
+
+            // Status Filter
+            if (statusFilter !== 'all') {
+                const isFinished = item.userMedia?.finishedAt;
+                const progress = item.userMedia?.progress || 0;
+
+                if (statusFilter === 'unread' && (isFinished || progress > 0)) return false;
+                if (statusFilter === 'in-progress' && (!progress || isFinished)) return false;
+                if (statusFilter === 'finished' && !isFinished) return false;
+            }
+
+            return true;
+        });
+
+        // 2. Sort
+        result.sort((a, b) => {
+            let valA: any = '';
+            let valB: any = '';
+
+            switch (sortOption) {
+                case 'title':
+                    valA = a.media.metadata.title?.toLowerCase() || '';
+                    valB = b.media.metadata.title?.toLowerCase() || '';
+                    break;
+                case 'author':
+                    valA = a.media.metadata.authorName?.toLowerCase() || '';
+                    valB = b.media.metadata.authorName?.toLowerCase() || '';
+                    break;
+                case 'added':
+                    valA = a.addedAt || 0;
+                    valB = b.addedAt || 0;
+                    break;
+                case 'year':
+                    valA = parseInt(a.media.metadata.publishedYear || '0') || 0;
+                    valB = parseInt(b.media.metadata.publishedYear || '0') || 0;
+                    break;
+                case 'duration':
+                    // Prefer duration (audio), fallback to numPages (ebook - strictly not comparable but better than nothing)
+                    // Or usually we sort audioItems by duration.
+                    valA = a.media.duration || a.media.numPages || 0;
+                    valB = b.media.duration || b.media.numPages || 0;
+                    break;
+            }
+
+            if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+            if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        return result;
+    }, [items, searchQuery, statusFilter, sortOption, sortDirection]);
+
+    const filteredItems = processedItems;
+
+    // Adapter for BookList (ABS)
+    const currentLib = libraries?.find(l => l.id === selectedLibraryId);
+
+    const bookListItems = React.useMemo(() => {
+        return filteredItems.map(item => {
+            let absProgress = undefined;
+            if (item.userMedia && item.userMedia.duration > 0) {
+                const duration = item.userMedia.duration;
+                const currentTime = item.userMedia.currentTime || 0;
+                const percentage = (currentTime / duration) * 100;
+
+                const timeLeftSeconds = duration - currentTime;
+                let timeLeft = "";
+                const hoursLeft = Math.floor(timeLeftSeconds / 3600);
+                const minutesLeft = Math.floor((timeLeftSeconds % 3600) / 60);
+
+                if (hoursLeft > 0) timeLeft += `${hoursLeft}h `;
+                timeLeft += `${minutesLeft}min`;
+                if (timeLeftSeconds < 60) timeLeft = "Alle 1min";
+                if (timeLeftSeconds <= 0) timeLeft = "Valmis";
+
+                const isFinished = percentage >= 99 || timeLeftSeconds <= 0;
+
+                absProgress = {
+                    percentage,
+                    timeLeft,
+                    duration,
+                    currentTime,
+                    isFinished
+                };
+            }
+
+            const isAudio = item.mediaType === 'audiobook' || currentLib?.mediaType === 'audiobook' || currentLib?.name?.toLowerCase().includes('audio');
+
+            return {
+                id: item.id,
+                title: item.media.metadata.title,
+                authors: item.media.metadata.authors?.map(a => a.name) || [item.media.metadata.authorName || ''],
+                images: item.media.coverPath ? [{ url: getABSCoverUrl(url!, token!, item.id) }] : [],
+                publicationYear: item.media.metadata.publishedYear,
+                description: item.media.metadata.description,
+                format: isAudio ? 'audiobook' : 'ebook',
+                absProgress,
+                finishedReading: item.userMedia?.finishedAt ? new Date(item.userMedia.finishedAt).toISOString() : undefined,
+                readOrListened: isAudio ? 'listened' : 'read'
+            };
+        });
+    }, [filteredItems, currentLib, url, token]);
 
     if (credsLoading) {
         return <View style={styles.center}><ActivityIndicator size="large" color="#636B2F" /></View>;
@@ -241,58 +342,7 @@ export default function ABSLibraryScreen() {
         );
     }
 
-    // Filter items based on search query (ABS)
-    const filteredItems = items?.filter(item => {
-        if (!searchQuery) return true;
-        const q = searchQuery.toLowerCase();
-        const title = item.media.metadata.title?.toLowerCase() || '';
-        const author = item.media.metadata.authorName?.toLowerCase() || '';
-        const authors = item.media.metadata.authors?.map(a => a.name.toLowerCase()).join(' ') || '';
-        return title.includes(q) || author.includes(q) || authors.includes(q);
-    }) || [];
 
-    // Adapter for BookList (ABS)
-    const currentLib = libraries?.find(l => l.id === selectedLibraryId);
-
-    const bookListItems = filteredItems.map(item => {
-        let absProgress = undefined;
-        if (item.userMedia && item.userMedia.duration > 0) {
-            const duration = item.userMedia.duration;
-            const currentTime = item.userMedia.currentTime || 0;
-            const percentage = (currentTime / duration) * 100;
-
-            const timeLeftSeconds = duration - currentTime;
-            let timeLeft = "";
-            const hoursLeft = Math.floor(timeLeftSeconds / 3600);
-            const minutesLeft = Math.floor((timeLeftSeconds % 3600) / 60);
-
-            if (hoursLeft > 0) timeLeft += `${hoursLeft}h `;
-            timeLeft += `${minutesLeft}min`;
-            if (timeLeftSeconds < 60) timeLeft = "Alle 1min";
-            if (timeLeftSeconds <= 0) timeLeft = "Valmis";
-
-            const isFinished = percentage >= 99 || timeLeftSeconds <= 0;
-
-            absProgress = {
-                percentage,
-                timeLeft,
-                duration,
-                currentTime,
-                isFinished
-            };
-        }
-
-        return {
-            id: item.id,
-            title: item.media.metadata.title,
-            authors: item.media.metadata.authors?.map(a => a.name) || [item.media.metadata.authorName || ''],
-            images: item.media.coverPath ? [{ url: getABSCoverUrl(url!, token!, item.id) }] : [],
-            publicationYear: item.media.metadata.publishedYear, // Assuming prop exists or optional
-            description: item.media.metadata.description,
-            format: (item.mediaType === 'audiobook' || currentLib?.mediaType === 'audiobook' || currentLib?.name?.toLowerCase().includes('audio')) ? 'audiobook' : 'ebook',
-            absProgress
-        };
-    });
 
     const toReadIds = myBooks.map(b => b.id);
     const readIds = readBooks.map(b => b.id);
@@ -352,6 +402,14 @@ export default function ABSLibraryScreen() {
                                 color="#333"
                             />
                         </TouchableOpacity>
+
+                        <TouchableOpacity onPress={() => setIsFilterModalVisible(true)} style={styles.viewToggle}>
+                            <MaterialCommunityIcons
+                                name="sort-variant"
+                                size={28}
+                                color="#333"
+                            />
+                        </TouchableOpacity>
                     </View>
                 )}
             </View>
@@ -362,8 +420,8 @@ export default function ABSLibraryScreen() {
                 ) : (
                     viewMode === 'grid' ? (
                         <FlashList
-                            data={filteredItems}
-                            renderItem={renderItem}
+                            data={bookListItems}
+                            renderItem={renderGridItem}
                             estimatedItemSize={200}
                             numColumns={COLUMN_COUNT}
                             contentContainerStyle={styles.listContent}
@@ -406,7 +464,6 @@ export default function ABSLibraryScreen() {
                 </>
             )}
 
-            {/* Review Modal for Finna items */}
             {selectedBookForReview && (
                 <ReviewModal
                     isVisible={isReviewModalVisible}
@@ -427,6 +484,38 @@ export default function ABSLibraryScreen() {
                     bookAuthors={selectedBookForReview.authors}
                 />
             )}
+
+
+            {/* Filter Modal */}
+            <FilterSortModal
+                visible={isFilterModalVisible}
+                onClose={() => setIsFilterModalVisible(false)}
+                currentSort={sortOption}
+                currentDirection={sortDirection}
+                currentStatus={statusFilter}
+                onApply={(sort, dir, status) => {
+                    setSortOption(sort);
+                    setSortDirection(dir);
+                    setStatusFilter(status);
+                }}
+            />
+
+            {/* Options Modal for ABS Items */}
+            <BookOptionsModal
+                isVisible={isOptionsModalVisible}
+                onClose={() => setIsOptionsModalVisible(false)}
+                book={selectedBookForOptions}
+                mode="search" // Treat as search/discovery
+                toReadIds={toReadIds}
+                readIds={readIds}
+                onAdd={addBook}
+                onRateAndReview={(book) => {
+                    setIsOptionsModalVisible(false);
+                    // Slight delay to allow modal to close?
+                    setTimeout(() => handleRateAndReview(book), 500);
+                }}
+                onMarkAsRead={handleMarkAsRead}
+            />
         </View>
     );
 }
@@ -513,6 +602,10 @@ const styles = StyleSheet.create({
         margin: 5,
         marginBottom: 15,
         maxWidth: ITEM_WIDTH - 10,
+    },
+    bookItemWrapper: {
+        flex: 1,
+        maxWidth: ITEM_WIDTH,
     },
     coverContainer: {
         width: '100%',

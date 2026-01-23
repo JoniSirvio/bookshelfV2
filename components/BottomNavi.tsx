@@ -76,22 +76,15 @@ const NotificationBell = () => {
         {newBooksData.hasNew && (
           <View style={{
             position: 'absolute',
-            top: 0,
-            right: 0,
+            top: 2,
+            right: 2,
             backgroundColor: '#D32F2F',
-            minWidth: 16, // bit wider for numbers
-            height: 16,
-            borderRadius: 8,
-            justifyContent: 'center',
-            alignItems: 'center',
-            borderWidth: 1,
+            width: 10,
+            height: 10,
+            borderRadius: 5,
+            borderWidth: 1.5,
             borderColor: '#fff',
-            paddingHorizontal: 2
-          }}>
-            <Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>
-              {newBooksData.count > 99 ? '99+' : newBooksData.count}
-            </Text>
-          </View>
+          }} />
         )}
       </TouchableOpacity>
 

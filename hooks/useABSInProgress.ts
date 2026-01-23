@@ -1,7 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useABSCredentials } from './useABSCredentials';
 import { fetchABSMe, fetchABSItem, getABSCoverUrl } from '../api/abs';
 import { FinnaSearchResult } from '../api/finna';
+import { useMemo } from 'react';
 
 export const useABSInProgress = (readBooks: any[] = []) => {
     const { url, token } = useABSCredentials();
@@ -19,28 +20,14 @@ export const useABSInProgress = (readBooks: any[] = []) => {
     });
 
     // 2. Process Progress & Fetch Item Details
-    const { data: inProgressBooks, isLoading } = useQuery({
-        queryKey: ['absInProgressDetails', url, user?.mediaProgress?.length, readBooks.length],
+    // We fetch ALL started items, even if finished. Filtering happens locally to avoid re-fetching when local state changes.
+    const { data: rawInProgressBooks, isLoading } = useQuery({
+        queryKey: ['absInProgressDetails', url, user?.mediaProgress?.length], // Removed readBooks dependency
         queryFn: async () => {
             if (!user || !user.mediaProgress) return [];
 
-            // Filter logic:
-            // 1. Progress > 0 (started)
-            // 2. AND (Not Finished OR (Finished but NOT in local readBooks))
-            const candidates = user.mediaProgress.filter((p: any) => {
-                const hasStarted = p.progress > 0;
-                if (!hasStarted) return false;
-
-                const absId = `abs-${p.libraryItemId}`;
-                const isLocallyRead = readBooks.some(b => b.id === absId);
-
-                // If it's finished in ABS, only show it if we haven't marked it as read locally
-                if (p.isFinished) {
-                    return !isLocallyRead;
-                }
-
-                return true; // Show in-progress items
-            });
+            // Filter logic: Only started items
+            const candidates = user.mediaProgress.filter((p: any) => p.progress > 0);
 
             // Sort by last update (most recent first)
             candidates.sort((a: any, b: any) => b.lastUpdate - a.lastUpdate);
@@ -95,12 +82,34 @@ export const useABSInProgress = (readBooks: any[] = []) => {
 
             const results = await Promise.all(promises);
             // Filter out nulls (failed fetches)
-            const validResults = results.filter(r => r !== null) as FinnaSearchResult[];
-            return validResults;
+            return results.filter(r => r !== null) as FinnaSearchResult[];
         },
         enabled: !!url && !!token && !!user?.mediaProgress,
+        placeholderData: keepPreviousData,
         staleTime: 1000 * 60 * 5,
     });
+
+    // 3. Local Filter: Hide items that are locally marked as read
+    const inProgressBooks = useMemo(() => {
+        if (!rawInProgressBooks) return [];
+
+        return rawInProgressBooks.filter(book => {
+            // Check if this ABS book ID exists in readBooks
+            const isLocallyRead = readBooks.some(b => b.id === book.id);
+
+            // If it's finished in ABS (implied by isFinished flag), only show it if NOT read locally.
+            // If it's still in progress (<100%), show it even if read locally? 
+            // Usually if marked read locally, we shouldn't show it in "In Progress" anymore.
+            // The previous logic was: `if (p.isFinished) return !isLocallyRead;`.
+            // But if I mark it as read in app, it should disappear from "In Progress" even if ABS thinks it's 50%?
+            // User intention: "Mark as read" -> move to Read shelf.
+            // So: If isLocallyRead, hide it.
+
+            if (isLocallyRead) return false;
+
+            return true;
+        });
+    }, [rawInProgressBooks, readBooks]);
 
     return {
         inProgressBooks: inProgressBooks || [],

@@ -32,6 +32,8 @@ export interface ABSItem {
         currentTime: number;
         duration: number;
         progress: number;
+        finishedAt?: number;
+        lastPlayedAt?: number;
     };
 }
 

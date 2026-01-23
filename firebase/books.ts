@@ -67,14 +67,22 @@ export const addBookToFirestore = async (userId: string, book: FinnaSearchResult
         };
 
         if (status === 'read') {
-            newBook.finishedReading = finishedDate || new Date().toISOString();
+            newBook.finishedReading = finishedDate || (book as any).finishedReading || new Date().toISOString();
         }
 
         if (recommendationReason) {
             newBook.recommendationReason = recommendationReason;
         }
 
-        await setDoc(bookRef, newBook);
+        // Sanitize undefined values (e.g. absProgress might be undefined)
+        const sanitizedBook = Object.entries(newBook).reduce((acc, [key, value]) => {
+            if (value !== undefined) {
+                acc[key] = value;
+            }
+            return acc;
+        }, {} as any);
+
+        await setDoc(bookRef, sanitizedBook);
     } catch (error) {
         console.error("Error adding book to Firestore: ", error);
         throw error;

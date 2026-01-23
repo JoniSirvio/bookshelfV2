@@ -184,15 +184,23 @@ export const useBooks = () => {
             // YES. `FinnaSearchResult` doesn't strictly type those, but `FirestoreBook` does.
             // If I cast `bookOrId` to `FirestoreBook` or mix in the props.
 
-            const actualDate = finishedDate || new Date().toISOString();
-            const bookWithMetadata = {
+            const actualDate = finishedDate || (inputBook as any).finishedReading || new Date().toISOString();
+
+            // Construct base part
+            const bookWithMetadata: any = {
                 ...inputBook,
-                review,
-                rating,
-                readOrListened,
+                status: 'read',
                 finishedReading: actualDate,
-                daysRead: undefined // Calculated if needed
-            } as any; // Cast to bypass strict FinnaSearchResult
+            };
+
+            // Conditionally add fields if they exist
+            if (review !== undefined) bookWithMetadata.review = review;
+            if (rating !== undefined) bookWithMetadata.rating = rating;
+            if (readOrListened !== undefined) bookWithMetadata.readOrListened = readOrListened;
+
+            // Explicitly handle daysRead - if it's undefined, don't set it, or set to null.
+            // bookWithMetadata.daysRead = null; // defaulting to null is safer if you want the field to exist.
+
 
             addBookMutation.mutate({ book: bookWithMetadata, status: 'read', finishedDate: actualDate });
             return;
