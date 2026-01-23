@@ -4,9 +4,10 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface FormatBadgeProps {
     format: 'audiobook' | 'ebook' | 'book';
+    compact?: boolean;
 }
 
-export const FormatBadge: React.FC<FormatBadgeProps> = ({ format }) => {
+export const FormatBadge: React.FC<FormatBadgeProps> = ({ format, compact = false }) => {
     // Only show badge for audiobook or ebook
     if (format === 'book') return null;
 
@@ -17,9 +18,14 @@ export const FormatBadge: React.FC<FormatBadgeProps> = ({ format }) => {
         iconName = 'cellphone'; // UX Choice: "Digital Edition" look
     }
 
+    const iconSize = compact ? 12 : 14;
+    const padding = compact ? 2 : 4;
+    const top = compact ? 4 : 6;
+    const right = compact ? 4 : 6;
+
     return (
-        <View style={styles.container}>
-            <MaterialCommunityIcons name={iconName} size={14} color="#FFFFFF" />
+        <View style={[styles.container, { padding, top, right }]}>
+            <MaterialCommunityIcons name={iconName} size={iconSize} color="#FFFFFF" />
         </View>
     );
 };
@@ -27,11 +33,8 @@ export const FormatBadge: React.FC<FormatBadgeProps> = ({ format }) => {
 const styles = StyleSheet.create({
     container: {
         position: 'absolute',
-        top: 6,
-        right: 6,
         backgroundColor: 'rgba(0, 0, 0, 0.6)',
         borderRadius: 12, // Circle or pill
-        padding: 4,
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 10,

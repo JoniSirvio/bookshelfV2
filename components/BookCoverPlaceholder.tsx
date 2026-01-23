@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { FormatBadge } from './FormatBadge';
 
 interface BookCoverPlaceholderProps {
     id: string;
@@ -46,20 +46,7 @@ export const BookCoverPlaceholder: React.FC<BookCoverPlaceholderProps> = ({ id, 
         <View style={[styles.container, { backgroundColor: bgColor }]}>
 
             {/* Format Indicator */}
-            <View style={styles.formatIndicator}>
-                {!compact && ( // Hide built-in format indicator in compact mode if we are using external badge, 
-                    // OR just scale it down. The user showed a screenshot where it was overlapping or large.
-                    // Let's scale it down or keep it if it fits. 
-                    // Actually, in the modal, we MIGHT overlay our new FormatBadge, 
-                    // but BookOptionsModal is NOT overlaying FormatBadge on placeholder (it's commented out/logic is separate).
-                    // So we DO need it here.
-                    <MaterialCommunityIcons
-                        name={format === 'audiobook' ? 'headphones' : 'book'}
-                        size={compact ? 14 : 20}
-                        color={iconColor}
-                    />
-                )}
-            </View>
+            <FormatBadge format={format} compact={compact} />
 
             {/* Content */}
             <View style={styles.content}>
