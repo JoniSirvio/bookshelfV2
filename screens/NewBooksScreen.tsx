@@ -17,6 +17,7 @@ import { BookGridItem } from '../components/BookGridItem';
 import { FlashList } from '@shopify/flash-list';
 
 import BookOptionsModal from '../components/BookOptionsModal';
+import { FilterSortModal, SortOption, SortDirection, StatusFilter } from '../components/FilterSortModal';
 
 export default function NewBooksScreen() {
     const { url, token, loading: credsLoading } = useABSCredentials();
@@ -32,6 +33,12 @@ export default function NewBooksScreen() {
     // Options Modal State
     const [isOptionsModalVisible, setIsOptionsModalVisible] = useState(false);
     const [selectedBookForOptions, setSelectedBookForOptions] = useState<any | null>(null);
+
+    // Filter/Sort State
+    const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
+    const [sortOption, setSortOption] = useState<SortOption>('added'); // Default to 'added' for New Books
+    const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+    const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
     // 1. Fetch Libraries
     const { data: libraries } = useQuery({
@@ -162,6 +169,77 @@ export default function NewBooksScreen() {
         </View>
     ), [handleBookPress]);
 
+    // Filter and Sort (Moved up)
+    const processedItems = useMemo(() => {
+        let result = allItems.filter(item => {
+            // 1. Existing Type Filter
+            const type = libraryMediaTypeMap[item.libraryId];
+            const isAudio = type === 'audiobook' || type === 'podcast' || (item.media?.duration || 0) > 0;
+            const isEbook = !isAudio;
+
+            if (selectedType === 'audio' && !isAudio) return false;
+            if (selectedType === 'ebook' && !isEbook) return false;
+
+            // 2. Search Query
+            if (searchQuery) {
+                const q = searchQuery.toLowerCase();
+                const title = item.media.metadata.title?.toLowerCase() || '';
+                const author = item.media.metadata.authorName?.toLowerCase() || '';
+                if (!title.includes(q) && !author.includes(q)) return false;
+            }
+
+            // 3. Status Filter
+            if (statusFilter !== 'all') {
+                const isFinished = item.userMedia?.finishedAt;
+                const progress = item.userMedia?.progress || 0;
+
+                if (statusFilter === 'unread' && (isFinished || progress > 0)) return false;
+                if (statusFilter === 'in-progress' && (!progress || isFinished)) return false;
+                if (statusFilter === 'finished' && !isFinished) return false;
+            }
+
+            return true;
+        });
+
+        // 4. Sort
+        result.sort((a, b) => {
+            let valA: any = '';
+            let valB: any = '';
+
+            switch (sortOption) {
+                case 'title':
+                    valA = a.media.metadata.title?.toLowerCase() || '';
+                    valB = b.media.metadata.title?.toLowerCase() || '';
+                    break;
+                case 'author':
+                    valA = a.media.metadata.authorName?.toLowerCase() || '';
+                    valB = b.media.metadata.authorName?.toLowerCase() || '';
+                    break;
+                case 'added':
+                    valA = a.addedAt || 0;
+                    valB = b.addedAt || 0;
+                    break;
+                case 'year':
+                    valA = parseInt(a.media.metadata.publishedYear || '0') || 0;
+                    valB = parseInt(b.media.metadata.publishedYear || '0') || 0;
+                    break;
+                case 'duration':
+                    // Prefer duration (audio), fallback to numPages (ebook)
+                    valA = a.media.duration || a.media.numPages || 0;
+                    valB = b.media.duration || b.media.numPages || 0;
+                    break;
+            }
+
+            if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+            if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        return result;
+    }, [allItems, selectedType, searchQuery, statusFilter, sortOption, sortDirection, libraryMediaTypeMap]);
+
+    const filteredItems = processedItems;
+
     if (credsLoading || loadingItems) {
         return <View style={styles.center}><ActivityIndicator size="large" color="#636B2F" /></View>;
     }
@@ -171,25 +249,6 @@ export default function NewBooksScreen() {
     }
 
 
-
-    // Filter
-    const filteredItems = allItems.filter(item => {
-        // Determine type from Library Metadata (most reliable) with fallback
-        const type = libraryMediaTypeMap[item.libraryId];
-        // Robust check: Library type OR duration presence matches 'counts' logic
-        const isAudio = type === 'audiobook' || type === 'podcast' || (item.media?.duration || 0) > 0;
-        const isEbook = !isAudio;
-
-        if (selectedType === 'audio' && !isAudio) return false;
-        if (selectedType === 'ebook' && !isEbook) return false;
-
-        // Query filter
-        if (!searchQuery) return true;
-        const q = searchQuery.toLowerCase();
-        const title = item.media.metadata.title?.toLowerCase() || '';
-        const author = item.media.metadata.authorName?.toLowerCase() || '';
-        return title.includes(q) || author.includes(q);
-    });
 
     const bookListItems = filteredItems.map(item => {
         let absProgress = undefined;
@@ -248,6 +307,10 @@ export default function NewBooksScreen() {
                     <Text style={[styles.headerTitle, { marginBottom: 0 }]}>Uudet lisäykset</Text>
                     <TouchableOpacity onPress={() => setViewMode(prev => prev === 'list' ? 'grid' : 'list')}>
                         <MaterialCommunityIcons name={viewMode === 'list' ? 'view-grid' : 'view-list'} size={28} color="#333" />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity onPress={() => setIsFilterModalVisible(true)} style={{ marginLeft: 10 }}>
+                        <MaterialCommunityIcons name="sort-variant" size={28} color="#333" />
                     </TouchableOpacity>
                 </View>
 
@@ -314,6 +377,20 @@ export default function NewBooksScreen() {
                     bookAuthors={selectedBookForReview.authors}
                 />
             )}
+
+            {/* Filter Modal */}
+            <FilterSortModal
+                visible={isFilterModalVisible}
+                onClose={() => setIsFilterModalVisible(false)}
+                currentSort={sortOption}
+                currentDirection={sortDirection}
+                currentStatus={statusFilter}
+                onApply={(sort, dir, status) => {
+                    setSortOption(sort);
+                    setSortDirection(dir);
+                    setStatusFilter(status);
+                }}
+            />
 
             {/* Options Modal */}
             <BookOptionsModal

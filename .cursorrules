@@ -111,6 +111,11 @@ When the user asks for a specific role, or when the task demands it, adopt one o
 - **Data Fetching**: TanStack Query
 - **Icons**: MaterialCommunityIcons
 
+### React Best Practices
+- **Rules of Hooks**: **CRITICAL**: NEVER place Hooks (`useMemo`, `useState`, `useEffect`, `useQuery`) after a conditional return statement. All Hooks must be at the top level of the component function.
+  - *Incorrect*: `if (!data) return null; const processed = useMemo(...)`
+  - *Correct*: `const processed = useMemo(...); if (!data) return null;`
+
 ### Common Patterns
 - **Header Styling**:
   ```javascript

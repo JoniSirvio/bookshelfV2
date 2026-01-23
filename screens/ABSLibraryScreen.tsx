@@ -23,6 +23,7 @@ import { useFinnaSearchResults } from '../hooks/useBooks';
 import ReviewModal from '../components/ReviewModal';
 
 import BookOptionsModal from '../components/BookOptionsModal';
+import { FilterSortModal, SortOption, SortDirection, StatusFilter } from '../components/FilterSortModal';
 
 export default function ABSLibraryScreen() {
     const { url, token, loading: credsLoading } = useABSCredentials();
@@ -39,6 +40,12 @@ export default function ABSLibraryScreen() {
     // Options Modal State (for ABS items)
     const [isOptionsModalVisible, setIsOptionsModalVisible] = useState(false);
     const [selectedBookForOptions, setSelectedBookForOptions] = useState<any | null>(null);
+
+    // Filter/Sort State
+    const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
+    const [sortOption, setSortOption] = useState<SortOption>('added');
+    const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+    const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
     // Finna State
     const [searchSource, setSearchSource] = useState<'abs' | 'finna'>('abs');
@@ -151,6 +158,75 @@ export default function ABSLibraryScreen() {
     };
 
 
+
+    // Filter and Sort Items (Moved up to prevent hook errors)
+    const processedItems = React.useMemo(() => {
+        if (!items) return [];
+
+        // 1. Filter
+        let result = items.filter(item => {
+            // Search Query
+            if (searchQuery) {
+                const q = searchQuery.toLowerCase();
+                const title = item.media.metadata.title?.toLowerCase() || '';
+                const author = item.media.metadata.authorName?.toLowerCase() || '';
+                const authors = item.media.metadata.authors?.map(a => a.name.toLowerCase()).join(' ') || '';
+                if (!title.includes(q) && !author.includes(q) && !authors.includes(q)) return false;
+            }
+
+            // Status Filter
+            if (statusFilter !== 'all') {
+                const isFinished = item.userMedia?.finishedAt;
+                const progress = item.userMedia?.progress || 0;
+
+                if (statusFilter === 'unread' && (isFinished || progress > 0)) return false;
+                if (statusFilter === 'in-progress' && (!progress || isFinished)) return false;
+                if (statusFilter === 'finished' && !isFinished) return false;
+            }
+
+            return true;
+        });
+
+        // 2. Sort
+        result.sort((a, b) => {
+            let valA: any = '';
+            let valB: any = '';
+
+            switch (sortOption) {
+                case 'title':
+                    valA = a.media.metadata.title?.toLowerCase() || '';
+                    valB = b.media.metadata.title?.toLowerCase() || '';
+                    break;
+                case 'author':
+                    valA = a.media.metadata.authorName?.toLowerCase() || '';
+                    valB = b.media.metadata.authorName?.toLowerCase() || '';
+                    break;
+                case 'added':
+                    valA = a.addedAt || 0;
+                    valB = b.addedAt || 0;
+                    break;
+                case 'year':
+                    valA = parseInt(a.media.metadata.publishedYear || '0') || 0;
+                    valB = parseInt(b.media.metadata.publishedYear || '0') || 0;
+                    break;
+                case 'duration':
+                    // Prefer duration (audio), fallback to numPages (ebook - strictly not comparable but better than nothing)
+                    // Or usually we sort audioItems by duration.
+                    valA = a.media.duration || a.media.numPages || 0;
+                    valB = b.media.duration || b.media.numPages || 0;
+                    break;
+            }
+
+            if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+            if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        return result;
+    }, [items, searchQuery, statusFilter, sortOption, sortDirection]);
+
+    const filteredItems = processedItems;
+
     if (credsLoading) {
         return <View style={styles.center}><ActivityIndicator size="large" color="#636B2F" /></View>;
     }
@@ -216,16 +292,6 @@ export default function ABSLibraryScreen() {
             </KeyboardAvoidingView>
         );
     }
-
-    // Filter items based on search query (ABS)
-    const filteredItems = items?.filter(item => {
-        if (!searchQuery) return true;
-        const q = searchQuery.toLowerCase();
-        const title = item.media.metadata.title?.toLowerCase() || '';
-        const author = item.media.metadata.authorName?.toLowerCase() || '';
-        const authors = item.media.metadata.authors?.map(a => a.name.toLowerCase()).join(' ') || '';
-        return title.includes(q) || author.includes(q) || authors.includes(q);
-    }) || [];
 
     // Adapter for BookList (ABS)
     const currentLib = libraries?.find(l => l.id === selectedLibraryId);
@@ -332,6 +398,14 @@ export default function ABSLibraryScreen() {
                                 color="#333"
                             />
                         </TouchableOpacity>
+
+                        <TouchableOpacity onPress={() => setIsFilterModalVisible(true)} style={styles.viewToggle}>
+                            <MaterialCommunityIcons
+                                name="sort-variant"
+                                size={28}
+                                color="#333"
+                            />
+                        </TouchableOpacity>
                     </View>
                 )}
             </View>
@@ -406,6 +480,21 @@ export default function ABSLibraryScreen() {
                     bookAuthors={selectedBookForReview.authors}
                 />
             )}
+
+
+            {/* Filter Modal */}
+            <FilterSortModal
+                visible={isFilterModalVisible}
+                onClose={() => setIsFilterModalVisible(false)}
+                currentSort={sortOption}
+                currentDirection={sortDirection}
+                currentStatus={statusFilter}
+                onApply={(sort, dir, status) => {
+                    setSortOption(sort);
+                    setSortDirection(dir);
+                    setStatusFilter(status);
+                }}
+            />
 
             {/* Options Modal for ABS Items */}
             <BookOptionsModal
