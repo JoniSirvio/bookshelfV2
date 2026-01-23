@@ -227,6 +227,55 @@ export default function ABSLibraryScreen() {
 
     const filteredItems = processedItems;
 
+    // Adapter for BookList (ABS)
+    const currentLib = libraries?.find(l => l.id === selectedLibraryId);
+
+    const bookListItems = React.useMemo(() => {
+        return filteredItems.map(item => {
+            let absProgress = undefined;
+            if (item.userMedia && item.userMedia.duration > 0) {
+                const duration = item.userMedia.duration;
+                const currentTime = item.userMedia.currentTime || 0;
+                const percentage = (currentTime / duration) * 100;
+
+                const timeLeftSeconds = duration - currentTime;
+                let timeLeft = "";
+                const hoursLeft = Math.floor(timeLeftSeconds / 3600);
+                const minutesLeft = Math.floor((timeLeftSeconds % 3600) / 60);
+
+                if (hoursLeft > 0) timeLeft += `${hoursLeft}h `;
+                timeLeft += `${minutesLeft}min`;
+                if (timeLeftSeconds < 60) timeLeft = "Alle 1min";
+                if (timeLeftSeconds <= 0) timeLeft = "Valmis";
+
+                const isFinished = percentage >= 99 || timeLeftSeconds <= 0;
+
+                absProgress = {
+                    percentage,
+                    timeLeft,
+                    duration,
+                    currentTime,
+                    isFinished
+                };
+            }
+
+            const isAudio = item.mediaType === 'audiobook' || currentLib?.mediaType === 'audiobook' || currentLib?.name?.toLowerCase().includes('audio');
+
+            return {
+                id: item.id,
+                title: item.media.metadata.title,
+                authors: item.media.metadata.authors?.map(a => a.name) || [item.media.metadata.authorName || ''],
+                images: item.media.coverPath ? [{ url: getABSCoverUrl(url!, token!, item.id) }] : [],
+                publicationYear: item.media.metadata.publishedYear,
+                description: item.media.metadata.description,
+                format: isAudio ? 'audiobook' : 'ebook',
+                absProgress,
+                finishedReading: item.userMedia?.finishedAt ? new Date(item.userMedia.finishedAt).toISOString() : undefined,
+                readOrListened: isAudio ? 'listened' : 'read'
+            };
+        });
+    }, [filteredItems, currentLib, url, token]);
+
     if (credsLoading) {
         return <View style={styles.center}><ActivityIndicator size="large" color="#636B2F" /></View>;
     }
@@ -293,52 +342,7 @@ export default function ABSLibraryScreen() {
         );
     }
 
-    // Adapter for BookList (ABS)
-    const currentLib = libraries?.find(l => l.id === selectedLibraryId);
 
-    const bookListItems = filteredItems.map(item => {
-        let absProgress = undefined;
-        if (item.userMedia && item.userMedia.duration > 0) {
-            const duration = item.userMedia.duration;
-            const currentTime = item.userMedia.currentTime || 0;
-            const percentage = (currentTime / duration) * 100;
-
-            const timeLeftSeconds = duration - currentTime;
-            let timeLeft = "";
-            const hoursLeft = Math.floor(timeLeftSeconds / 3600);
-            const minutesLeft = Math.floor((timeLeftSeconds % 3600) / 60);
-
-            if (hoursLeft > 0) timeLeft += `${hoursLeft}h `;
-            timeLeft += `${minutesLeft}min`;
-            if (timeLeftSeconds < 60) timeLeft = "Alle 1min";
-            if (timeLeftSeconds <= 0) timeLeft = "Valmis";
-
-            const isFinished = percentage >= 99 || timeLeftSeconds <= 0;
-
-            absProgress = {
-                percentage,
-                timeLeft,
-                duration,
-                currentTime,
-                isFinished
-            };
-        }
-
-        const isAudio = item.mediaType === 'audiobook' || currentLib?.mediaType === 'audiobook' || currentLib?.name?.toLowerCase().includes('audio');
-
-        return {
-            id: item.id,
-            title: item.media.metadata.title,
-            authors: item.media.metadata.authors?.map(a => a.name) || [item.media.metadata.authorName || ''],
-            images: item.media.coverPath ? [{ url: getABSCoverUrl(url!, token!, item.id) }] : [],
-            publicationYear: item.media.metadata.publishedYear,
-            description: item.media.metadata.description,
-            format: isAudio ? 'audiobook' : 'ebook',
-            absProgress,
-            finishedReading: item.userMedia?.finishedAt ? new Date(item.userMedia.finishedAt).toISOString() : undefined,
-            readOrListened: isAudio ? 'listened' : 'read'
-        };
-    });
 
     const toReadIds = myBooks.map(b => b.id);
     const readIds = readBooks.map(b => b.id);

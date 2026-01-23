@@ -240,6 +240,53 @@ export default function NewBooksScreen() {
 
     const filteredItems = processedItems;
 
+    const bookListItems = useMemo(() => {
+        return filteredItems.map(item => {
+            let absProgress = undefined;
+            if (item.userMedia && item.userMedia.duration > 0) {
+                const duration = item.userMedia.duration;
+                const currentTime = item.userMedia.currentTime || 0;
+                const percentage = (currentTime / duration) * 100;
+
+                const timeLeftSeconds = duration - currentTime;
+                let timeLeft = "";
+                const hoursLeft = Math.floor(timeLeftSeconds / 3600);
+                const minutesLeft = Math.floor((timeLeftSeconds % 3600) / 60);
+
+                if (hoursLeft > 0) timeLeft += `${hoursLeft}h `;
+                timeLeft += `${minutesLeft}min`;
+                if (timeLeftSeconds < 60) timeLeft = "Alle 1min";
+                if (timeLeftSeconds <= 0) timeLeft = "Valmis";
+
+                const isFinished = percentage >= 99 || timeLeftSeconds <= 0;
+
+                absProgress = {
+                    percentage,
+                    timeLeft,
+                    duration,
+                    currentTime,
+                    isFinished
+                };
+            }
+
+            const isAudio = libraryMediaTypeMap[item.libraryId] === 'audiobook' || (item.media?.duration || 0) > 0;
+
+            return {
+                id: item.id,
+                title: item.media.metadata.title,
+                authors: item.media.metadata.authors?.map(a => a.name) || [item.media.metadata.authorName || ''],
+                images: item.media.coverPath ? [{ url: getABSCoverUrl(url!, token!, item.id) }] : [],
+                publicationYear: item.media.metadata.publishedYear,
+                description: item.media.metadata.description,
+                addedAt: item.addedAt,
+                format: isAudio ? 'audiobook' : 'ebook',
+                absProgress,
+                finishedReading: item.userMedia?.finishedAt ? new Date(item.userMedia.finishedAt).toISOString() : undefined,
+                readOrListened: isAudio ? 'listened' : 'read'
+            };
+        });
+    }, [filteredItems, url, token, libraryMediaTypeMap]);
+
     if (credsLoading || loadingItems) {
         return <View style={styles.center}><ActivityIndicator size="large" color="#636B2F" /></View>;
     }
@@ -250,50 +297,7 @@ export default function NewBooksScreen() {
 
 
 
-    const bookListItems = filteredItems.map(item => {
-        let absProgress = undefined;
-        if (item.userMedia && item.userMedia.duration > 0) {
-            const duration = item.userMedia.duration;
-            const currentTime = item.userMedia.currentTime || 0;
-            const percentage = (currentTime / duration) * 100;
 
-            const timeLeftSeconds = duration - currentTime;
-            let timeLeft = "";
-            const hoursLeft = Math.floor(timeLeftSeconds / 3600);
-            const minutesLeft = Math.floor((timeLeftSeconds % 3600) / 60);
-
-            if (hoursLeft > 0) timeLeft += `${hoursLeft}h `;
-            timeLeft += `${minutesLeft}min`;
-            if (timeLeftSeconds < 60) timeLeft = "Alle 1min";
-            if (timeLeftSeconds <= 0) timeLeft = "Valmis";
-
-            const isFinished = percentage >= 99 || timeLeftSeconds <= 0;
-
-            absProgress = {
-                percentage,
-                timeLeft,
-                duration,
-                currentTime,
-                isFinished
-            };
-        }
-
-        const isAudio = libraryMediaTypeMap[item.libraryId] === 'audiobook' || (item.media?.duration || 0) > 0;
-
-        return {
-            id: item.id,
-            title: item.media.metadata.title,
-            authors: item.media.metadata.authors?.map(a => a.name) || [item.media.metadata.authorName || ''],
-            images: item.media.coverPath ? [{ url: getABSCoverUrl(url!, token!, item.id) }] : [],
-            publicationYear: item.media.metadata.publishedYear,
-            description: item.media.metadata.description,
-            addedAt: item.addedAt,
-            format: isAudio ? 'audiobook' : 'ebook',
-            absProgress,
-            finishedReading: item.userMedia?.finishedAt ? new Date(item.userMedia.finishedAt).toISOString() : undefined,
-            readOrListened: isAudio ? 'listened' : 'read'
-        };
-    });
 
     const toReadIds = myBooks.map(b => b.id);
     const readIds = readBooks.map(b => b.id);
