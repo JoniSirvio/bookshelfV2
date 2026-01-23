@@ -1,30 +1,11 @@
 import { QueryClient } from '@tanstack/react-query';
-import { Persister } from '@tanstack/react-query-persist-client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 
-// Create a custom persister for TanStack Query using AsyncStorage
-// (MMKV is not supported in Expo Go without a custom dev build)
-export const clientPersister: Persister = {
-    persistClient: async (client) => {
-        try {
-            await AsyncStorage.setItem('REACT_QUERY_OFFLINE_CACHE', JSON.stringify(client));
-        } catch (error) {
-            console.error('Failed to persist query client:', error);
-        }
-    },
-    restoreClient: async () => {
-        try {
-            const persistedClient = await AsyncStorage.getItem('REACT_QUERY_OFFLINE_CACHE');
-            return persistedClient ? JSON.parse(persistedClient) : undefined;
-        } catch (error) {
-            console.error('Failed to restore query client:', error);
-            return undefined;
-        }
-    },
-    removeClient: async () => {
-        await AsyncStorage.removeItem('REACT_QUERY_OFFLINE_CACHE');
-    },
-};
+export const clientPersister = createAsyncStoragePersister({
+    storage: AsyncStorage,
+    throttleTime: 1000, // Throttle writes to once every second
+});
 
 // Create the QueryClient with default options
 export const queryClient = new QueryClient({
