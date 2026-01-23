@@ -513,7 +513,6 @@ const styles = StyleSheet.create({
     bookItemWrapper: {
         flex: 1,
         maxWidth: ITEM_WIDTH,
-        aspectRatio: 1 / 1.5, // Enforce aspect ratio logic here if needed, or let children handle
     },
     coverContainer: {
         width: '100%',

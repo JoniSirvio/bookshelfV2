@@ -348,7 +348,6 @@ const styles = StyleSheet.create({
     bookItemWrapper: {
         flex: 1,
         maxWidth: ITEM_WIDTH,
-        aspectRatio: 1 / 1.5,
     },
     header: {
         marginBottom: 10

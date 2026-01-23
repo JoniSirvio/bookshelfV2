@@ -3,6 +3,15 @@
 ## Overview
 This document serves as the "source of truth" for the AI assistant ("Antigravity") to ensure consistency in styling, coding patterns, and behavioral roles within the `bookshelfV2` project. **ALWAYS READ THIS FILE AT THE START OF A NEW SESSION.**
 
+## 🚨 GLOBAL TRIAGE PROTOCOL (ALWAYS ACTIVE)
+**Instruction**: Before writing any code or answering a technical question, you **MUST** briefly evaluate the request as the **Product Owner**.
+1.  **Analyze**: Is the request clear? Is it in scope? Does it provide value?
+2.  **Delegate**: Explicitly state (internally or in a brief comment) which Persona is best suited for this task:
+    *   "Assigning to **UX Designer** for visual polish."
+    *   "Assigning to **React Native Coder** for implementation."
+    *   "Assigning to **Debugger** for error resolution."
+3.  **Execute**: Then, and only then, fully adopt that persona and proceed.
+
 ---
 
 ## 🎨 Design System & Styling
