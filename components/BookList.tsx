@@ -26,7 +26,8 @@ interface BookListProps<T extends FinnaSearchResult> {
   onRateAndReview?: (book: T) => void;
 }
 
-const UnderlayLeft = ({ item, mode, toReadIds, readIds }: { item: FinnaSearchResult, mode: Mode, toReadIds?: string[], readIds?: string[] }) => {
+// Underlay for Left Swipe (Add/Read)
+export const UnderlayLeft = ({ item, mode, toReadIds, readIds }: { item: FinnaSearchResult, mode: Mode, toReadIds?: string[], readIds?: string[] }) => {
   let content = null;
   let backgroundColor = '#636B2F'; // Green
 
@@ -72,7 +73,7 @@ const UnderlayLeft = ({ item, mode, toReadIds, readIds }: { item: FinnaSearchRes
 };
 
 // Underlay for Right Swipe (Delete)
-const UnderlayRight = () => {
+export const UnderlayRight = () => {
   return (
     <View style={styles.underlayRight}>
       <MaterialCommunityIcons name="trash-can-outline" size={30} color="white" />

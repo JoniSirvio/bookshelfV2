@@ -160,11 +160,7 @@ const HomeScreen: React.FC = () => {
           books={combinedBooks}
           onTriggerDelete={handleOpenDeleteModal}
           onMarkAsRead={(book) => {
-            if (book.id.startsWith('abs-')) {
-              handleRateAndReview(book);
-              return;
-            }
-            markAsRead(book.id)
+            markAsRead(book);
           }}
           onRateAndReview={handleRateAndReview}
           mode="home"
@@ -234,11 +230,7 @@ const HomeScreen: React.FC = () => {
           mode="home"
           onTriggerDelete={handleOpenDeleteModal}
           onMarkAsRead={(book) => {
-            if (book.id.startsWith('abs-')) {
-              handleRateAndReview(book);
-              return;
-            }
-            markAsRead(book.id);
+            markAsRead(book);
           }}
           onStartReading={(book) => !book.id.startsWith('abs-') && startReading(book.id)}
           onRateAndReview={handleRateAndReview}
