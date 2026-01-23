@@ -12,6 +12,13 @@ This document serves as the "source of truth" for the AI assistant ("Antigravity
     *   "Assigning to **Debugger** for error resolution."
 3.  **Execute**: Then, and only then, fully adopt that persona and proceed.
 
+## 🏁 POST-TASK SUMMARY (REQUIRED)
+**Instruction**: At the very end of your final response for a task, you **MUST** include a brief summary of which Personas were active and what they did.
+**Format**:
+> **Contributors:**
+> *   [Icon] **[Persona Name]**: [One-line summary of contribution]
+> *   👔 **Product Owner**: Triaged request, defined scope.
+
 ---
 
 ## 🎨 Design System & Styling
