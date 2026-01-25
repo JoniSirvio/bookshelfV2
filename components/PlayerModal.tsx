@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, Image, Dimensions, SafeAreaView, Platform } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, Image, Dimensions, SafeAreaView, Platform, LayoutAnimation, UIManager } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAudio } from '../context/AudioContext';
 import { useABSCredentials } from '../hooks/useABSCredentials';
@@ -8,6 +8,12 @@ import Slider from '@react-native-community/slider';
 import { BookCoverPlaceholder } from './BookCoverPlaceholder';
 
 const { width } = Dimensions.get('window');
+
+if (Platform.OS === 'android') {
+    if (UIManager.setLayoutAnimationEnabledExperimental) {
+        UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+}
 
 const formatTime = (seconds: number) => {
     if (!seconds || seconds < 0 || isNaN(seconds)) return "0:00";
@@ -34,11 +40,17 @@ export const PlayerModal = () => {
         computedTotalDuration,
         isPlayerModalVisible,
         hidePlayer,
-        isLoading
+        isLoading,
+        playbackRate,
+        setRate
     } = useAudio();
     const { url, token } = useABSCredentials();
     const [isSeeking, setIsSeeking] = useState(false);
     const [seekValue, setSeekValue] = useState(0);
+    const [imgError, setImgError] = useState(false);
+
+    // Speed Control State
+    const [isSpeedControlVisible, setIsSpeedControlVisible] = useState(false);
 
     // Update slider value from actual position unless user is dragging
     useEffect(() => {
@@ -104,7 +116,7 @@ export const PlayerModal = () => {
                             </Text>
                             <Text style={styles.infoSeparator}>•</Text>
                             <Text style={styles.infoText}>
-                                {computedTotalDuration > 0 ? `Kesto: ${formatTime(computedTotalDuration)}` : ''}
+                                {computedTotalDuration > 0 ? `Kesto: ${formatTime(computedTotalDuration / playbackRate)}` : ''}
                             </Text>
                         </View>
                     </View>
@@ -130,7 +142,7 @@ export const PlayerModal = () => {
                         />
                         <View style={styles.timeRow}>
                             <Text style={styles.timeText}>{formatTime(seekValue)}</Text>
-                            <Text style={styles.timeText}>-{formatTime((duration || 0) - seekValue)}</Text>
+                            <Text style={styles.timeText}>-{formatTime(((duration || 0) - seekValue) / playbackRate)}</Text>
                         </View>
                     </View>
 
@@ -157,6 +169,39 @@ export const PlayerModal = () => {
                             {/* Explicit 30s Forward */}
                             <MaterialCommunityIcons name="fast-forward-30" size={36} color="#333" />
                         </TouchableOpacity>
+                    </View>
+
+                    {/* Inline Speed Control */}
+                    <View style={[styles.speedContainer, { justifyContent: isSpeedControlVisible ? 'flex-start' : 'center' }]}>
+                        <TouchableOpacity
+                            style={[
+                                styles.speedButton,
+                                isSpeedControlVisible && styles.speedButtonActive
+                            ]}
+                            onPress={() => {
+                                LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
+                                setIsSpeedControlVisible(!isSpeedControlVisible);
+                            }}
+                        >
+                            <Text style={styles.speedButtonText}>{playbackRate.toFixed(2)}x</Text>
+                        </TouchableOpacity>
+
+                        {isSpeedControlVisible && (
+                            <View style={styles.inlineSliderContainer}>
+                                <Slider
+                                    style={styles.inlineSlider}
+                                    minimumValue={1.0}
+                                    maximumValue={2.0}
+                                    step={0.05}
+                                    value={playbackRate}
+                                    onValueChange={(val) => setRate(parseFloat(val.toFixed(2)))}
+                                    minimumTrackTintColor="#636B2F"
+                                    maximumTrackTintColor="#f0f0f0"
+                                    thumbTintColor="#636B2F"
+                                />
+                                <Text style={styles.speedValueInline}>{playbackRate.toFixed(2)}x</Text>
+                            </View>
+                        )}
                     </View>
                 </View>
             </SafeAreaView>
@@ -270,12 +315,54 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         gap: 40,
-        marginBottom: 40,
+        marginBottom: 20, // Reduced bottom margin to fit speed button
     },
     subControl: {
         padding: 10,
     },
     mainControl: {
         // padding: 0,
-    }
+    },
+    speedContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        marginBottom: 20,
+        width: '100%',
+    },
+    speedButton: {
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 20,
+        backgroundColor: '#f0f0f0',
+        marginRight: 10,
+    },
+    speedButtonActive: {
+        backgroundColor: '#e0e0e0',
+    },
+    speedButtonText: {
+        fontWeight: 'bold',
+        color: '#636B2F',
+        fontSize: 14,
+    },
+    inlineSliderContainer: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f9f9f9',
+        borderRadius: 20,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+    },
+    inlineSlider: {
+        flex: 1,
+        height: 30,
+    },
+    speedValueInline: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        color: '#666',
+        marginLeft: 8,
+        fontVariant: ['tabular-nums'],
+    },
 });

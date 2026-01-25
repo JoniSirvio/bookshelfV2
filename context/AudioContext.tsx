@@ -11,6 +11,7 @@ interface AudioContextType {
     position: number; // seconds
     duration: number; // seconds
     computedTotalDuration: number; // Calculated total duration
+    playbackRate: number;
     isLoading: boolean;
     isPlayerModalVisible: boolean;
     openPlayer: () => void;
@@ -19,6 +20,7 @@ interface AudioContextType {
     togglePlay: () => void;
     seek: (position: number) => Promise<void>;
     skip: (seconds: number) => Promise<void>;
+    setRate: (rate: number) => void;
     closePlayer: () => void;
 }
 
@@ -30,6 +32,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const [currentFileIndex, setCurrentFileIndex] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
     const [isPlayerModalVisible, setIsPlayerModalVisible] = useState(false);
+    const [playbackRate, setPlaybackRate] = useState(1.0);
     const lastSyncTime = useRef(0);
 
     // Initialize player with no source initially
@@ -38,6 +41,13 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     const openPlayer = () => setIsPlayerModalVisible(true);
     const hidePlayer = () => setIsPlayerModalVisible(false);
+
+    const setRate = (rate: number) => {
+        setPlaybackRate(rate);
+        if (player.setPlaybackRate) {
+            player.setPlaybackRate(rate);
+        }
+    };
 
     // Setup Background Audio Mode
     useEffect(() => {
@@ -156,6 +166,13 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 }
 
                 await player.seekTo(position);
+            }
+
+            if (player.setPlaybackRate) {
+                player.setPlaybackRate(playbackRate);
+            } else {
+                // Fallback or ignore if not supported in this version
+                // console.warn("setPlaybackRate not available");
             }
 
             player.play();
@@ -291,6 +308,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 togglePlay,
                 seek,
                 skip,
+                setRate,
+                playbackRate,
                 closePlayer
             }}
         >
