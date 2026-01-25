@@ -16,7 +16,7 @@ export const useABSInProgress = (readBooks: any[] = []) => {
             return u;
         },
         enabled: !!url && !!token,
-        staleTime: 1000 * 60 * 5, // 5 minutes
+        staleTime: 0, // Always fetch fresh on mount to ensure progress is up to date
     });
 
     // 2. Process Progress & Fetch Item Details
@@ -26,8 +26,8 @@ export const useABSInProgress = (readBooks: any[] = []) => {
         queryFn: async () => {
             if (!user || !user.mediaProgress) return [];
 
-            // Filter logic: Only started items
-            const candidates = user.mediaProgress.filter((p: any) => p.progress > 0);
+            // Filter logic: Only started items AND not hidden
+            const candidates = user.mediaProgress.filter((p: any) => p.progress > 0 && !p.hideFromContinueListening);
 
             // Sort by last update (most recent first)
             candidates.sort((a: any, b: any) => b.lastUpdate - a.lastUpdate);

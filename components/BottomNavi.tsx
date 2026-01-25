@@ -15,6 +15,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getLastSeenNewBooksTime } from '../utils/notificationsStore';
 import { useABSCredentials } from '../hooks/useABSCredentials';
 import { fetchABSLibraries, fetchABSLibraryItems } from '../api/abs';
+import { MiniPlayer } from './MiniPlayer';
 
 const NotificationBell = () => {
   const navigation = useNavigation<any>();
@@ -167,53 +168,56 @@ const NotificationBell = () => {
 
 export default function MyTabs() {
   return (
-    <Tab.Navigator
-      screenOptions={{
-        headerShown: true,
-        tabBarStyle: { height: 80 },
-        tabBarLabelStyle: { fontSize: 12 },
-        tabBarLabelPosition: 'below-icon',
-        headerTitle: () => (
-          <Text style={{ fontSize: 20 }}>
-            <Text style={{ fontStyle: 'italic' }}>Book</Text>
-            <Text style={{ fontWeight: 'bold' }}>Shelf</Text>
-          </Text>
-        ),
-        headerStyle: { backgroundColor: '#636B2F' },
-        tabBarActiveTintColor: '#636B2F',
-        headerRight: () => <NotificationBell />,
-      }}
-    >
-      <Tab.Screen
-        name="Home"
-        component={HomeScreen}
-        options={{
-          tabBarLabel: 'Luettavat',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="book-open-variant-outline" color={color} size={size} />
+    <>
+      <Tab.Navigator
+        screenOptions={{
+          headerShown: true,
+          tabBarStyle: { height: 80 },
+          tabBarLabelStyle: { fontSize: 12 },
+          tabBarLabelPosition: 'below-icon',
+          headerTitle: () => (
+            <Text style={{ fontSize: 20 }}>
+              <Text style={{ fontStyle: 'italic' }}>Book</Text>
+              <Text style={{ fontWeight: 'bold' }}>Shelf</Text>
+            </Text>
           ),
+          headerStyle: { backgroundColor: '#636B2F' },
+          tabBarActiveTintColor: '#636B2F',
+          headerRight: () => <NotificationBell />,
         }}
-      />
-      <Tab.Screen
-        name="Kirjasto"
-        component={ABSLibraryScreen}
-        options={{
-          tabBarLabel: 'Kirjat',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="bookshelf" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Past Reads"
-        component={PastReadScreen}
-        options={{
-          tabBarLabel: 'Luetut',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="book-check-outline" color={color} size={size} />
-          ),
-        }}
-      />
-    </Tab.Navigator>
+      >
+        <Tab.Screen
+          name="Home"
+          component={HomeScreen}
+          options={{
+            tabBarLabel: 'Luettavat',
+            tabBarIcon: ({ color, size }) => (
+              <MaterialCommunityIcons name="book-open-variant-outline" color={color} size={size} />
+            ),
+          }}
+        />
+        <Tab.Screen
+          name="Kirjasto"
+          component={ABSLibraryScreen}
+          options={{
+            tabBarLabel: 'Kirjat',
+            tabBarIcon: ({ color, size }) => (
+              <MaterialCommunityIcons name="bookshelf" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tab.Screen
+          name="Past Reads"
+          component={PastReadScreen}
+          options={{
+            tabBarLabel: 'Luetut',
+            tabBarIcon: ({ color, size }) => (
+              <MaterialCommunityIcons name="book-check-outline" color={color} size={size} />
+            ),
+          }}
+        />
+      </Tab.Navigator>
+      <MiniPlayer />
+    </>
   );
 }

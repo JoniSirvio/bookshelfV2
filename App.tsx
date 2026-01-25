@@ -4,8 +4,10 @@ import { NavigationContainer } from '@react-navigation/native';
 import { Provider as PaperProvider, DefaultTheme } from 'react-native-paper';
 import { BooksProvider } from './context/BooksContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { AudioProvider } from './context/AudioContext'; // Import AudioProvider
 import BottomNavi from './components/BottomNavi';
 import LoginModal from './components/LoginModal';
+import { PlayerModal } from './components/PlayerModal'; // Import PlayerModal
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useFonts } from 'expo-font';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -42,27 +44,30 @@ const AppContent = () => {
 
   return (
     <>
-      <BooksProvider>
-        <NavigationContainer>
-          <Stack.Navigator>
-            <Stack.Screen
-              name="Main"
-              component={BottomNavi}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="NewBooks"
-              component={NewBooksScreen}
-              options={{
-                headerTitle: 'Uudet lisäykset',
-                headerStyle: { backgroundColor: '#636B2F' },
-                headerTintColor: '#fff',
-                headerBackTitle: 'Takaisin'
-              }}
-            />
-          </Stack.Navigator>
-        </NavigationContainer>
-      </BooksProvider>
+      <AudioProvider>
+        <BooksProvider>
+          <NavigationContainer>
+            <Stack.Navigator>
+              <Stack.Screen
+                name="Main"
+                component={BottomNavi}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="NewBooks"
+                component={NewBooksScreen}
+                options={{
+                  headerTitle: 'Uudet lisäykset',
+                  headerStyle: { backgroundColor: '#636B2F' },
+                  headerTintColor: '#fff',
+                  headerBackTitle: 'Takaisin'
+                }}
+              />
+            </Stack.Navigator>
+          </NavigationContainer>
+        </BooksProvider>
+        <PlayerModal />
+      </AudioProvider>
       <LoginModal visible={!user} />
     </>
   );

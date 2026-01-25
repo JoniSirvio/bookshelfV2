@@ -4,6 +4,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { FinnaSearchResult } from '../api/finna';
 import { BookCoverPlaceholder } from './BookCoverPlaceholder';
 import { FormatBadge } from './FormatBadge';
+import { useAudio } from '../context/AudioContext';
+import { ABSItem } from '../api/abs';
 
 type Mode = 'search' | 'home' | 'read' | 'recommendation';
 
@@ -43,6 +45,16 @@ const BookOptionsModal: React.FC<BookOptionsModalProps> = ({
     const alreadyAdded = isInToRead || isInRead;
 
     const format = book.absProgress ? 'audiobook' : ((book as any).format || 'book');
+
+    const { loadBook, openPlayer } = useAudio();
+
+    const handleListen = async () => {
+        if (format === 'audiobook') {
+            await loadBook(book as unknown as ABSItem);
+            openPlayer();
+            onClose();
+        }
+    };
 
     return (
         <Modal
@@ -91,12 +103,19 @@ const BookOptionsModal: React.FC<BookOptionsModalProps> = ({
                         </TouchableOpacity>
                     </View>
 
-                    {/* Start Reading */}
-                    {showStartReading && onStartReading && (
-                        <TouchableOpacity style={styles.option} onPress={() => { onStartReading(book); onClose(); }}>
-                            <MaterialCommunityIcons name="book-open-page-variant" size={24} color="#333" />
-                            <Text style={styles.optionText}>Aloita lukeminen</Text>
+                    {/* Start Reading / Listening */}
+                    {format === 'audiobook' ? (
+                        <TouchableOpacity style={styles.option} onPress={handleListen}>
+                            <MaterialCommunityIcons name="headphones" size={24} color="#333" />
+                            <Text style={styles.optionText}>Aloita kuuntelu</Text>
                         </TouchableOpacity>
+                    ) : (
+                        showStartReading && onStartReading && (
+                            <TouchableOpacity style={styles.option} onPress={() => { onStartReading(book); onClose(); }}>
+                                <MaterialCommunityIcons name="book-open-page-variant" size={24} color="#333" />
+                                <Text style={styles.optionText}>Aloita lukeminen</Text>
+                            </TouchableOpacity>
+                        )
                     )}
 
                     {/* Home Mode Actions */}
