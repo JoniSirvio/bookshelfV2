@@ -14,6 +14,7 @@ import SearchBar from '../components/SearchBar';
 import ReviewModal from '../components/ReviewModal';
 import { setLastSeenNewBooksTime, getLastSeenNewBooksTime } from '../utils/notificationsStore';
 import { BookGridItem } from '../components/BookGridItem';
+import { useViewMode } from '../hooks/useViewMode';
 import { FlashList } from '@shopify/flash-list';
 
 import BookOptionsModal from '../components/BookOptionsModal';
@@ -23,7 +24,7 @@ export default function NewBooksScreen() {
     const { url, token, loading: credsLoading } = useABSCredentials();
     const { myBooks, readBooks, addBook, markAsRead } = useBooksContext();
     const [selectedType, setSelectedType] = useState<'all' | 'audio' | 'ebook'>('all');
-    const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+    const [viewMode, setViewMode] = useViewMode('newbooks_view_mode', 'list');
     const [searchQuery, setSearchQuery] = useState('');
 
     // Review Modal State

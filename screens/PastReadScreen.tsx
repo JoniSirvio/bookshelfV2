@@ -6,12 +6,13 @@ import { FinnaSearchResult } from "../api/finna";
 import ConfirmDeleteModal from "../components/ConfirmDeleteModal";
 import BookOptionsModal from "../components/BookOptionsModal";
 import { BookGridItem } from "../components/BookGridItem";
+import { useViewMode } from "../hooks/useViewMode";
 import { FlashList } from "@shopify/flash-list";
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function PastReadScreen() {
   const { readBooks, removeReadBook, reorderBooks } = useBooksContext();
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [viewMode, setViewMode] = useViewMode('history_view_mode', 'list');
 
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [selectedBookForDeletion, setSelectedBookForDeletion] = useState<FinnaSearchResult | null>(null);

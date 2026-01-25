@@ -1,7 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { FinnaSearchResult } from '../api/finna';
+import { BookCoverPlaceholder } from './BookCoverPlaceholder';
+import { FormatBadge } from './FormatBadge';
+import { useAudio } from '../context/AudioContext';
+import { ABSItem } from '../api/abs';
 
 type Mode = 'search' | 'home' | 'read' | 'recommendation';
 
@@ -40,6 +44,18 @@ const BookOptionsModal: React.FC<BookOptionsModalProps> = ({
     const isInRead = readIds?.includes(book.id);
     const alreadyAdded = isInToRead || isInRead;
 
+    const format = book.absProgress ? 'audiobook' : ((book as any).format || 'book');
+
+    const { loadBook, openPlayer } = useAudio();
+
+    const handleListen = async () => {
+        if (format === 'audiobook') {
+            await loadBook(book as unknown as ABSItem);
+            openPlayer();
+            onClose();
+        }
+    };
+
     return (
         <Modal
             visible={isVisible}
@@ -50,18 +66,56 @@ const BookOptionsModal: React.FC<BookOptionsModalProps> = ({
             <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
                 <View style={styles.modalContent}>
                     <View style={styles.header}>
-                        <Text style={styles.title} numberOfLines={1}>{book.title}</Text>
-                        <TouchableOpacity onPress={onClose}>
+                        {/* Cover Image Wrapper */}
+                        <View style={styles.headerImageContainer}>
+                            {book.images?.length ? (
+                                <View style={styles.coverImageWrapper}>
+                                    <Image source={{ uri: book.images[0].url }} style={styles.headerCoverImage} />
+                                    <FormatBadge format={format} />
+                                </View>
+                            ) : (
+                                <View style={[styles.coverImageWrapper, { backgroundColor: '#eee' }]}>
+                                    <BookCoverPlaceholder
+                                        id={book.id}
+                                        title={book.title}
+                                        authors={book.authors}
+                                        format={format}
+                                        compact={true}
+                                    />
+                                    {/* Placeholder has its own badge logic often, but consistent badge overlay is fine too if placeholder doesn't double up or we want unified style. 
+                                        Actually placeholder has it built-in. Let's rely on placeholder's own if no image, OR overlay our new badge. 
+                                        Our new badge is better styled. Let's use our new badge on top if we want consistency, 
+                                        BUT BookCoverPlaceholder already has one. Let's stick to just Image wrapper for now.
+                                        Wait, BookList uses Placeholder when no image. 
+                                        Let's just use our wrapper + image/placeholder pattern.
+                                    */}
+                                </View>
+                            )}
+                        </View>
+
+                        <View style={styles.headerTextContent}>
+                            <Text style={styles.title} numberOfLines={2}>{book.title}</Text>
+                            {book.authors && <Text style={styles.author} numberOfLines={1}>{book.authors.join(', ')}</Text>}
+                        </View>
+
+                        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                             <MaterialCommunityIcons name="close" size={24} color="#333" />
                         </TouchableOpacity>
                     </View>
 
-                    {/* Start Reading */}
-                    {showStartReading && onStartReading && (
-                        <TouchableOpacity style={styles.option} onPress={() => { onStartReading(book); onClose(); }}>
-                            <MaterialCommunityIcons name="book-open-page-variant" size={24} color="#333" />
-                            <Text style={styles.optionText}>Aloita lukeminen</Text>
+                    {/* Start Reading / Listening */}
+                    {format === 'audiobook' ? (
+                        <TouchableOpacity style={styles.option} onPress={handleListen}>
+                            <MaterialCommunityIcons name="headphones" size={24} color="#333" />
+                            <Text style={styles.optionText}>Aloita kuuntelu</Text>
                         </TouchableOpacity>
+                    ) : (
+                        showStartReading && onStartReading && (
+                            <TouchableOpacity style={styles.option} onPress={() => { onStartReading(book); onClose(); }}>
+                                <MaterialCommunityIcons name="book-open-page-variant" size={24} color="#333" />
+                                <Text style={styles.optionText}>Aloita lukeminen</Text>
+                            </TouchableOpacity>
+                        )
                     )}
 
                     {/* Home Mode Actions */}
@@ -173,18 +227,50 @@ const styles = StyleSheet.create({
     },
     header: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         marginBottom: 20,
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
         paddingBottom: 15,
     },
+    headerImageContainer: {
+        marginRight: 15,
+        /* Add shadow for depth */
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 3.84,
+        elevation: 5,
+    },
+    coverImageWrapper: {
+        width: 60,
+        height: 90,
+        borderRadius: 4,
+        overflow: 'hidden',
+    },
+    headerCoverImage: {
+        width: '100%',
+        height: '100%',
+        resizeMode: 'cover',
+    },
+    headerTextContent: {
+        flex: 1,
+        justifyContent: 'center',
+        paddingTop: 4,
+    },
     title: {
         fontSize: 18,
         fontWeight: 'bold',
-        flex: 1,
-        marginRight: 10,
+        color: '#333',
+        marginBottom: 4,
+    },
+    author: {
+        fontSize: 14,
+        color: '#666',
+    },
+    closeButton: {
+        marginLeft: 10,
+        padding: 4,
     },
     option: {
         flexDirection: 'row',

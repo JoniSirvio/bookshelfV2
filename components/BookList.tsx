@@ -6,6 +6,7 @@ import SwipeableItem, { OpenDirection, useSwipeableItemParams } from 'react-nati
 import { FinnaSearchResult } from '../api/finna';
 import BookOptionsModal from './BookOptionsModal';
 import { BookCoverPlaceholder } from './BookCoverPlaceholder';
+import { FormatBadge } from './FormatBadge';
 
 type Mode = 'search' | 'home' | 'read' | 'recommendation';
 
@@ -137,7 +138,10 @@ const BookContent: React.FC<{
     <View style={styles.listItem}>
       <View style={styles.itemRow}>
         {item.images?.length ? (
-          <Image source={{ uri: item.images[0].url }} style={styles.coverImage} />
+          <View style={[styles.coverImage, { overflow: 'hidden' }]}>
+            <Image source={{ uri: item.images[0].url }} style={{ width: '100%', height: '100%' }} />
+            <FormatBadge format={item.absProgress ? 'audiobook' : ((item as any).format || 'book')} />
+          </View>
         ) : (
           <View style={[styles.coverImage, { overflow: 'hidden' }]}>
             <BookCoverPlaceholder
