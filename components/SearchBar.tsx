@@ -2,6 +2,7 @@ import React from "react";
 import { View, TextInput as NativeTextInput, StyleSheet, TouchableOpacity } from "react-native";
 import { Button } from "react-native-paper";
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { colors } from '../theme';
 
 interface SearchBarProps {
     value?: string;
@@ -32,7 +33,7 @@ export default function SearchBar({
                 <MaterialCommunityIcons
                     name="magnify"
                     size={20}
-                    color="#666"
+                    color={colors.textSecondaryAlt}
                     style={styles.searchIcon}
                 />
                 <NativeTextInput
@@ -41,7 +42,7 @@ export default function SearchBar({
                     value={effectiveValue}
                     onChangeText={effectiveOnChange}
                     style={styles.searchInput}
-                    selectionColor="#636B2F"
+                    selectionColor={colors.primary}
                     onSubmitEditing={onSearch} // Allow keyboard submit
                     returnKeyType="search"
                 />
@@ -57,8 +58,8 @@ export default function SearchBar({
                     onPress={onSearch}
                     loading={loading}
                     disabled={loading}
-                    buttonColor="#636B2F"
-                    textColor="#fff"
+                    buttonColor={colors.primary}
+                    textColor={colors.white}
                     style={styles.searchButton}
                     contentStyle={{ height: 45 }}
                 >
@@ -93,7 +94,7 @@ const styles = StyleSheet.create({
         height: 45,
         backgroundColor: 'transparent',
         fontSize: 16,
-        color: '#333',
+        color: colors.textPrimary,
     },
     searchButton: {
         borderRadius: 10,

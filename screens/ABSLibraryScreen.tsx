@@ -14,6 +14,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { doc, updateDoc, setDoc } from 'firebase/firestore';
 import { firestore } from '../firebase/Config';
 import { useAuth } from '../context/AuthContext';
+import { colors, loaderColor } from '../theme';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const COLUMN_COUNT = 3;
@@ -278,7 +279,7 @@ export default function ABSLibraryScreen() {
     }, [filteredItems, currentLib, url, token]);
 
     if (credsLoading) {
-        return <View style={styles.center}><ActivityIndicator size="large" color="#636B2F" /></View>;
+        return <View style={styles.center}><ActivityIndicator size="large" color={loaderColor} /></View>;
     }
 
     if (!url || !token) {
@@ -292,7 +293,7 @@ export default function ABSLibraryScreen() {
                     contentContainerStyle={styles.formContent}
                     keyboardShouldPersistTaps="handled"
                 >
-                    <MaterialCommunityIcons name="bookshelf" size={64} color="#636B2F" style={{ marginBottom: 20 }} />
+                    <MaterialCommunityIcons name="bookshelf" size={64} color={colors.primary} style={{ marginBottom: 20 }} />
                     <Text style={styles.title}>Yhdistä Audiobookshelfiin</Text>
                     <Text style={styles.subtitle}>Syötä palvelimen tiedot kirjautuaksesi.</Text>
 
@@ -305,7 +306,7 @@ export default function ABSLibraryScreen() {
                         keyboardType="url"
                         style={styles.input}
                         mode="outlined"
-                        activeOutlineColor="#636B2F"
+                        activeOutlineColor={colors.primary}
                     />
 
                     <TextInput
@@ -315,7 +316,7 @@ export default function ABSLibraryScreen() {
                         autoCapitalize="none"
                         style={styles.input}
                         mode="outlined"
-                        activeOutlineColor="#636B2F"
+                        activeOutlineColor={colors.primary}
                     />
 
                     <TextInput
@@ -325,7 +326,7 @@ export default function ABSLibraryScreen() {
                         secureTextEntry
                         style={styles.input}
                         mode="outlined"
-                        activeOutlineColor="#636B2F"
+                        activeOutlineColor={colors.primary}
                     />
 
                     <Button
@@ -334,7 +335,7 @@ export default function ABSLibraryScreen() {
                         loading={savingCreds}
                         disabled={savingCreds}
                         style={styles.saveButton}
-                        buttonColor="#636B2F"
+                        buttonColor={colors.primary}
                     >
                         Yhdistä
                     </Button>
@@ -360,7 +361,7 @@ export default function ABSLibraryScreen() {
                         style={{
                             flexDirection: 'row',
                             alignItems: 'center',
-                            backgroundColor: '#F1F8E9',
+                            backgroundColor: colors.bgRec,
                             paddingHorizontal: 12,
                             paddingVertical: 6,
                             borderRadius: 20,
@@ -400,7 +401,7 @@ export default function ABSLibraryScreen() {
                             <MaterialCommunityIcons
                                 name={viewMode === 'grid' ? "view-list" : "view-grid"}
                                 size={28}
-                                color="#333"
+                                color={colors.textPrimary}
                             />
                         </TouchableOpacity>
 
@@ -408,7 +409,7 @@ export default function ABSLibraryScreen() {
                             <MaterialCommunityIcons
                                 name="sort-variant"
                                 size={28}
-                                color="#333"
+                                color={colors.textPrimary}
                             />
                         </TouchableOpacity>
                     </View>
@@ -417,7 +418,7 @@ export default function ABSLibraryScreen() {
 
             {searchSource === 'abs' ? (
                 itemsLoading && !items ? (
-                    <View style={styles.center}><ActivityIndicator size="large" color="#636B2F" /></View>
+                    <View style={styles.center}><ActivityIndicator size="large" color={loaderColor} /></View>
                 ) : (
                     viewMode === 'grid' ? (
                         <FlashList
@@ -524,7 +525,7 @@ export default function ABSLibraryScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: colors.white,
         padding: 16, // Added padding to match HomeScreen
     },
     center: {
@@ -532,7 +533,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center', // This centers the ScrollView horizontally
         padding: 20,
-        backgroundColor: '#fff',
+        backgroundColor: colors.white,
     },
     // ...
     scrollView: {
@@ -551,7 +552,7 @@ const styles = StyleSheet.create({
     message: {
         marginTop: 10,
         fontSize: 16,
-        color: '#666',
+        color: colors.textSecondaryAlt,
         textAlign: 'center',
     },
     header: {
@@ -585,14 +586,14 @@ const styles = StyleSheet.create({
         backgroundColor: '#f5f5f5',
     },
     activeTab: {
-        backgroundColor: '#636B2F',
+        backgroundColor: colors.primary,
     },
     tabText: {
-        color: '#666',
+        color: colors.textSecondaryAlt,
         fontWeight: '500',
     },
     activeTabText: {
-        color: '#fff',
+        color: colors.white,
         fontWeight: 'bold',
     },
     listContent: {
@@ -632,7 +633,7 @@ const styles = StyleSheet.create({
     bookTitle: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#333',
+        color: colors.textPrimary,
         marginBottom: 2,
     },
     bookAuthor: {
@@ -643,12 +644,12 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 24,
         fontWeight: 'bold',
-        color: '#333',
+        color: colors.textPrimary,
         marginBottom: 10,
     },
     subtitle: {
         fontSize: 16,
-        color: '#666',
+        color: colors.textSecondaryAlt,
         marginBottom: 30,
         textAlign: 'center',
     },
@@ -662,7 +663,7 @@ const styles = StyleSheet.create({
     placeholderTitle: {
         fontSize: 12,
         fontWeight: 'bold',
-        color: '#555',
+        color: colors.textSecondary,
         textAlign: 'center',
         padding: 4
     }

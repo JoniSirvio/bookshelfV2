@@ -9,6 +9,7 @@ import { BookGridItem } from "../components/BookGridItem";
 import { useViewMode } from "../hooks/useViewMode";
 import { FlashList } from "@shopify/flash-list";
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { colors } from "../theme";
 
 export default function PastReadScreen() {
   const { readBooks, removeReadBook, reorderBooks } = useBooksContext();
@@ -100,7 +101,7 @@ export default function PastReadScreen() {
       <View style={styles.headerContainer}>
         <Text style={styles.title}>Luettujen hylly</Text>
         <TouchableOpacity onPress={() => setViewMode(prev => prev === 'list' ? 'grid' : 'list')}>
-          <MaterialCommunityIcons name={viewMode === 'list' ? 'view-grid' : 'view-list'} size={28} color="#333" />
+          <MaterialCommunityIcons name={viewMode === 'list' ? 'view-grid' : 'view-list'} size={28} color={colors.textPrimary} />
         </TouchableOpacity>
       </View>
 
@@ -181,7 +182,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: "#fff",
+    backgroundColor: colors.white,
   },
   headerContainer: {
     flexDirection: 'row',
@@ -195,7 +196,7 @@ const styles = StyleSheet.create({
   },
   totalCount: {
     fontSize: 16,
-    color: '#666',
+    color: colors.textSecondaryAlt,
     marginBottom: 16,
   },
   filterContainer: {
@@ -214,13 +215,13 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   activeFilterChip: {
-    backgroundColor: '#636B2F', // App green
+    backgroundColor: colors.primary,
   },
   filterText: {
-    color: '#333',
+    color: colors.textPrimary,
     fontWeight: '500',
   },
   activeFilterText: {
-    color: 'white',
+    color: colors.white,
   },
 });

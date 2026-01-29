@@ -16,6 +16,7 @@ import { useCallback, useEffect } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { queryClient, clientPersister } from './utils/queryClient';
+import { headerStyle, headerTintColor, loaderColor } from './theme';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -37,7 +38,7 @@ const AppContent = () => {
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#636B2F" />
+        <ActivityIndicator size="large" color={loaderColor} />
       </View>
     );
   }
@@ -58,8 +59,8 @@ const AppContent = () => {
                 component={NewBooksScreen}
                 options={{
                   headerTitle: 'Uudet lisäykset',
-                  headerStyle: { backgroundColor: '#636B2F' },
-                  headerTintColor: '#fff',
+                  headerStyle,
+                  headerTintColor,
                   headerBackTitle: 'Takaisin'
                 }}
               />

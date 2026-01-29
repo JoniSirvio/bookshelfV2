@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions } from 'rea
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { BookCoverPlaceholder } from './BookCoverPlaceholder';
 import { FormatBadge } from './FormatBadge';
+import { colors } from '../theme';
 
 const COLUMN_COUNT = 3;
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -41,7 +42,7 @@ export const BookGridItem: React.FC<BookGridItemProps> = ({ id, title, authors, 
         <TouchableOpacity style={styles.bookItem} onPress={onPress} activeOpacity={0.7}>
             <View style={[
                 styles.coverContainer,
-                !coverUrl && { borderColor: '#636B2F', borderWidth: 2 }
+                !coverUrl && { borderColor: colors.primary, borderWidth: 2 }
             ]}>
                 {coverUrl ? (
                     <Image
@@ -69,7 +70,7 @@ export const BookGridItem: React.FC<BookGridItemProps> = ({ id, title, authors, 
                         {absProgress.isFinished ? (
                             /* Finished Badge (Pill) */
                             <View style={styles.finishedBadge}>
-                                <MaterialCommunityIcons name="check-circle" size={12} color="#FFFFFF" />
+                                <MaterialCommunityIcons name="check-circle" size={12} color={colors.white} />
                                 <Text style={styles.finishedText}>Kuunneltu</Text>
                             </View>
                         ) : absProgress.percentage > 0 && (
@@ -89,7 +90,7 @@ export const BookGridItem: React.FC<BookGridItemProps> = ({ id, title, authors, 
                                             styles.progressBarFill,
                                             {
                                                 width: `${absProgress.percentage}%`,
-                                                backgroundColor: !coverUrl ? '#FFFFFF' : '#636B2F'
+                                                backgroundColor: !coverUrl ? colors.white : colors.primary
                                             }
                                         ]}
                                     />
@@ -135,7 +136,7 @@ const styles = StyleSheet.create({
     bookTitle: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#333',
+        color: colors.textPrimary,
         marginBottom: 2,
     },
     bookAuthor: {
@@ -161,7 +162,7 @@ const styles = StyleSheet.create({
         gap: 4
     },
     finishedText: {
-        color: '#FFFFFF',
+        color: colors.white,
         fontSize: 10,
         fontWeight: 'bold',
     },
@@ -190,7 +191,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     timeBadgeText: {
-        color: '#FFFFFF',
+        color: colors.white,
         fontSize: 10,
         fontWeight: '600',
     }

@@ -6,6 +6,7 @@ import { useABSCredentials } from '../hooks/useABSCredentials';
 import { getABSCoverUrl } from '../api/abs';
 import Slider from '@react-native-community/slider';
 import { BookCoverPlaceholder } from './BookCoverPlaceholder';
+import { colors } from '../theme';
 
 const { width } = Dimensions.get('window');
 
@@ -78,7 +79,7 @@ export const PlayerModal = () => {
                 {/* Header */}
                 <View style={styles.header}>
                     <TouchableOpacity onPress={hidePlayer} style={styles.headerButton}>
-                        <MaterialCommunityIcons name="chevron-down" size={32} color="#333" />
+                        <MaterialCommunityIcons name="chevron-down" size={32} color={colors.textPrimary} />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Toistetaan nyt</Text>
                     <View style={styles.headerButton} />
@@ -136,9 +137,9 @@ export const PlayerModal = () => {
                                 await seek(val);
                                 setIsSeeking(false);
                             }}
-                            minimumTrackTintColor="#636B2F"
+                            minimumTrackTintColor={colors.primary}
                             maximumTrackTintColor="#ddd"
-                            thumbTintColor="#636B2F"
+                            thumbTintColor={colors.primary}
                         />
                         <View style={styles.timeRow}>
                             <Text style={styles.timeText}>{formatTime(seekValue)}</Text>
@@ -150,24 +151,24 @@ export const PlayerModal = () => {
                     <View style={styles.controls}>
                         <TouchableOpacity onPress={() => skip(-30)} style={styles.subControl}>
                             {/* Explicit 30s Rewind */}
-                            <MaterialCommunityIcons name="rewind-30" size={36} color="#333" />
+                            <MaterialCommunityIcons name="rewind-30" size={36} color={colors.textPrimary} />
                         </TouchableOpacity>
 
                         <TouchableOpacity onPress={togglePlay} style={styles.mainControl}>
                             {isLoading ? (
-                                <MaterialCommunityIcons name="loading" size={48} color="#333" />
+                                <MaterialCommunityIcons name="loading" size={48} color={colors.textPrimary} />
                             ) : (
                                 <MaterialCommunityIcons
                                     name={isPlaying ? "pause-circle" : "play-circle"}
                                     size={80}
-                                    color="#636B2F"
+                                    color={colors.primary}
                                 />
                             )}
                         </TouchableOpacity>
 
                         <TouchableOpacity onPress={() => skip(30)} style={styles.subControl}>
                             {/* Explicit 30s Forward */}
-                            <MaterialCommunityIcons name="fast-forward-30" size={36} color="#333" />
+                            <MaterialCommunityIcons name="fast-forward-30" size={36} color={colors.textPrimary} />
                         </TouchableOpacity>
                     </View>
 
@@ -195,9 +196,9 @@ export const PlayerModal = () => {
                                     step={0.05}
                                     value={playbackRate}
                                     onValueChange={(val) => setRate(parseFloat(val.toFixed(2)))}
-                                    minimumTrackTintColor="#636B2F"
+                                    minimumTrackTintColor={colors.primary}
                                     maximumTrackTintColor="#f0f0f0"
-                                    thumbTintColor="#636B2F"
+                                    thumbTintColor={colors.primary}
                                 />
                                 <Text style={styles.speedValueInline}>{playbackRate.toFixed(2)}x</Text>
                             </View>
@@ -212,7 +213,7 @@ export const PlayerModal = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: colors.white,
     },
     header: {
         flexDirection: 'row',
@@ -229,7 +230,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 14,
         fontWeight: 'bold',
-        color: '#666',
+        color: colors.textSecondaryAlt,
         textTransform: 'uppercase',
         letterSpacing: 1,
     },
@@ -264,13 +265,13 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 22,
         fontWeight: 'bold',
-        color: '#333',
+        color: colors.textPrimary,
         textAlign: 'center',
         marginBottom: 8,
     },
     author: {
         fontSize: 16,
-        color: '#636B2F',
+        color: colors.primary,
         textAlign: 'center',
         marginBottom: 8,
     },
@@ -283,7 +284,7 @@ const styles = StyleSheet.create({
     },
     infoText: {
         fontSize: 13,
-        color: '#666',
+        color: colors.textSecondaryAlt,
         fontWeight: '600',
     },
     infoSeparator: {
@@ -342,7 +343,7 @@ const styles = StyleSheet.create({
     },
     speedButtonText: {
         fontWeight: 'bold',
-        color: '#636B2F',
+        color: colors.primary,
         fontSize: 14,
     },
     inlineSliderContainer: {
@@ -361,7 +362,7 @@ const styles = StyleSheet.create({
     speedValueInline: {
         fontSize: 12,
         fontWeight: 'bold',
-        color: '#666',
+        color: colors.textSecondaryAlt,
         marginLeft: 8,
         fontVariant: ['tabular-nums'],
     },

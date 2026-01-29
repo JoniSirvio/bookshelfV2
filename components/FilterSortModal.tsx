@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, TouchableWithoutFeedback } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { colors } from '../theme';
 
 export type SortOption = 'added' | 'title' | 'author' | 'year' | 'duration';
 export type SortDirection = 'asc' | 'desc';
@@ -85,7 +86,7 @@ export const FilterSortModal: React.FC<FilterSortModalProps> = ({
                     <MaterialCommunityIcons
                         name={direction === 'asc' ? 'sort-ascending' : 'sort-descending'}
                         size={20}
-                        color="#636B2F"
+                        color={colors.primary}
                     />
                 )}
             </TouchableOpacity>
@@ -115,7 +116,7 @@ export const FilterSortModal: React.FC<FilterSortModalProps> = ({
                             <View style={styles.header}>
                                 <Text style={styles.title}>Järjestä ja Suodata</Text>
                                 <TouchableOpacity onPress={onClose}>
-                                    <MaterialCommunityIcons name="close" size={24} color="#333" />
+                                    <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
                                 </TouchableOpacity>
                             </View>
 
@@ -169,12 +170,12 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: '#333',
+        color: colors.textPrimary,
     },
     sectionTitle: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#666',
+        color: colors.textSecondaryAlt,
         marginTop: 10,
         marginBottom: 10,
     },
@@ -190,7 +191,7 @@ const styles = StyleSheet.create({
         borderBottomColor: '#f0f0f0',
     },
     selectedOption: {
-        backgroundColor: '#F1F8E9', // Light green bg
+        backgroundColor: colors.bgRec,
         paddingHorizontal: 10,
         borderRadius: 8,
         borderBottomWidth: 0,
@@ -198,15 +199,15 @@ const styles = StyleSheet.create({
     },
     optionText: {
         fontSize: 16,
-        color: '#333',
+        color: colors.textPrimary,
     },
     selectedOptionText: {
-        color: '#636B2F',
+        color: colors.primary,
         fontWeight: 'bold',
     },
     directionText: {
         fontSize: 12,
-        color: '#636B2F',
+        color: colors.primary,
         marginTop: 2,
     },
     pillsContainer: {
@@ -224,19 +225,19 @@ const styles = StyleSheet.create({
         borderColor: '#eee',
     },
     activePill: {
-        backgroundColor: '#636B2F',
-        borderColor: '#636B2F',
+        backgroundColor: colors.primary,
+        borderColor: colors.primary,
     },
     pillText: {
-        color: '#666',
+        color: colors.textSecondaryAlt,
         fontWeight: '500',
     },
     activePillText: {
-        color: '#fff',
+        color: colors.white,
         fontWeight: 'bold',
     },
     applyButton: {
-        backgroundColor: '#636B2F',
+        backgroundColor: colors.primary,
         paddingVertical: 15,
         borderRadius: 12,
         alignItems: 'center',

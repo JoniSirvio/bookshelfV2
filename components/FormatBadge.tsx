@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { colors } from '../theme';
 
 interface FormatBadgeProps {
     format: 'audiobook' | 'ebook' | 'book';
@@ -25,7 +26,7 @@ export const FormatBadge: React.FC<FormatBadgeProps> = ({ format, compact = fals
 
     return (
         <View style={[styles.container, { padding, top, right }]}>
-            <MaterialCommunityIcons name={iconName} size={iconSize} color="#FFFFFF" />
+            <MaterialCommunityIcons name={iconName} size={iconSize} color={colors.white} />
         </View>
     );
 };

@@ -16,6 +16,7 @@ import { getLastSeenNewBooksTime } from '../utils/notificationsStore';
 import { useABSCredentials } from '../hooks/useABSCredentials';
 import { fetchABSLibraries, fetchABSLibraryItems } from '../api/abs';
 import { MiniPlayer } from './MiniPlayer';
+import { colors, headerStyle } from '../theme';
 
 const NotificationBell = () => {
   const navigation = useNavigation<any>();
@@ -79,12 +80,12 @@ const NotificationBell = () => {
             position: 'absolute',
             top: 2,
             right: 2,
-            backgroundColor: '#D32F2F',
+            backgroundColor: colors.secondary,
             width: 10,
             height: 10,
             borderRadius: 5,
             borderWidth: 1.5,
-            borderColor: '#fff',
+            borderColor: colors.white,
           }} />
         )}
       </TouchableOpacity>
@@ -103,7 +104,7 @@ const NotificationBell = () => {
                 position: 'absolute',
                 top: 105, // Adjusted for header height
                 right: 11,
-                backgroundColor: '#fff',
+                backgroundColor: colors.white,
                 borderRadius: 8,
                 padding: 15,
                 shadowColor: "#000",
@@ -118,19 +119,19 @@ const NotificationBell = () => {
                     <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 5 }}>
                       Uusia kirjoja!
                     </Text>
-                    <Text style={{ fontSize: 14, color: '#666', marginBottom: 10 }}>
+                    <Text style={{ fontSize: 14, color: colors.textSecondaryAlt, marginBottom: 10 }}>
                       Kirjastoon on lisätty {newBooksData.count} {newBooksData.count === 1 ? 'uusi kirja' : 'uutta kirjaa'}.
                     </Text>
                     <TouchableOpacity
                       onPress={handleOpenNewBooks}
                       style={{
-                        backgroundColor: '#636B2F',
+                        backgroundColor: colors.primary,
                         paddingVertical: 8,
                         borderRadius: 5,
                         alignItems: 'center'
                       }}
                     >
-                      <Text style={{ color: '#fff', fontWeight: 'bold' }}>Katso uutuudet</Text>
+                      <Text style={{ color: colors.white, fontWeight: 'bold' }}>Katso uutuudet</Text>
                     </TouchableOpacity>
                   </>
                 ) : (
@@ -138,7 +139,7 @@ const NotificationBell = () => {
                     <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 5 }}>
                       Ei uusia ilmoituksia
                     </Text>
-                    <Text style={{ fontSize: 14, color: '#666', marginBottom: 5 }}>
+                    <Text style={{ fontSize: 14, color: colors.textSecondaryAlt, marginBottom: 5 }}>
                       Olet ajan tasalla kirjaston valikoimasta.
                     </Text>
                   </>
@@ -155,7 +156,7 @@ const NotificationBell = () => {
                   borderStyle: 'solid',
                   borderLeftColor: 'transparent',
                   borderRightColor: 'transparent',
-                  borderBottomColor: '#fff',
+                  borderBottomColor: colors.white,
                 }} />
               </View>
             </View>
@@ -181,8 +182,8 @@ export default function MyTabs() {
               <Text style={{ fontWeight: 'bold' }}>Shelf</Text>
             </Text>
           ),
-          headerStyle: { backgroundColor: '#636B2F' },
-          tabBarActiveTintColor: '#636B2F',
+          headerStyle,
+          tabBarActiveTintColor: colors.primary,
           headerRight: () => <NotificationBell />,
         }}
       >

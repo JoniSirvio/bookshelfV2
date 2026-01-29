@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { FormatBadge } from './FormatBadge';
+import { colors } from '../theme';
 
 interface BookCoverPlaceholderProps {
     id: string;
@@ -9,17 +10,6 @@ interface BookCoverPlaceholderProps {
     format?: 'audiobook' | 'ebook' | 'book';
     compact?: boolean; // New prop for small thumbnails
 }
-
-// Brand Colors
-const COLORS = {
-    primary: '#636B2F',
-    textDark: '#333333',
-    bgLight: '#FFFFFF',
-    bgTint: '#EBECE6', // 10-15% opacity of primary on white
-    bgAccent: '#636B2F',
-    textLight: '#FFFFFF',
-    textLightOpacity: 'rgba(255, 255, 255, 0.8)',
-};
 
 type Variant = 'light' | 'tint' | 'accent';
 
@@ -37,10 +27,9 @@ const getVariant = (id: string): Variant => {
 
 export const BookCoverPlaceholder: React.FC<BookCoverPlaceholderProps> = ({ id, title, authors, format = 'book', compact = false }) => {
     // User Request: Only Green background, remove watermark.
-    const bgColor = COLORS.bgAccent;
-    const titleColor = COLORS.textLight;
-    const authorColor = COLORS.textLightOpacity;
-    const iconColor = COLORS.textLight;
+    const bgColor = colors.primary;
+    const titleColor = colors.white;
+    const authorColor = colors.textLightOpacity;
 
     return (
         <View style={[styles.container, { backgroundColor: bgColor }]}>

@@ -3,6 +3,7 @@ import { View, StyleSheet, Modal, Text } from 'react-native';
 import { TextInput, Button } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
+import { colors } from '../theme';
 
 interface LoginModalProps {
     visible: boolean;
@@ -44,7 +45,7 @@ export default function LoginModal({ visible }: LoginModalProps) {
             <View style={styles.container}>
                 <View style={styles.content}>
                     <View style={styles.header}>
-                        <MaterialCommunityIcons name="book-open-page-variant" size={40} color="#636B2F" />
+                        <MaterialCommunityIcons name="book-open-page-variant" size={40} color={colors.primary} />
                         <Text style={styles.titleContainer}>
                             <Text style={styles.titleBook}>Book</Text>
                             <Text style={styles.titleShelf}>Shelf</Text>
@@ -61,7 +62,7 @@ export default function LoginModal({ visible }: LoginModalProps) {
                         keyboardType="email-address"
                         style={styles.input}
                         mode="outlined"
-                        activeOutlineColor="#636B2F"
+                        activeOutlineColor={colors.primary}
                     />
                     <TextInput
                         label="Salasana"
@@ -70,7 +71,7 @@ export default function LoginModal({ visible }: LoginModalProps) {
                         secureTextEntry
                         style={styles.input}
                         mode="outlined"
-                        activeOutlineColor="#636B2F"
+                        activeOutlineColor={colors.primary}
                     />
 
                     {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -81,7 +82,7 @@ export default function LoginModal({ visible }: LoginModalProps) {
                         loading={loading}
                         disabled={loading}
                         style={styles.button}
-                        buttonColor="#636B2F"
+                        buttonColor={colors.primary}
                     >
                         {'Kirjaudu'}
                     </Button>
@@ -124,7 +125,7 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         marginBottom: 15,
         textAlign: 'center',
-        color: '#333',
+        color: colors.textPrimary,
     },
     input: {
         marginBottom: 10,
@@ -135,7 +136,7 @@ const styles = StyleSheet.create({
         paddingVertical: 5,
     },
     errorText: {
-        color: '#d9534f',
+        color: colors.delete,
         marginBottom: 10,
         textAlign: 'center',
     },

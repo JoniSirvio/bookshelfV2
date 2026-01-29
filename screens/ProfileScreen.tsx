@@ -3,6 +3,7 @@ import { TextInput, Button } from "react-native-paper";
 import React, { useEffect, useState } from "react";
 import { useProfile } from "../hooks/useProfile";
 import { useAuth } from "../context/AuthContext";
+import { colors } from "../theme";
 
 const ProfileScreen: React.FC = () => {
     const [profile, setProfile] = useState({ email: '', phone: '' });
@@ -31,7 +32,7 @@ const ProfileScreen: React.FC = () => {
                 onChangeText={text => setProfile({ ...profile, email: text })}
                 keyboardType="email-address"
                 autoCapitalize="none"
-                activeOutlineColor="#636B2F"
+                activeOutlineColor={colors.primary}
             />
             <TextInput
                 label="Puhelinnumero"
@@ -40,7 +41,7 @@ const ProfileScreen: React.FC = () => {
                 value={profile.phone}
                 onChangeText={text => setProfile({ ...profile, phone: text })}
                 keyboardType="phone-pad"
-                activeOutlineColor="#636B2F"
+                activeOutlineColor={colors.primary}
             />
 
             <Button mode="contained"
@@ -48,7 +49,7 @@ const ProfileScreen: React.FC = () => {
                     await saveProfile(profile);
                 }}
                 style={styles.button}
-                buttonColor="#636B2F">
+                buttonColor={colors.primary}>
                 Tallenna tiedot
             </Button>
 
@@ -56,7 +57,7 @@ const ProfileScreen: React.FC = () => {
                 mode="outlined"
                 onPress={signOut}
                 style={[styles.button, styles.signOutButton]}
-                textColor="#d9534f"
+                textColor={colors.delete}
             >
                 Kirjaudu ulos
             </Button>
@@ -79,7 +80,7 @@ const styles = StyleSheet.create({
     userInfo: {
         fontSize: 16,
         marginBottom: 20,
-        color: '#333',
+        color: colors.textPrimary,
     },
     input: {
         width: "90%",
@@ -91,7 +92,7 @@ const styles = StyleSheet.create({
         alignSelf: "center",
     },
     signOutButton: {
-        borderColor: '#d9534f',
+        borderColor: colors.delete,
         marginTop: 30,
     },
 });

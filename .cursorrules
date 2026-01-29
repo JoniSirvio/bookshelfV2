@@ -124,12 +124,27 @@ When the user asks for a specific role, or when the task demands it, adopt one o
   - *Correct*: `const processed = useMemo(...); if (!data) return null;`
 
 ### Common Patterns
-- **Header Styling**:
-  ```javascript
-  headerStyle: { backgroundColor: '#636B2F' },
-  headerTintColor: '#fff',
-  ```
-- **Loader**:
-  ```javascript
-  <ActivityIndicator size="large" color="#636B2F" />
-  ```
+- **Header Styling**: Use `headerStyle` and `headerTintColor` from `theme.ts` (e.g. `options={{ headerStyle, headerTintColor }}`).
+- **Loader**: Use `loaderColor` from `theme.ts` (e.g. `<ActivityIndicator size="large" color={loaderColor} />`).
+- **Theme/Constants**: The project uses `theme.ts` for colors and common patterns (e.g. `colors.primary`, `headerStyle`, `loaderColor`). Use it in new UI instead of hardcoding hex codes.
+
+---
+
+## Code Quality
+
+- **Reusable components**: Prefer reusable components over copy-paste. If the same UI or logic appears in more than one place, extract a shared component or hook in `components/` or `hooks/`.
+- **Proper fixes**: Fix root causes only; no temporary patches or "bubblegum" fixes. After a fix, check for the same pattern elsewhere (grep or semantic search).
+- **Keep it simple**: Avoid over-engineering; match existing patterns (e.g. Context + TanStack Query, existing list/modal patterns).
+
+---
+
+## Codebase Context
+
+For structure and data flow, see `.cursor/docs/codebase-overview.md` if present.
+
+**Runnable commands** (commit, push, UX discussion, feature discussion, refactor-or-fix) live in `.cursor/commands/`. Use those command files when running those workflows; do not duplicate their steps in rules.
+
+- **Screens**: `screens/` — HomeScreen, PastReadScreen, ABSLibraryScreen, NewBooksScreen, ProfileScreen.
+- **Data**: Auth via `useAuth()`; shelf/read/recommendations via `useBooksContext()` (Firestore); ABS library/items via `useABSCredentials()` + `api/abs`; playback via `AudioContext`.
+- **Shared UI**: BookList, BookGridItem, SearchBar; modals — ReviewModal, ConfirmDeleteModal, BookOptionsModal, FilterSortModal, LoginModal, PlayerModal. Reuse these for new list/grid screens where possible.
+- **Navigation**: Bottom tabs in BottomNavi; stack screen NewBooks; header style and app title pattern as in Common Patterns above.

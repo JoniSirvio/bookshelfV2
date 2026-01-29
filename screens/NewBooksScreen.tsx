@@ -19,6 +19,7 @@ import { FlashList } from '@shopify/flash-list';
 
 import BookOptionsModal from '../components/BookOptionsModal';
 import { FilterSortModal, SortOption, SortDirection, StatusFilter } from '../components/FilterSortModal';
+import { colors, loaderColor } from '../theme';
 
 export default function NewBooksScreen() {
     const { url, token, loading: credsLoading } = useABSCredentials();
@@ -289,7 +290,7 @@ export default function NewBooksScreen() {
     }, [filteredItems, url, token, libraryMediaTypeMap]);
 
     if (credsLoading || loadingItems) {
-        return <View style={styles.center}><ActivityIndicator size="large" color="#636B2F" /></View>;
+        return <View style={styles.center}><ActivityIndicator size="large" color={loaderColor} /></View>;
     }
 
     if (!url || !token) {
@@ -311,11 +312,11 @@ export default function NewBooksScreen() {
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                     <Text style={[styles.headerTitle, { marginBottom: 0 }]}>Uudet lisäykset</Text>
                     <TouchableOpacity onPress={() => setViewMode(prev => prev === 'list' ? 'grid' : 'list')}>
-                        <MaterialCommunityIcons name={viewMode === 'list' ? 'view-grid' : 'view-list'} size={28} color="#333" />
+                        <MaterialCommunityIcons name={viewMode === 'list' ? 'view-grid' : 'view-list'} size={28} color={colors.textPrimary} />
                     </TouchableOpacity>
 
                     <TouchableOpacity onPress={() => setIsFilterModalVisible(true)} style={{ marginLeft: 10 }}>
-                        <MaterialCommunityIcons name="sort-variant" size={28} color="#333" />
+                        <MaterialCommunityIcons name="sort-variant" size={28} color={colors.textPrimary} />
                     </TouchableOpacity>
                 </View>
 
@@ -419,7 +420,7 @@ export default function NewBooksScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: colors.white,
         padding: 16
     },
     center: {
@@ -438,7 +439,7 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: 'bold',
         marginBottom: 10,
-        color: '#333'
+        color: colors.textPrimary
     },
     toggles: {
         flexDirection: 'row',
@@ -452,14 +453,14 @@ const styles = StyleSheet.create({
         backgroundColor: '#f5f5f5',
     },
     activePill: {
-        backgroundColor: '#636B2F',
+        backgroundColor: colors.primary,
     },
     pillText: {
-        color: '#666',
+        color: colors.textSecondaryAlt,
         fontWeight: '500'
     },
     activePillText: {
-        color: '#fff',
+        color: colors.white,
         fontWeight: 'bold'
     }
 });
