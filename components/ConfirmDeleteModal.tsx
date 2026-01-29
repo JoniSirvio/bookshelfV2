@@ -1,5 +1,6 @@
 import React from 'react';
 import { Modal, View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { colors } from '../theme';
 
 interface ConfirmDeleteModalProps {
   isVisible: boolean;
@@ -97,7 +98,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   confirmButton: {
-    backgroundColor: '#d9534f', // Red for confirmation of deletion
+    backgroundColor: colors.delete,
   },
   cancelButton: {
     backgroundColor: '#5bc0de', // Info blue for cancel

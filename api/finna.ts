@@ -15,7 +15,6 @@ export interface FinnaSearchResult {
     readOrListened?: string; // Added for read or listened status
     startedReading?: string; // ISO Date string
     finishedReading?: string; // ISO Date string
-    finishedReading?: string; // ISO Date string
     daysRead?: number;
     absProgress?: {
         percentage: number;

@@ -12,6 +12,7 @@ import { useViewMode } from "../hooks/useViewMode";
 import { FlashList } from "@shopify/flash-list";
 
 import { useABSInProgress } from "../hooks/useABSInProgress";
+import { colors } from "../theme";
 
 const HomeScreen: React.FC = () => {
   const { myBooks, readBooks, removeBook, markAsRead, startReading, reorderBooks, recommendations, generateRecommendations, removeRecommendation, addBook } = useBooksContext();
@@ -108,7 +109,7 @@ const HomeScreen: React.FC = () => {
     <View style={styles.headerContainer}>
       <Text style={styles.title}>Luettavien hylly</Text>
       <TouchableOpacity onPress={() => setViewMode(prev => prev === 'list' ? 'grid' : 'list')}>
-        <MaterialCommunityIcons name={viewMode === 'list' ? 'view-grid' : 'view-list'} size={28} color="#333" />
+        <MaterialCommunityIcons name={viewMode === 'list' ? 'view-grid' : 'view-list'} size={28} color={colors.textPrimary} />
       </TouchableOpacity>
     </View>
   );
@@ -133,7 +134,7 @@ const HomeScreen: React.FC = () => {
           <ActivityIndicator size="small" color="#33691E" style={{ marginRight: 8 }} />
         ) : null}
         <Text style={styles.generateButtonText}>{generating ? 'Haetaan...' : 'Hae suosituksia'}</Text>
-        {!generating && <MaterialCommunityIcons name="robot" size={20} color="#636B2F" style={{ marginLeft: 8 }} />}
+        {!generating && <MaterialCommunityIcons name="robot" size={20} color={colors.primary} style={{ marginLeft: 8 }} />}
       </TouchableOpacity>
 
       {recommendations.length > 0 && (
@@ -246,7 +247,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: "#fff",
+    backgroundColor: colors.white,
   },
   headerContainer: {
     flexDirection: 'row',
@@ -261,12 +262,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   sectionSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textSecondaryAlt,
     marginBottom: 16,
   },
   wishesInput: {
@@ -276,7 +277,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     fontSize: 14,
-    color: '#333',
+    color: colors.textPrimary,
     marginBottom: 16,
     minHeight: 60,
     textAlignVertical: 'top',
@@ -295,7 +296,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   generateButton: {
-    borderColor: '#636B2F',
+    borderColor: colors.primary,
     borderWidth: 1.5,
     paddingVertical: 12,
     paddingHorizontal: 20,
@@ -303,7 +304,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F1F8E9',
+    backgroundColor: colors.bgRec,
     alignSelf: 'stretch',
     marginBottom: 24,
   },
@@ -313,7 +314,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   recommendationsList: {
-    backgroundColor: '#FFF',
+    backgroundColor: colors.white,
   }
 });
 

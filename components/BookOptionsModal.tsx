@@ -6,6 +6,7 @@ import { BookCoverPlaceholder } from './BookCoverPlaceholder';
 import { FormatBadge } from './FormatBadge';
 import { useAudio } from '../context/AudioContext';
 import { ABSItem } from '../api/abs';
+import { colors } from '../theme';
 
 type Mode = 'search' | 'home' | 'read' | 'recommendation';
 
@@ -99,20 +100,20 @@ const BookOptionsModal: React.FC<BookOptionsModalProps> = ({
                         </View>
 
                         <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                            <MaterialCommunityIcons name="close" size={24} color="#333" />
+                            <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
                         </TouchableOpacity>
                     </View>
 
                     {/* Start Reading / Listening */}
                     {format === 'audiobook' ? (
                         <TouchableOpacity style={styles.option} onPress={handleListen}>
-                            <MaterialCommunityIcons name="headphones" size={24} color="#333" />
+                            <MaterialCommunityIcons name="headphones" size={24} color={colors.textPrimary} />
                             <Text style={styles.optionText}>Aloita kuuntelu</Text>
                         </TouchableOpacity>
                     ) : (
                         showStartReading && onStartReading && (
                             <TouchableOpacity style={styles.option} onPress={() => { onStartReading(book); onClose(); }}>
-                                <MaterialCommunityIcons name="book-open-page-variant" size={24} color="#333" />
+                                <MaterialCommunityIcons name="book-open-page-variant" size={24} color={colors.textPrimary} />
                                 <Text style={styles.optionText}>Aloita lukeminen</Text>
                             </TouchableOpacity>
                         )
@@ -123,20 +124,20 @@ const BookOptionsModal: React.FC<BookOptionsModalProps> = ({
                         <>
                             {onMarkAsRead && (
                                 <TouchableOpacity style={styles.option} onPress={() => { onMarkAsRead(book); onClose(); }}>
-                                    <MaterialCommunityIcons name="check-all" size={24} color="#636B2F" />
+                                    <MaterialCommunityIcons name="check-all" size={24} color={colors.primary} />
                                     <Text style={styles.optionText}>Lisää luetuksi{'\n'}(ilman arvostelua)</Text>
                                 </TouchableOpacity>
                             )}
                             {onRateAndReview && (
                                 <TouchableOpacity style={styles.option} onPress={() => { onRateAndReview(book); onClose(); }}>
-                                    <MaterialCommunityIcons name="star-outline" size={24} color="#636B2F" />
+                                    <MaterialCommunityIcons name="star-outline" size={24} color={colors.primary} />
                                     <Text style={styles.optionText}>Arvostele ja merkitse luetuksi</Text>
                                 </TouchableOpacity>
                             )}
                             {onTriggerDelete && (
                                 <TouchableOpacity style={styles.option} onPress={() => { onTriggerDelete(book); onClose(); }}>
-                                    <MaterialCommunityIcons name="trash-can-outline" size={24} color="#d9534f" />
-                                    <Text style={[styles.optionText, { color: '#d9534f' }]}>Poista hyllystä</Text>
+                                    <MaterialCommunityIcons name="trash-can-outline" size={24} color={colors.delete} />
+                                    <Text style={[styles.optionText, { color: colors.delete }]}>Poista hyllystä</Text>
                                 </TouchableOpacity>
                             )}
                         </>
@@ -147,14 +148,14 @@ const BookOptionsModal: React.FC<BookOptionsModalProps> = ({
                         <>
                             {onMarkAsRead && !alreadyAdded && (
                                 <TouchableOpacity style={styles.option} onPress={() => { onMarkAsRead(book); onClose(); }}>
-                                    <MaterialCommunityIcons name="check-all" size={24} color="#636B2F" />
+                                    <MaterialCommunityIcons name="check-all" size={24} color={colors.primary} />
                                     <Text style={styles.optionText}>Lisää luetuksi{'\n'}(ilman arvostelua)</Text>
                                 </TouchableOpacity>
                             )}
 
                             {onRateAndReview && !alreadyAdded && (
                                 <TouchableOpacity style={styles.option} onPress={() => { onRateAndReview(book); onClose(); }}>
-                                    <MaterialCommunityIcons name="star-outline" size={24} color="#636B2F" />
+                                    <MaterialCommunityIcons name="star-outline" size={24} color={colors.primary} />
                                     <Text style={styles.optionText}>Arvostele ja merkitse luetuksi</Text>
                                 </TouchableOpacity>
                             )}
@@ -172,9 +173,9 @@ const BookOptionsModal: React.FC<BookOptionsModalProps> = ({
                                 <MaterialCommunityIcons
                                     name={alreadyAdded ? "check" : "plus-circle-outline"}
                                     size={24}
-                                    color={alreadyAdded ? "#9E9E9E" : "#636B2F"}
+                                    color={alreadyAdded ? colors.disabled : colors.primary}
                                 />
-                                <Text style={[styles.optionText, alreadyAdded && { color: '#9E9E9E' }]}>
+                                <Text style={[styles.optionText, alreadyAdded && { color: colors.disabled }]}>
                                     {alreadyAdded ? "Hyllyssä" : "Lisää hyllyyn"}
                                 </Text>
                             </TouchableOpacity>
@@ -184,8 +185,8 @@ const BookOptionsModal: React.FC<BookOptionsModalProps> = ({
                     {/* Read Mode Actions */}
                     {mode === 'read' && onTriggerDelete && (
                         <TouchableOpacity style={styles.option} onPress={() => { onTriggerDelete(book); onClose(); }}>
-                            <MaterialCommunityIcons name="trash-can-outline" size={24} color="#d9534f" />
-                            <Text style={[styles.optionText, { color: '#d9534f' }]}>Poista historiasta</Text>
+                            <MaterialCommunityIcons name="trash-can-outline" size={24} color={colors.delete} />
+                            <Text style={[styles.optionText, { color: colors.delete }]}>Poista historiasta</Text>
                         </TouchableOpacity>
                     )}
                     {/* Recommendation Mode Actions */}
@@ -193,14 +194,14 @@ const BookOptionsModal: React.FC<BookOptionsModalProps> = ({
                         <>
                             {onAdd && (
                                 <TouchableOpacity style={styles.option} onPress={() => { onAdd(book); onClose(); }}>
-                                    <MaterialCommunityIcons name="plus-circle-outline" size={24} color="#636B2F" />
+                                    <MaterialCommunityIcons name="plus-circle-outline" size={24} color={colors.primary} />
                                     <Text style={styles.optionText}>Lisää hyllyyn</Text>
                                 </TouchableOpacity>
                             )}
                             {onTriggerDelete && (
                                 <TouchableOpacity style={styles.option} onPress={() => { onTriggerDelete(book); onClose(); }}>
-                                    <MaterialCommunityIcons name="trash-can-outline" size={24} color="#d9534f" />
-                                    <Text style={[styles.optionText, { color: '#d9534f' }]}>Poista suositus</Text>
+                                    <MaterialCommunityIcons name="trash-can-outline" size={24} color={colors.delete} />
+                                    <Text style={[styles.optionText, { color: colors.delete }]}>Poista suositus</Text>
                                 </TouchableOpacity>
                             )}
                         </>
@@ -261,12 +262,12 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#333',
+        color: colors.textPrimary,
         marginBottom: 4,
     },
     author: {
         fontSize: 14,
-        color: '#666',
+        color: colors.textSecondaryAlt,
     },
     closeButton: {
         marginLeft: 10,
@@ -285,7 +286,7 @@ const styles = StyleSheet.create({
     optionText: {
         fontSize: 16,
         marginLeft: 15,
-        color: '#333',
+        color: colors.textPrimary,
     },
 });
 

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Modal, View, Text, TextInput, StyleSheet, TouchableOpacity, Platform, TouchableWithoutFeedback, Keyboard, Switch, ScrollView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SegmentedButtons } from 'react-native-paper';
+import { colors } from '../theme';
 
 interface ReviewModalProps {
   isVisible: boolean;
@@ -119,8 +120,8 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                 style={styles.segmentedButtons}
                 theme={{
                   colors: {
-                    secondaryContainer: '#636B2F',
-                    onSecondaryContainer: '#FFFFFF',
+                    secondaryContainer: colors.primary,
+                    onSecondaryContainer: colors.white,
                   },
                 }}
               />
@@ -130,7 +131,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                   <Text style={styles.switchLabel}>Valitse ajankohta</Text>
                   <Switch
                     trackColor={{ false: "#767577", true: "#a5d6a7" }}
-                    thumbColor={useCustomDate ? "#636B2F" : "#f4f3f4"}
+                    thumbColor={useCustomDate ? colors.primary : "#f4f3f4"}
                     ios_backgroundColor="#3e3e3e"
                     onValueChange={setUseCustomDate}
                     value={useCustomDate}
@@ -141,7 +142,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                   <View style={styles.datePickerContainer}>
                     <View style={styles.yearContainer}>
                       <TouchableOpacity onPress={() => setSelectedYear((parseInt(selectedYear) - 1).toString())}>
-                        <MaterialCommunityIcons name="chevron-left" size={24} color="#333" />
+                        <MaterialCommunityIcons name="chevron-left" size={24} color={colors.textPrimary} />
                       </TouchableOpacity>
                       <Text style={styles.yearText}>{selectedYear}</Text>
                       <TouchableOpacity
@@ -149,7 +150,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                         disabled={parseInt(selectedYear) >= currentYear}
                         style={{ opacity: parseInt(selectedYear) >= currentYear ? 0.3 : 1 }}
                       >
-                        <MaterialCommunityIcons name="chevron-right" size={24} color="#333" />
+                        <MaterialCommunityIcons name="chevron-right" size={24} color={colors.textPrimary} />
                       </TouchableOpacity>
                     </View>
                     <View style={styles.monthsGrid}>
@@ -190,7 +191,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                   multiline
                   scrollEnabled={true}
                   placeholder="Kirjoita lyhyt arvostelu..."
-                  placeholderTextColor="#666"
+                  placeholderTextColor={colors.textSecondaryAlt}
                   value={reviewText}
                   onChangeText={setReviewText}
                 />
@@ -265,14 +266,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 15,
     textAlign: 'center',
-    color: '#333',
+    color: colors.textPrimary,
   },
   label: {
     fontSize: 16,
     fontWeight: '600',
     marginTop: 10,
     marginBottom: 5,
-    color: '#555',
+    color: colors.textSecondary,
   },
   starContainer: {
     flexDirection: 'row',
@@ -299,7 +300,7 @@ const styles = StyleSheet.create({
     flex: 1, // Fill the wrapper
     textAlignVertical: 'top',
     fontSize: 16,
-    color: '#333',
+    color: colors.textPrimary,
     padding: 0, // Remove padding from input itself to avoid scroll issues
   },
   buttonContainer: {
@@ -326,7 +327,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ccc',
   },
   primaryButton: {
-    backgroundColor: '#636B2F',
+    backgroundColor: colors.primary,
   },
   primaryButtonText: {
     color: 'white',
@@ -368,7 +369,7 @@ const styles = StyleSheet.create({
   },
   switchLabel: {
     fontSize: 16,
-    color: '#333',
+    color: colors.textPrimary,
     fontWeight: '500',
   },
   checkboxContainer: {
@@ -379,7 +380,7 @@ const styles = StyleSheet.create({
   checkboxLabel: {
     marginLeft: 8,
     fontSize: 16,
-    color: '#333',
+    color: colors.textPrimary,
     fontWeight: '500',
   },
   datePickerContainer: {
@@ -395,7 +396,7 @@ const styles = StyleSheet.create({
   yearText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.textPrimary,
   },
   monthsGrid: {
     flexDirection: 'row',
@@ -412,7 +413,7 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   selectedMonthChip: {
-    backgroundColor: '#636B2F',
+    backgroundColor: colors.primary,
   },
   disabledMonthChip: {
     opacity: 0.3,
@@ -420,7 +421,7 @@ const styles = StyleSheet.create({
   },
   monthText: {
     fontSize: 14,
-    color: '#333',
+    color: colors.textPrimary,
   },
   selectedMonthText: {
     color: 'white',

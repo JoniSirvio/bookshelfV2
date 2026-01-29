@@ -7,6 +7,7 @@ import { FinnaSearchResult } from '../api/finna';
 import BookOptionsModal from './BookOptionsModal';
 import { BookCoverPlaceholder } from './BookCoverPlaceholder';
 import { FormatBadge } from './FormatBadge';
+import { colors } from '../theme';
 
 type Mode = 'search' | 'home' | 'read' | 'recommendation';
 
@@ -30,7 +31,7 @@ interface BookListProps<T extends FinnaSearchResult> {
 // Underlay for Left Swipe (Add/Read)
 export const UnderlayLeft = ({ item, mode, toReadIds, readIds }: { item: FinnaSearchResult, mode: Mode, toReadIds?: string[], readIds?: string[] }) => {
   let content = null;
-  let backgroundColor = '#636B2F'; // Green
+  let backgroundColor = colors.primary;
 
   if (mode === 'home') {
     content = (
@@ -42,7 +43,7 @@ export const UnderlayLeft = ({ item, mode, toReadIds, readIds }: { item: FinnaSe
   } else if (mode === 'search') {
     const alreadyAdded = toReadIds?.includes(item.id) || readIds?.includes(item.id);
     if (alreadyAdded) {
-      backgroundColor = '#9E9E9E'; // Gray
+      backgroundColor = colors.disabled;
       content = (
         <>
           <MaterialCommunityIcons name="check" size={30} color="white" />
@@ -100,7 +101,7 @@ const BookContent: React.FC<{
           key={i}
           name={i <= rating ? 'star' : 'star-outline'}
           size={16}
-          color={i <= rating ? 'gold' : 'gray'}
+          color={i <= rating ? colors.stars : 'gray'}
         />
       );
     }
@@ -163,14 +164,14 @@ const BookContent: React.FC<{
 
           {mode === 'home' && item.startedReading && !item.finishedReading && !item.absProgress && (
             <View style={styles.readingStatusContainer}>
-              <MaterialCommunityIcons name="book-open-page-variant" size={16} color="#636B2F" />
+              <MaterialCommunityIcons name="book-open-page-variant" size={16} color={colors.primary} />
               <Text style={styles.readingStatusText}>Luetaan ({currentDaysRead} pv)</Text>
             </View>
           )}
 
           {mode === 'home' && item.startedReading && !item.finishedReading && item.absProgress && !item.absProgress.isFinished && (
             <View style={styles.readingStatusContainer}>
-              <MaterialCommunityIcons name="headphones" size={16} color="#636B2F" />
+              <MaterialCommunityIcons name="headphones" size={16} color={colors.primary} />
               <Text style={styles.readingStatusText}>Kuunnellaan ({currentDaysRead} pv)</Text>
             </View>
           )}
@@ -178,8 +179,8 @@ const BookContent: React.FC<{
           {mode !== 'read' && item.absProgress && (
             <View style={styles.absProgressContainer}>
               {item.absProgress.isFinished ? (
-                <View style={[styles.absProgressBarBackground, { backgroundColor: '#E8F5E9' }]}>
-                  <View style={[styles.absProgressBarFill, { width: '100%', backgroundColor: '#636B2F' }]} />
+                <View style={[styles.absProgressBarBackground, { backgroundColor: colors.bgLight }]}>
+                  <View style={[styles.absProgressBarFill, { width: '100%', backgroundColor: colors.primary }]} />
                 </View>
               ) : (
                 <View style={styles.absProgressBarBackground}>
@@ -190,8 +191,8 @@ const BookContent: React.FC<{
               <View style={styles.absProgressMeta}>
                 {item.absProgress.isFinished ? (
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <MaterialCommunityIcons name="check-circle" size={14} color="#636B2F" style={{ marginRight: 4 }} />
-                    <Text style={[styles.absProgressText, { color: '#636B2F', fontWeight: 'bold' }]}>
+                    <MaterialCommunityIcons name="check-circle" size={14} color={colors.primary} style={{ marginRight: 4 }} />
+                    <Text style={[styles.absProgressText, { color: colors.primary, fontWeight: 'bold' }]}>
                       Kuunneltu ({currentDaysRead} pv) - Arvostele kirja
                     </Text>
                   </View>
@@ -207,7 +208,7 @@ const BookContent: React.FC<{
 
           {mode === 'recommendation' && (item as any).recommendationReason && (
             <View style={styles.recommendationContainer}>
-              <MaterialCommunityIcons name="robot-outline" size={16} color="#636B2F" />
+              <MaterialCommunityIcons name="robot-outline" size={16} color={colors.primary} />
               <Text style={styles.recommendationText}>"{(item as any).recommendationReason}"</Text>
             </View>
           )}
@@ -219,7 +220,7 @@ const BookContent: React.FC<{
                   <MaterialCommunityIcons
                     name={item.readOrListened === 'listened' ? 'headphones' : 'book-open-page-variant-outline'}
                     size={16}
-                    color="#333"
+                    color={colors.textPrimary}
                   />
                   <Text style={styles.readFormatText}>
                     {item.readOrListened === 'listened' ? 'Kuunneltu' : 'Luettu'}
@@ -231,7 +232,7 @@ const BookContent: React.FC<{
               )}
               {item.finishedReading && (
                 <View style={styles.dateContainer}>
-                  <MaterialCommunityIcons name="calendar-month-outline" size={16} color="#555" />
+                  <MaterialCommunityIcons name="calendar-month-outline" size={16} color={colors.textSecondary} />
                   <Text style={styles.dateText}>
                     {(() => {
                       const date = new Date(item.finishedReading);
@@ -253,7 +254,7 @@ const BookContent: React.FC<{
           )}
           {(isInToRead || isInRead) && (
             <View style={styles.inShelfContainer}>
-              <MaterialCommunityIcons name={shelfIcon} size={16} color="#636B2F" />
+              <MaterialCommunityIcons name={shelfIcon} size={16} color={colors.primary} />
               <Text style={styles.inShelfText}>{shelfLabel}</Text>
             </View>
           )}
@@ -413,7 +414,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   itemContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
@@ -434,7 +435,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#d9534f', // Red
+    backgroundColor: colors.delete,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-start',
@@ -448,7 +449,7 @@ const styles = StyleSheet.create({
   },
   listItem: {
     padding: 12,
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
   },
   itemRow: {
     flexDirection: 'row',
@@ -486,19 +487,19 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.textPrimary,
     marginBottom: 2,
   },
   reviewText: {
     fontStyle: 'italic',
-    color: '#555',
+    color: colors.textSecondary,
     fontSize: 13,
   },
   inShelfContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 8,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: colors.bgLight,
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 12,
@@ -519,7 +520,7 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.textPrimary,
   },
   readingStatusContainer: {
     flexDirection: 'row',
@@ -528,7 +529,7 @@ const styles = StyleSheet.create({
   },
   readingStatusText: {
     marginLeft: 5,
-    color: '#636B2F',
+    color: colors.primary,
     fontWeight: 'bold',
   },
   dateContainer: {
@@ -539,12 +540,12 @@ const styles = StyleSheet.create({
   dateText: {
     marginLeft: 6,
     fontSize: 13,
-    color: '#555',
+    color: colors.textSecondary,
   },
   recommendationContainer: {
     flexDirection: 'row',
     marginTop: 8,
-    backgroundColor: '#F1F8E9',
+    backgroundColor: colors.bgRec,
     padding: 8,
     borderRadius: 8,
     alignItems: 'flex-start',
@@ -575,7 +576,7 @@ const styles = StyleSheet.create({
   },
   absProgressBarFill: {
     height: '100%',
-    backgroundColor: '#636B2F',
+    backgroundColor: colors.primary,
     borderRadius: 2,
   },
   absProgressMeta: {
@@ -584,13 +585,13 @@ const styles = StyleSheet.create({
   },
   absProgressText: {
     fontSize: 12,
-    color: '#666',
+    color: colors.textSecondaryAlt,
     fontWeight: '500',
   },
   placeholderTitle: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: '#555',
+    color: colors.textSecondary,
     textAlign: 'center',
     padding: 4
   }

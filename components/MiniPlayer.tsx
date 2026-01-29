@@ -5,6 +5,7 @@ import { useAudio } from '../context/AudioContext';
 import { useABSCredentials } from '../hooks/useABSCredentials';
 import { getABSCoverUrl } from '../api/abs';
 import { BookCoverPlaceholder } from './BookCoverPlaceholder';
+import { colors } from '../theme';
 
 export const MiniPlayer = () => {
     const { currentBook, isPlaying, togglePlay, openPlayer, isLoading } = useAudio();
@@ -62,12 +63,12 @@ export const MiniPlayer = () => {
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
                     {isLoading ? (
-                        <MaterialCommunityIcons name="loading" size={28} color="#333" />
+                        <MaterialCommunityIcons name="loading" size={28} color={colors.textPrimary} />
                     ) : (
                         <MaterialCommunityIcons
                             name={isPlaying ? "pause" : "play"}
                             size={28}
-                            color="#333"
+                            color={colors.textPrimary}
                         />
                     )}
                 </TouchableOpacity>
@@ -82,7 +83,7 @@ const styles = StyleSheet.create({
         bottom: 80, // Height of Tab Bar
         left: 0,
         right: 0,
-        backgroundColor: '#fff',
+        backgroundColor: colors.white,
         borderTopWidth: 1,
         borderTopColor: '#eee',
         height: 60,
@@ -119,11 +120,11 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 14,
         fontWeight: 'bold',
-        color: '#333',
+        color: colors.textPrimary,
     },
     author: {
         fontSize: 12,
-        color: '#666',
+        color: colors.textSecondaryAlt,
     },
     playButton: {
         padding: 5,
