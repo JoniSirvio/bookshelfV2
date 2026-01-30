@@ -18,6 +18,7 @@ import { chatAboutBook, ChatMessage, BookChatMode } from '../api/gemini';
 import { useBooksContext } from '../context/BooksContext';
 import { BookCoverPlaceholder } from './BookCoverPlaceholder';
 import { FormatBadge } from './FormatBadge';
+import Markdown from 'react-native-markdown-display';
 import { colors, loaderColor } from '../theme';
 
 interface AskAIAboutBookModalProps {
@@ -25,6 +26,46 @@ interface AskAIAboutBookModalProps {
     onClose: () => void;
     book: FinnaSearchResult | null;
 }
+
+const markdownStyles = StyleSheet.create({
+    body: {
+        color: colors.textPrimary,
+        fontSize: 14,
+        lineHeight: 22,
+        flex: 1,
+        alignSelf: 'stretch',
+    },
+    paragraph: { marginTop: 0, marginBottom: 8 },
+    strong: { fontWeight: 'bold', color: colors.textPrimary },
+    em: { fontStyle: 'italic', color: colors.textPrimary },
+    text: { color: colors.textPrimary },
+    bullet_list: { marginBottom: 8 },
+    bullet_list_icon: { color: colors.primary, marginLeft: 2, marginRight: 8, fontSize: 14 },
+    bullet_list_content: { flex: 1 },
+    ordered_list: { marginBottom: 8 },
+    ordered_list_icon: { color: colors.primary, marginLeft: 2, marginRight: 8, fontSize: 14 },
+    list_item: { marginBottom: 6 },
+    heading1: { fontSize: 17, fontWeight: 'bold', color: colors.textPrimary, marginBottom: 6, marginTop: 4 },
+    heading2: { fontSize: 16, fontWeight: 'bold', color: colors.textPrimary, marginBottom: 4, marginTop: 2 },
+    heading3: { fontSize: 15, fontWeight: '600', color: colors.textPrimary, marginBottom: 4, marginTop: 2 },
+    blockquote: {
+        backgroundColor: 'rgba(99, 107, 47, 0.08)',
+        borderLeftColor: colors.primary,
+        borderLeftWidth: 4,
+        paddingLeft: 12,
+        paddingVertical: 8,
+        marginVertical: 8,
+        borderRadius: 0,
+    },
+    code_inline: {
+        backgroundColor: 'rgba(0,0,0,0.07)',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+        fontSize: 13,
+        color: colors.textPrimary,
+    },
+});
 
 const MODES: { key: BookChatMode; label: string; icon: string }[] = [
     { key: 'description', label: 'Kuvaus', icon: 'text-box-outline' },
@@ -174,9 +215,21 @@ const AskAIAboutBookModal: React.FC<AskAIAboutBookModalProps> = ({
                                         {msg.role === 'model' && (
                                             <MaterialCommunityIcons name="robot-outline" size={16} color={colors.primary} style={styles.messageIcon} />
                                         )}
-                                        <Text style={[styles.messageText, msg.role === 'user' && styles.messageTextUser]}>
-                                            {msg.text}
-                                        </Text>
+                                        {msg.role === 'model' ? (
+                                            <View style={styles.messageMarkdownWrap}>
+                                                <Markdown
+                                                    key={`ai-${i}`}
+                                                    style={markdownStyles}
+                                                    mergeStyle={true}
+                                                >
+                                                    {String(msg.text ?? '')}
+                                                </Markdown>
+                                            </View>
+                                        ) : (
+                                            <Text style={[styles.messageText, styles.messageTextUser]}>
+                                                {msg.text}
+                                            </Text>
+                                        )}
                                     </View>
                                 ))}
                             </ScrollView>
@@ -246,7 +299,7 @@ const styles = StyleSheet.create({
         borderTopRightRadius: 20,
         padding: 20,
         paddingBottom: 32,
-        maxHeight: '90%',
+        height: '92%',
     },
     header: {
         flexDirection: 'row',
@@ -329,7 +382,8 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     conversationContainer: {
-        height: 260,
+        flex: 1,
+        minHeight: 280,
         marginBottom: 12,
         borderWidth: 1,
         borderColor: '#eee',
@@ -360,6 +414,9 @@ const styles = StyleSheet.create({
     messageIcon: {
         marginRight: 6,
         marginTop: 2,
+    },
+    messageMarkdownWrap: {
+        flex: 1,
     },
     messageText: {
         flex: 1,
