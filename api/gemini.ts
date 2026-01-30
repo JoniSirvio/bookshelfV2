@@ -75,3 +75,128 @@ export const getBookRecommendations = async (readBooks: string[], userWishes?: s
         throw error;
     }
 };
+
+/**
+ * Ask AI to describe a book without spoilers. Optionally include the user's own question.
+ * Returns plain text in Finnish.
+ */
+export const askAboutBook = async (
+    title: string,
+    authors?: string[],
+    userQuestion?: string
+): Promise<string> => {
+    if (!API_KEY) {
+        console.error("Gemini API Key is missing");
+        return "API-avain puuttuu. Aseta EXPO_PUBLIC_GEMINI_API_KEY.";
+    }
+
+    const authorStr = authors?.length ? authors.join(", ") : "tuntematon";
+    let prompt = `
+Describe the following book briefly and in Finnish. Give a short, engaging description that helps the reader decide if they want to read it.
+Do NOT include spoilers. Do NOT reveal major plot twists or the ending.
+Book: "${title}" by ${authorStr}.
+`;
+
+    if (userQuestion?.trim()) {
+        prompt += `
+The user also has a specific question about this book:
+"${userQuestion.trim()}"
+Please answer this question in Finnish, still avoiding spoilers.
+`;
+    }
+
+    prompt += `
+Reply in Finnish only. Use clear, natural language. Do not use markdown or bullet points unless it fits the answer.
+`;
+
+    try {
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
+        return text.trim();
+    } catch (error) {
+        console.error("Error asking about book from Gemini:", error);
+        throw error;
+    }
+};
+
+/** One message in the conversation (for chatAboutBook). */
+export interface ChatMessage {
+    role: 'user' | 'model';
+    text: string;
+}
+
+export type BookChatMode = 'description' | 'goodfit' | 'custom';
+
+/**
+ * Chat about a book with optional conversation history (for follow-ups).
+ * Modes: description (no spoilers), goodfit (compare to read books), custom (user's own question).
+ * Returns the model response and the updated conversation history.
+ */
+export const chatAboutBook = async (
+    book: { title: string; authors?: string[] },
+    options: {
+        mode: BookChatMode;
+        readBooksTitles?: string[];
+        userMessage?: string;
+    },
+    conversationHistory: ChatMessage[] = []
+): Promise<{ response: string; newHistory: ChatMessage[] }> => {
+    if (!API_KEY) {
+        throw new Error("API-avain puuttuu. Aseta EXPO_PUBLIC_GEMINI_API_KEY.");
+    }
+
+    const authorStr = book.authors?.length ? book.authors.join(', ') : 'tuntematon';
+    const bookContext = `Kirja: "${book.title}" kirjailijalta ${authorStr}.`;
+
+    const buildFirstPrompt = (): string => {
+        switch (options.mode) {
+            case 'description':
+                return `Kuvaile tämä kirja lyhyesti suomeksi ilman spoilereita. Anna lyhyt, mielenkiintoinen kuvaus, joka auttaa lukijaa päättämään haluaako hän lukea kirjan. ${bookContext} Vastaa vain suomeksi, selkeällä kielellä.`;
+            case 'goodfit':
+                const readList = (options.readBooksTitles?.length)
+                    ? `Olen lukenut nämä kirjat: ${options.readBooksTitles.join('; ')}.`
+                    : 'En ole vielä lukenut kirjoja (lista on tyhjä).';
+                return `${readList} Sopiiko tämä kirja minulle? ${bookContext} Vastaa suomeksi ja perustele lyhyesti. Älä paljasta juonikohtauksia.`;
+            case 'custom':
+                const q = (options.userMessage || '').trim();
+                return q
+                    ? `Käyttäjä kysyy tästä kirjasta: ${bookContext} Kysymys: "${q}" Vastaa suomeksi, älä paljasta spoilereita.`
+                    : `Käyttäjä haluaa tietää tästä kirjasta: ${bookContext} Anna lyhyt kuvaus suomeksi ilman spoilereita.`;
+        }
+    };
+
+    const historyToGemini = (messages: ChatMessage[]): { role: 'user' | 'model'; parts: { text: string }[] }[] => {
+        return messages.map(m => ({ role: m.role, parts: [{ text: m.text }] }));
+    };
+
+    try {
+        let userMessage: string;
+        let history = conversationHistory;
+
+        if (history.length === 0) {
+            userMessage = buildFirstPrompt();
+        } else {
+            const msg = (options.userMessage || '').trim();
+            if (!msg) return { response: '', newHistory: history };
+            userMessage = msg;
+        }
+
+        const geminiHistory = historyToGemini(history);
+        const chat = model.startChat({ history: geminiHistory });
+        const result = await chat.sendMessage(userMessage);
+        const response = result.response;
+        const text = response.text().trim();
+
+        const newHistory: ChatMessage[] = [
+            ...history,
+            { role: 'user', text: userMessage },
+            { role: 'model', text },
+        ];
+
+        return { response: text, newHistory };
+    } catch (error) {
+        console.error('Error in chatAboutBook:', error);
+        throw error;
+    }
+};

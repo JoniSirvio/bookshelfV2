@@ -26,6 +26,7 @@ interface BookListProps<T extends FinnaSearchResult> {
   ListFooterComponent?: React.ReactElement | null;
   scrollEnabled?: boolean;
   onRateAndReview?: (book: T) => void;
+  onAskAI?: (book: T) => void;
 }
 
 // Underlay for Left Swipe (Add/Read)
@@ -393,7 +394,7 @@ export const BookList = <T extends FinnaSearchResult>({ books, mode = 'search', 
         onClose={() => setModalVisible(false)}
         book={selectedBook}
         mode={mode}
-        onMarkAsRead={props.onMarkAsRead as any} // Cast to any to avoid complex type issues with Modal props
+        onMarkAsRead={props.onMarkAsRead as any}
         onTriggerDelete={props.onTriggerDelete as any}
         onAdd={props.onAdd as any}
         onStartReading={props.onStartReading as any}
@@ -401,6 +402,7 @@ export const BookList = <T extends FinnaSearchResult>({ books, mode = 'search', 
         toReadIds={props.toReadIds}
         readIds={props.readIds}
         onRateAndReview={props.onRateAndReview as any}
+        onAskAI={props.onAskAI as any}
       />
     </>
   );

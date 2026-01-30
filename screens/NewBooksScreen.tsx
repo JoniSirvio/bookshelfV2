@@ -1,23 +1,24 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView, Alert, Dimensions } from 'react-native';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const COLUMN_COUNT = 3;
 const ITEM_WIDTH = SCREEN_WIDTH / COLUMN_COUNT;
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useABSCredentials } from '../hooks/useABSCredentials';
-import { fetchABSLibraries, fetchABSLibraryItems, getABSCoverUrl, ABSItem } from '../api/abs';
+import { fetchABSLibraries, getABSCoverUrl, ABSItem } from '../api/abs';
 import { BookList } from '../components/BookList';
 import { useBooksContext } from '../context/BooksContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import SearchBar from '../components/SearchBar';
 import ReviewModal from '../components/ReviewModal';
-import { setLastSeenNewBooksTime, getLastSeenNewBooksTime } from '../utils/notificationsStore';
+import { fetchNewBooksWithSideEffects } from '../utils/absNewBooksQuery';
 import { BookGridItem } from '../components/BookGridItem';
 import { useViewMode } from '../hooks/useViewMode';
 import { FlashList } from '@shopify/flash-list';
 
 import BookOptionsModal from '../components/BookOptionsModal';
+import AskAIAboutBookModal from '../components/AskAIAboutBookModal';
 import { FilterSortModal, SortOption, SortDirection, StatusFilter } from '../components/FilterSortModal';
 import { colors, loaderColor } from '../theme';
 
@@ -35,6 +36,10 @@ export default function NewBooksScreen() {
     // Options Modal State
     const [isOptionsModalVisible, setIsOptionsModalVisible] = useState(false);
     const [selectedBookForOptions, setSelectedBookForOptions] = useState<any | null>(null);
+
+    // Ask AI Modal State
+    const [bookForAI, setBookForAI] = useState<any | null>(null);
+    const [askAIModalVisible, setAskAIModalVisible] = useState(false);
 
     // Filter/Sort State
     const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
@@ -65,58 +70,16 @@ export default function NewBooksScreen() {
     }, [libraries]);
 
 
-    // 2. Fetch items from ALL libraries manually (simplification: iterate and fetch)
-    // Ideally we want an endpoint for "recently added" across libraries, but ABS API structure often requires per-library fetch.
-    // We will simulate "All New Books" by fetching from all libraries and sorting.
+    // 2. Fetch "new" items from ALL libraries via TanStack Query (cached + persisted locally)
+    const libraryIdsKey = libraries?.map(l => l.id).sort().join(',') ?? '';
+    const { data: newBooksData, isLoading: loadingItems } = useQuery({
+        queryKey: ['absNewBooks', url, libraryIdsKey],
+        queryFn: () => fetchNewBooksWithSideEffects(url!, token!, libraries!),
+        enabled: !!url && !!token && !!libraries?.length,
+        staleTime: 1000 * 60 * 10, // 10 min cache; persisted via PersistQueryClientProvider
+    });
 
-    const [allItems, setAllItems] = useState<ABSItem[]>([]);
-    const [loadingItems, setLoadingItems] = useState(false);
-
-    const queryClient = useQueryClient();
-
-    useEffect(() => {
-        const fetchAll = async () => {
-            if (!url || !token || !libraries) return;
-            setLoadingItems(true);
-            try {
-                // 1. Get the time we LAST checked/saw the list
-                const previousLastSeen = await getLastSeenNewBooksTime();
-
-                let all: ABSItem[] = [];
-                for (const lib of libraries) {
-                    try {
-                        const items = await fetchABSLibraryItems(url, token, lib.id);
-                        // Inject libraryId manually
-                        all = [...all, ...items.map(i => ({ ...i, libraryId: lib.id }))];
-                    } catch (libErr) {
-                        console.error(`Failed to fetch items for lib ${lib.name}`, libErr);
-                    }
-                }
-
-                // 2. Filter: Only keep books added AFTER our last visit
-                const newOnly = all.filter(item => (item.addedAt || 0) > previousLastSeen);
-
-                // Sort by addedAt desc
-                newOnly.sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0));
-                setAllItems(newOnly);
-
-                // 3. Mark "now" as the new reference point (clearing the inbox for next time)
-                await setLastSeenNewBooksTime(Date.now());
-
-                // 4. Invalidate the notification query so the bell updates immediately
-                queryClient.invalidateQueries({ queryKey: ['hasNewBooks'] });
-
-            } catch (e) {
-                console.error("Failed to fetch new books", e);
-            } finally {
-                setLoadingItems(false);
-            }
-        };
-
-        if (libraries && libraries.length > 0) {
-            fetchAll();
-        }
-    }, [libraries, url, token, queryClient]);
+    const allItems = newBooksData ?? [];
 
 
     // Handlers
@@ -348,6 +311,7 @@ export default function NewBooksScreen() {
                     onAdd={addBook}
                     onMarkAsRead={handleMarkAsRead}
                     onRateAndReview={handleRateAndReview}
+                    onAskAI={(book) => { setBookForAI(book); setAskAIModalVisible(true); }}
                     ListHeaderComponent={<SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Suodata uutuuksia..." />}
                     scrollEnabled={true}
                 />
@@ -412,6 +376,13 @@ export default function NewBooksScreen() {
                     setTimeout(() => handleRateAndReview(book), 500);
                 }}
                 onMarkAsRead={handleMarkAsRead}
+                onAskAI={(book) => { setBookForAI(book); setIsOptionsModalVisible(false); setAskAIModalVisible(true); }}
+            />
+
+            <AskAIAboutBookModal
+                isVisible={askAIModalVisible}
+                onClose={() => { setAskAIModalVisible(false); setBookForAI(null); }}
+                book={bookForAI}
             />
         </View>
     );

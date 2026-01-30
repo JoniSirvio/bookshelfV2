@@ -25,6 +25,7 @@ import { useFinnaSearchResults } from '../hooks/useBooks';
 import ReviewModal from '../components/ReviewModal';
 
 import BookOptionsModal from '../components/BookOptionsModal';
+import AskAIAboutBookModal from '../components/AskAIAboutBookModal';
 import { FilterSortModal, SortOption, SortDirection, StatusFilter } from '../components/FilterSortModal';
 
 export default function ABSLibraryScreen() {
@@ -57,6 +58,10 @@ export default function ABSLibraryScreen() {
     // Review Modal State
     const [isReviewModalVisible, setIsReviewModalVisible] = useState(false);
     const [selectedBookForReview, setSelectedBookForReview] = useState<any | null>(null);
+
+    // Ask AI Modal State
+    const [bookForAI, setBookForAI] = useState<any | null>(null);
+    const [askAIModalVisible, setAskAIModalVisible] = useState(false);
 
     // 1. Fetch Libraries
     const { data: libraries, isLoading: librariesLoading } = useQuery({
@@ -436,6 +441,12 @@ export default function ABSLibraryScreen() {
                         <BookList
                             books={bookListItems as any}
                             mode="search"
+                            toReadIds={toReadIds}
+                            readIds={readIds}
+                            onAdd={addBook}
+                            onMarkAsRead={handleMarkAsRead}
+                            onRateAndReview={handleRateAndReview}
+                            onAskAI={(book) => { setBookForAI(book); setAskAIModalVisible(true); }}
                             scrollEnabled={true}
                             ListHeaderComponent={<SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Hae kirjaa tai kirjailijaa..." />}
                         />
@@ -460,6 +471,7 @@ export default function ABSLibraryScreen() {
                         onAdd={addBook}
                         onMarkAsRead={handleMarkAsRead}
                         onRateAndReview={handleRateAndReview}
+                        onAskAI={(book) => { setBookForAI(book); setAskAIModalVisible(true); }}
                         mode="search"
                         scrollEnabled={true}
                     />
@@ -507,16 +519,22 @@ export default function ABSLibraryScreen() {
                 isVisible={isOptionsModalVisible}
                 onClose={() => setIsOptionsModalVisible(false)}
                 book={selectedBookForOptions}
-                mode="search" // Treat as search/discovery
+                mode="search"
                 toReadIds={toReadIds}
                 readIds={readIds}
                 onAdd={addBook}
                 onRateAndReview={(book) => {
                     setIsOptionsModalVisible(false);
-                    // Slight delay to allow modal to close?
                     setTimeout(() => handleRateAndReview(book), 500);
                 }}
                 onMarkAsRead={handleMarkAsRead}
+                onAskAI={(book) => { setBookForAI(book); setIsOptionsModalVisible(false); setAskAIModalVisible(true); }}
+            />
+
+            <AskAIAboutBookModal
+                isVisible={askAIModalVisible}
+                onClose={() => { setAskAIModalVisible(false); setBookForAI(null); }}
+                book={bookForAI}
             />
         </View>
     );

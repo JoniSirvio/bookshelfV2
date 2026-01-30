@@ -5,6 +5,7 @@ import { useState, useMemo } from "react";
 import { FinnaSearchResult } from "../api/finna";
 import ConfirmDeleteModal from "../components/ConfirmDeleteModal";
 import BookOptionsModal from "../components/BookOptionsModal";
+import AskAIAboutBookModal from "../components/AskAIAboutBookModal";
 import { BookGridItem } from "../components/BookGridItem";
 import { useViewMode } from "../hooks/useViewMode";
 import { FlashList } from "@shopify/flash-list";
@@ -21,6 +22,10 @@ export default function PastReadScreen() {
   // State for Options Modal
   const [isOptionsModalVisible, setIsOptionsModalVisible] = useState(false);
   const [selectedBookForOptions, setSelectedBookForOptions] = useState<FinnaSearchResult | null>(null);
+
+  // State for Ask AI Modal
+  const [bookForAI, setBookForAI] = useState<FinnaSearchResult | null>(null);
+  const [askAIModalVisible, setAskAIModalVisible] = useState(false);
 
   // State for filtering
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
@@ -136,6 +141,7 @@ export default function PastReadScreen() {
           onTriggerDelete={handleOpenDeleteModal}
           onReorder={(newList) => reorderBooks(newList, 'readBooks')}
           onBookPress={handleOpenOptionsModal}
+          onAskAI={(book) => { setBookForAI(book); setAskAIModalVisible(true); }}
         />
       ) : (
         <FlashList
@@ -172,8 +178,15 @@ export default function PastReadScreen() {
           mode="read"
           onTriggerDelete={handleOpenDeleteModal}
           showStartReading={false}
+          onAskAI={(book) => { setBookForAI(book); handleCloseOptionsModal(); setAskAIModalVisible(true); }}
         />
       )}
+
+      <AskAIAboutBookModal
+        isVisible={askAIModalVisible}
+        onClose={() => { setAskAIModalVisible(false); setBookForAI(null); }}
+        book={bookForAI}
+      />
     </View>
   );
 };
