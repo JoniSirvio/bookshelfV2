@@ -8,12 +8,14 @@ import BookOptionsModal from "../components/BookOptionsModal";
 import AskAIAboutBookModal from "../components/AskAIAboutBookModal";
 import { BookGridItem } from "../components/BookGridItem";
 import { useViewMode } from "../hooks/useViewMode";
+import { useABSFinishedDates } from "../hooks/useABSFinishedDates";
 import { FlashList } from "@shopify/flash-list";
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from "../theme";
 
 export default function PastReadScreen() {
   const { readBooks, removeReadBook, reorderBooks } = useBooksContext();
+  const absFinishedDates = useABSFinishedDates();
   const [viewMode, setViewMode] = useViewMode('history_view_mode', 'list');
 
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
@@ -30,19 +32,36 @@ export default function PastReadScreen() {
   // State for filtering
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
 
-  // Group books by month
+  // Sort by reading order: most recently finished first (finishedAt / finishedReading descending)
+  // Use Firestore finishedReading, or ABS finishedAt for audiobooks when Firestore lacks it
+  const sortedReadBooks = useMemo(() => {
+    const getTime = (book: FinnaSearchResult) => {
+      if (book.finishedReading) return new Date(book.finishedReading).getTime();
+      if (book.id.startsWith('abs-') && absFinishedDates[book.id] != null) return absFinishedDates[book.id];
+      return 0;
+    };
+    return [...readBooks].sort((a, b) => getTime(b) - getTime(a)); // Newest first
+  }, [readBooks, absFinishedDates]);
+
+  // Group books by month (based on effective finished date)
   const booksByMonth = useMemo(() => {
+    const getTime = (book: FinnaSearchResult) => {
+      if (book.finishedReading) return new Date(book.finishedReading).getTime();
+      if (book.id.startsWith('abs-') && absFinishedDates[book.id] != null) return absFinishedDates[book.id];
+      return 0;
+    };
     const groups: { [key: string]: number } = {};
-    readBooks.forEach(book => {
-      if (book.finishedReading) {
-        const date = new Date(book.finishedReading);
+    sortedReadBooks.forEach(book => {
+      const time = getTime(book);
+      if (time > 0) {
+        const date = new Date(time);
         const key = date.toLocaleDateString('fi-FI', { month: 'long', year: 'numeric' });
         const capitalizedKey = key.charAt(0).toUpperCase() + key.slice(1);
         groups[capitalizedKey] = (groups[capitalizedKey] || 0) + 1;
       }
     });
     return groups;
-  }, [readBooks]);
+  }, [sortedReadBooks, absFinishedDates]);
 
   // Re-sorting keys by date to ensure chip order is logical (newest first)
   const sortedMonthKeys = useMemo(() => {
@@ -59,15 +78,21 @@ export default function PastReadScreen() {
   }, [booksByMonth]);
 
   const filteredBooks = useMemo(() => {
-    if (!selectedMonth) return readBooks;
-    return readBooks.filter(book => {
-      if (!book.finishedReading) return false;
-      const date = new Date(book.finishedReading);
+    if (!selectedMonth) return sortedReadBooks;
+    const getTime = (book: FinnaSearchResult) => {
+      if (book.finishedReading) return new Date(book.finishedReading).getTime();
+      if (book.id.startsWith('abs-') && absFinishedDates[book.id] != null) return absFinishedDates[book.id];
+      return 0;
+    };
+    return sortedReadBooks.filter(book => {
+      const time = getTime(book);
+      if (time <= 0) return false;
+      const date = new Date(time);
       const key = date.toLocaleDateString('fi-FI', { month: 'long', year: 'numeric' });
       const capitalizedKey = key.charAt(0).toUpperCase() + key.slice(1);
       return capitalizedKey === selectedMonth;
     });
-  }, [readBooks, selectedMonth]);
+  }, [sortedReadBooks, selectedMonth, absFinishedDates]);
 
   const handleOpenDeleteModal = (book: FinnaSearchResult) => {
     setSelectedBookForDeletion(book);
