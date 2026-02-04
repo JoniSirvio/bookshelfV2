@@ -23,6 +23,7 @@ interface BookOptionsModalProps {
     toReadIds?: string[];
     readIds?: string[];
     onRateAndReview?: (book: FinnaSearchResult) => void;
+    onAskAI?: (book: FinnaSearchResult) => void;
 }
 
 const BookOptionsModal: React.FC<BookOptionsModalProps> = ({
@@ -38,6 +39,7 @@ const BookOptionsModal: React.FC<BookOptionsModalProps> = ({
     toReadIds,
     readIds,
     onRateAndReview,
+    onAskAI,
 }) => {
     if (!book) return null;
 
@@ -103,6 +105,20 @@ const BookOptionsModal: React.FC<BookOptionsModalProps> = ({
                             <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
                         </TouchableOpacity>
                     </View>
+
+                    {/* Ask AI (all modes) */}
+                    {onAskAI && (
+                        <TouchableOpacity
+                            style={styles.option}
+                            onPress={() => {
+                                onAskAI(book);
+                                onClose();
+                            }}
+                        >
+                            <MaterialCommunityIcons name="robot-outline" size={24} color={colors.primary} />
+                            <Text style={styles.optionText}>Kysy AI:lta kirjasta</Text>
+                        </TouchableOpacity>
+                    )}
 
                     {/* Start Reading / Listening */}
                     {format === 'audiobook' ? (

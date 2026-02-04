@@ -9,12 +9,13 @@ import ABSLibraryScreen from '../screens/ABSLibraryScreen';
 const Tab = createBottomTabNavigator();
 
 import { TouchableOpacity, View, StyleSheet, Modal, TouchableWithoutFeedback } from 'react-native';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigation } from '@react-navigation/native';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getLastSeenNewBooksTime } from '../utils/notificationsStore';
 import { useABSCredentials } from '../hooks/useABSCredentials';
 import { fetchABSLibraries, fetchABSLibraryItems } from '../api/abs';
+import { fetchNewBooksWithSideEffects } from '../utils/absNewBooksQuery';
 import { MiniPlayer } from './MiniPlayer';
 import { colors, headerStyle } from '../theme';
 
@@ -167,9 +168,34 @@ const NotificationBell = () => {
   );
 };
 
+/** Prefetches new books when app opens so the list is ready and the user sees new books immediately. */
+function NewBooksPrefetcher() {
+  const { url, token } = useABSCredentials();
+  const queryClient = useQueryClient();
+  const { data: libraries } = useQuery({
+    queryKey: ['absLibraries', url],
+    queryFn: () => fetchABSLibraries(url!, token!),
+    enabled: !!url && !!token,
+    staleTime: 1000 * 60 * 60,
+  });
+  const libraryIdsKey = libraries?.map(l => l.id).sort().join(',') ?? '';
+
+  useEffect(() => {
+    if (!url || !token || !libraries?.length) return;
+    queryClient.prefetchQuery({
+      queryKey: ['absNewBooks', url, libraryIdsKey],
+      queryFn: () => fetchNewBooksWithSideEffects(url, token, libraries),
+      staleTime: 1000 * 60 * 10,
+    });
+  }, [url, token, libraries, libraryIdsKey, queryClient]);
+
+  return null;
+}
+
 export default function MyTabs() {
   return (
     <>
+      <NewBooksPrefetcher />
       <Tab.Navigator
         screenOptions={{
           headerShown: true,
