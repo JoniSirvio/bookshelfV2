@@ -124,6 +124,9 @@ Reply in Finnish only. Use clear, natural language. Do not use markdown or bulle
 export interface ChatMessage {
     role: 'user' | 'model';
     text: string;
+    displayLabel?: string;  // Short label for quick command only (no extra input)
+    displayIcon?: string;   // MaterialCommunityIcons name
+    displayText?: string;   // User's additional input when they wrote in prompt (overrides displayLabel)
 }
 
 export type BookChatMode = 'description' | 'goodfit' | 'custom';
@@ -139,6 +142,9 @@ export const chatAboutBook = async (
         mode: BookChatMode;
         readBooksTitles?: string[];
         userMessage?: string;
+        displayLabel?: string;
+        displayIcon?: string;
+        displayText?: string;
     },
     conversationHistory: ChatMessage[] = []
 ): Promise<{ response: string; newHistory: ChatMessage[] }> => {
@@ -188,9 +194,16 @@ export const chatAboutBook = async (
         const response = result.response;
         const text = response.text().trim();
 
+        const userMsg: ChatMessage = {
+            role: 'user',
+            text: userMessage,
+            ...(options.displayLabel != null && { displayLabel: options.displayLabel }),
+            ...(options.displayIcon != null && { displayIcon: options.displayIcon }),
+            ...(options.displayText != null && { displayText: options.displayText }),
+        };
         const newHistory: ChatMessage[] = [
             ...history,
-            { role: 'user', text: userMessage },
+            userMsg,
             { role: 'model', text },
         ];
 

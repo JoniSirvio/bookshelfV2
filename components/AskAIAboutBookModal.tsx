@@ -70,7 +70,7 @@ const markdownStyles = StyleSheet.create({
 const MODES: { key: BookChatMode; label: string; icon: string }[] = [
     { key: 'description', label: 'Kuvaus', icon: 'text-box-outline' },
     { key: 'goodfit', label: 'Sopiiko minulle?', icon: 'account-check-outline' },
-    { key: 'custom', label: 'Oma kysymykseni', icon: 'message-question-outline' },
+    { key: 'custom', label: 'Oma kysymys', icon: 'message-question-outline' },
 ];
 
 const AskAIAboutBookModal: React.FC<AskAIAboutBookModalProps> = ({
@@ -100,12 +100,21 @@ const AskAIAboutBookModal: React.FC<AskAIAboutBookModalProps> = ({
 
         try {
             const authors = Array.isArray(book.authors) ? book.authors : (book.authors ? [String(book.authors)] : []);
+            const modeConfig = MODES.find(m => m.key === mode);
+            const hasAdditionalInput = currentQuestion.length > 0;
+            const displayLabel = isFirstTurn && mode !== 'custom' && !hasAdditionalInput ? modeConfig?.label : undefined;
+            const displayIcon = isFirstTurn && mode !== 'custom' && !hasAdditionalInput ? modeConfig?.icon : undefined;
+            const displayText = hasAdditionalInput ? currentQuestion : undefined;
+
             const { response, newHistory } = await chatAboutBook(
                 { title: book.title, authors },
                 {
                     mode,
                     readBooksTitles: mode === 'goodfit' ? readBooksTitles : undefined,
                     userMessage: isFirstTurn ? (mode === 'custom' ? currentQuestion : undefined) : currentQuestion,
+                    displayLabel,
+                    displayIcon,
+                    displayText,
                 },
                 conversation
             );
@@ -184,7 +193,7 @@ const AskAIAboutBookModal: React.FC<AskAIAboutBookModalProps> = ({
                                 <TouchableOpacity
                                     key={m.key}
                                     style={[styles.modePill, mode === m.key && styles.modePillActive]}
-                                    onPress={() => { setMode(m.key); setConversation([]); setError(null); }}
+                                    onPress={() => { setMode(m.key); setError(null); }}
                                     disabled={loading}
                                 >
                                     <MaterialCommunityIcons
@@ -226,9 +235,25 @@ const AskAIAboutBookModal: React.FC<AskAIAboutBookModalProps> = ({
                                                 </Markdown>
                                             </View>
                                         ) : (
-                                            <Text style={[styles.messageText, styles.messageTextUser]}>
-                                                {msg.text}
-                                            </Text>
+                                            <View style={styles.messageUserDisplay}>
+                                                {msg.displayText ? (
+                                                    <Text style={[styles.messageText, styles.messageTextUser]}>{msg.displayText}</Text>
+                                                ) : msg.displayLabel ? (
+                                                    <>
+                                                        {msg.displayIcon && (
+                                                            <MaterialCommunityIcons
+                                                                name={msg.displayIcon as any}
+                                                                size={18}
+                                                                color={colors.primary}
+                                                                style={styles.messageDisplayIcon}
+                                                            />
+                                                        )}
+                                                        <Text style={[styles.messageText, styles.messageTextUser]}>{msg.displayLabel}</Text>
+                                                    </>
+                                                ) : (
+                                                    <Text style={[styles.messageText, styles.messageTextUser]}>{msg.text}</Text>
+                                                )}
+                                            </View>
                                         )}
                                     </View>
                                 ))}
@@ -417,6 +442,15 @@ const styles = StyleSheet.create({
     },
     messageMarkdownWrap: {
         flex: 1,
+    },
+    messageUserDisplay: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        flex: 1,
+    },
+    messageDisplayIcon: {
+        marginRight: 2,
     },
     messageText: {
         flex: 1,
