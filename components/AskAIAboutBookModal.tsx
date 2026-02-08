@@ -15,6 +15,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { FinnaSearchResult } from '../api/finna';
 import { chatAboutBook, ChatMessage, BookChatMode } from '../api/gemini';
+import { useAuth } from '../context/AuthContext';
 import { useBooksContext } from '../context/BooksContext';
 import { BookCoverPlaceholder } from './BookCoverPlaceholder';
 import { FormatBadge } from './FormatBadge';
@@ -78,6 +79,7 @@ const AskAIAboutBookModal: React.FC<AskAIAboutBookModalProps> = ({
     onClose,
     book,
 }) => {
+    const { user } = useAuth();
     const { readBooks } = useBooksContext();
     const [mode, setMode] = useState<BookChatMode>('description');
     const [conversation, setConversation] = useState<ChatMessage[]>([]);
@@ -120,6 +122,10 @@ const AskAIAboutBookModal: React.FC<AskAIAboutBookModalProps> = ({
             );
             setConversation(newHistory);
             setUserQuestion('');
+            if (user) {
+                const { incrementAIUsage } = await import('../firebase/aiUsage');
+                incrementAIUsage(user.uid, 'chat').catch(() => {});
+            }
         } catch (e) {
             setError('Vastaus epäonnistui. Tarkista verkko ja kokeile uudelleen.');
         } finally {

@@ -209,6 +209,9 @@ export const useBooks = () => {
 
         const newRecs = await getBookRecommendations(readBookTitles, userWishes);
 
+        const { incrementAIUsage } = await import('../firebase/aiUsage');
+        incrementAIUsage(user.uid, 'recommendation').catch(() => {});
+
         for (const rec of newRecs) {
             const query = `${rec.title} ${rec.author}`;
             const searchResults = await searchFinna(query);

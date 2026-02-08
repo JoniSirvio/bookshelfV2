@@ -1,0 +1,13 @@
+{
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "functions": {
+    "source": "functions",
+    "predeploy": ["npm --prefix \"$RESOURCE_DIR\" run build"]
+  },
+  "hosting": {
+    "public": "admin-app/dist",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"]
+  }
+}

@@ -184,7 +184,7 @@ function NewBooksPrefetcher() {
     if (!url || !token || !libraries?.length) return;
     queryClient.prefetchQuery({
       queryKey: ['absNewBooks', url, libraryIdsKey],
-      queryFn: () => fetchNewBooksWithSideEffects(url, token, libraries),
+      queryFn: () => fetchNewBooksWithSideEffects(url, token, libraries, { updateLastSeen: false }),
       staleTime: 1000 * 60 * 10,
     });
   }, [url, token, libraries, libraryIdsKey, queryClient]);

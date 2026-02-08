@@ -40,3 +40,8 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# admin-app build
+admin-app/dist
+
+*-firebase-adminsdk-*.json
