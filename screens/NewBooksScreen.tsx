@@ -4,7 +4,8 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const COLUMN_COUNT = 3;
 const ITEM_WIDTH = SCREEN_WIDTH / COLUMN_COUNT;
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useFocusEffect } from '@react-navigation/native';
 import { useABSCredentials } from '../hooks/useABSCredentials';
 import { fetchABSLibraries, getABSCoverUrl, ABSItem } from '../api/abs';
 import { BookList } from '../components/BookList';
@@ -13,6 +14,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import SearchBar from '../components/SearchBar';
 import ReviewModal from '../components/ReviewModal';
 import { fetchNewBooksWithSideEffects } from '../utils/absNewBooksQuery';
+import { setLastSeenNewBooksTime } from '../utils/notificationsStore';
 import { BookGridItem } from '../components/BookGridItem';
 import { useViewMode } from '../hooks/useViewMode';
 import { FlashList } from '@shopify/flash-list';
@@ -23,6 +25,7 @@ import { FilterSortModal, SortOption, SortDirection, StatusFilter } from '../com
 import { colors, loaderColor } from '../theme';
 
 export default function NewBooksScreen() {
+    const queryClient = useQueryClient();
     const { url, token, loading: credsLoading } = useABSCredentials();
     const { myBooks, readBooks, addBook, markAsRead } = useBooksContext();
     const [selectedType, setSelectedType] = useState<'all' | 'audio' | 'ebook'>('all');
@@ -78,6 +81,15 @@ export default function NewBooksScreen() {
         enabled: !!url && !!token && !!libraries?.length,
         staleTime: 1000 * 60 * 10, // 10 min cache; persisted via PersistQueryClientProvider
     });
+
+    // Mark new books as seen when user views this screen so the bell badge clears (even when cache is used)
+    useFocusEffect(
+        useCallback(() => {
+            setLastSeenNewBooksTime(Date.now()).then(() => {
+                queryClient.invalidateQueries({ queryKey: ['hasNewBooks'] });
+            });
+        }, [queryClient])
+    );
 
     const allItems = newBooksData ?? [];
 
