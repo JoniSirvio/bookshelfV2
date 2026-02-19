@@ -87,6 +87,8 @@ export default function NewBooksScreen() {
         useCallback(() => {
             setLastSeenNewBooksTime(Date.now()).then(() => {
                 queryClient.invalidateQueries({ queryKey: ['hasNewBooks'] });
+                // Refetch so cache is updated immediately; bell may be unmounted (different stack) so invalidate alone doesn't refetch
+                queryClient.refetchQueries({ queryKey: ['hasNewBooks'] });
             });
         }, [queryClient])
     );
