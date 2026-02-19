@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Modal,
     View,
@@ -26,6 +26,7 @@ interface AskAIAboutBookModalProps {
     isVisible: boolean;
     onClose: () => void;
     book: FinnaSearchResult | null;
+    initialConversation?: ChatMessage[];
 }
 
 const markdownStyles = StyleSheet.create({
@@ -78,6 +79,7 @@ const AskAIAboutBookModal: React.FC<AskAIAboutBookModalProps> = ({
     isVisible,
     onClose,
     book,
+    initialConversation = [],
 }) => {
     const { user } = useAuth();
     const { readBooks } = useBooksContext();
@@ -86,6 +88,12 @@ const AskAIAboutBookModal: React.FC<AskAIAboutBookModalProps> = ({
     const [userQuestion, setUserQuestion] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (isVisible) {
+            setConversation(initialConversation ?? []);
+        }
+    }, [isVisible, initialConversation]);
 
     const readBooksTitles = readBooks.map(b => `${b.title} by ${(b.authors || []).join(', ')}`);
     const isFirstTurn = conversation.length === 0;
@@ -125,6 +133,17 @@ const AskAIAboutBookModal: React.FC<AskAIAboutBookModalProps> = ({
             if (user) {
                 const { incrementAIUsage } = await import('../firebase/aiUsage');
                 incrementAIUsage(user.uid, 'chat').catch(() => {});
+                if (book.id) {
+                    const { saveAIChat } = await import('../firebase/aiChats');
+                    const authorsArr = Array.isArray(book.authors) ? book.authors : (book.authors ? [String(book.authors)] : []);
+                    try {
+                        await saveAIChat(user.uid, book.id, { id: book.id, title: book.title, authors: authorsArr, images: book.images }, newHistory);
+                    } catch (err) {
+                        console.warn('Failed to save AI chat:', err);
+                    }
+                } else {
+                    console.warn('AI chat not saved: book.id is missing', { title: book.title });
+                }
             }
         } catch (e) {
             setError('Vastaus epäonnistui. Tarkista verkko ja kokeile uudelleen.');

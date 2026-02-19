@@ -20,7 +20,7 @@ import { useViewMode } from '../hooks/useViewMode';
 import { FlashList } from '@shopify/flash-list';
 
 import BookOptionsModal from '../components/BookOptionsModal';
-import AskAIAboutBookModal from '../components/AskAIAboutBookModal';
+import { useAIChat } from '../context/AIChatContext';
 import { FilterSortModal, SortOption, SortDirection, StatusFilter } from '../components/FilterSortModal';
 import { colors, loaderColor } from '../theme';
 
@@ -28,6 +28,7 @@ export default function NewBooksScreen() {
     const queryClient = useQueryClient();
     const { url, token, loading: credsLoading } = useABSCredentials();
     const { myBooks, readBooks, addBook, markAsRead } = useBooksContext();
+    const { openAIModal } = useAIChat();
     const [selectedType, setSelectedType] = useState<'all' | 'audio' | 'ebook'>('all');
     const [viewMode, setViewMode] = useViewMode('newbooks_view_mode', 'list');
     const [searchQuery, setSearchQuery] = useState('');
@@ -39,10 +40,6 @@ export default function NewBooksScreen() {
     // Options Modal State
     const [isOptionsModalVisible, setIsOptionsModalVisible] = useState(false);
     const [selectedBookForOptions, setSelectedBookForOptions] = useState<any | null>(null);
-
-    // Ask AI Modal State
-    const [bookForAI, setBookForAI] = useState<any | null>(null);
-    const [askAIModalVisible, setAskAIModalVisible] = useState(false);
 
     // Filter/Sort State
     const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
@@ -325,7 +322,7 @@ export default function NewBooksScreen() {
                     onAdd={addBook}
                     onMarkAsRead={handleMarkAsRead}
                     onRateAndReview={handleRateAndReview}
-                    onAskAI={(book) => { setBookForAI(book); setAskAIModalVisible(true); }}
+                    onAskAI={(book) => openAIModal(book)}
                     ListHeaderComponent={<SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Suodata uutuuksia..." />}
                     scrollEnabled={true}
                 />
@@ -390,14 +387,9 @@ export default function NewBooksScreen() {
                     setTimeout(() => handleRateAndReview(book), 500);
                 }}
                 onMarkAsRead={handleMarkAsRead}
-                onAskAI={(book) => { setBookForAI(book); setIsOptionsModalVisible(false); setAskAIModalVisible(true); }}
+                onAskAI={(book) => { setIsOptionsModalVisible(false); openAIModal(book); }}
             />
 
-            <AskAIAboutBookModal
-                isVisible={askAIModalVisible}
-                onClose={() => { setAskAIModalVisible(false); setBookForAI(null); }}
-                book={bookForAI}
-            />
         </View>
     );
 }

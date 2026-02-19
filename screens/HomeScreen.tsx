@@ -5,7 +5,7 @@ import { useBooksContext } from "../context/BooksContext";
 import ReviewModal from '../components/ReviewModal';
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
 import BookOptionsModal from '../components/BookOptionsModal';
-import AskAIAboutBookModal from '../components/AskAIAboutBookModal';
+import { useAIChat } from '../context/AIChatContext';
 import { useState, useRef } from "react";
 import { FinnaSearchResult } from "../api/finna";
 import { BookGridItem } from "../components/BookGridItem";
@@ -18,6 +18,7 @@ import { colors } from "../theme";
 const HomeScreen: React.FC = () => {
   const { myBooks, readBooks, removeBook, markAsRead, startReading, reorderBooks, recommendations, generateRecommendations, removeRecommendation, addBook } = useBooksContext();
   const { inProgressBooks, loading: absLoading } = useABSInProgress(readBooks); // Fetch ABS items
+  const { openAIModal } = useAIChat();
 
   const [generating, setGenerating] = useState(false);
   const [userWishes, setUserWishes] = useState("");
@@ -41,10 +42,6 @@ const HomeScreen: React.FC = () => {
   // State for Delete Confirmation Modal
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [selectedBookForDeletion, setSelectedBookForDeletion] = useState<FinnaSearchResult | null>(null);
-
-  // State for Ask AI Modal
-  const [bookForAI, setBookForAI] = useState<FinnaSearchResult | null>(null);
-  const [askAIModalVisible, setAskAIModalVisible] = useState(false);
 
   // Handlers for Review Modal
   const handleRateAndReview = (book: FinnaSearchResult) => {
@@ -176,7 +173,7 @@ const HomeScreen: React.FC = () => {
             reorderBooks(localBooksOnly as any, 'myBooks')
           }}
           onStartReading={(book) => !book.id.startsWith('abs-') && startReading(book.id)}
-          onAskAI={(book) => { setBookForAI(book); setAskAIModalVisible(true); }}
+          onAskAI={(book) => openAIModal(book)}
         />
       ) : (
         <FlashList
@@ -243,15 +240,9 @@ const HomeScreen: React.FC = () => {
           onStartReading={(book) => !book.id.startsWith('abs-') && startReading(book.id)}
           onRateAndReview={handleRateAndReview}
           showStartReading={!selectedBookForOptions.startedReading}
-          onAskAI={(book) => { setBookForAI(book); setIsOptionsModalVisible(false); setAskAIModalVisible(true); }}
+          onAskAI={(book) => { setIsOptionsModalVisible(false); openAIModal(book); }}
         />
       )}
-
-      <AskAIAboutBookModal
-        isVisible={askAIModalVisible}
-        onClose={() => { setAskAIModalVisible(false); setBookForAI(null); }}
-        book={bookForAI}
-      />
     </View>
   );
 };
