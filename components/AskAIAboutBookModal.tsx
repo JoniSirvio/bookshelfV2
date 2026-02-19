@@ -90,7 +90,7 @@ const AskAIAboutBookModal: React.FC<AskAIAboutBookModalProps> = ({
     const readBooksTitles = readBooks.map(b => `${b.title} by ${(b.authors || []).join(', ')}`);
     const isFirstTurn = conversation.length === 0;
     const canSendFirst = isFirstTurn && (mode !== 'custom' || userQuestion.trim().length > 0);
-    const canSendFollowUp = !isFirstTurn && userQuestion.trim().length > 0;
+    const canSendFollowUp = !isFirstTurn && (userQuestion.trim().length > 0 || mode !== 'custom');
     const canSend = canSendFirst || canSendFollowUp;
 
     const handleAsk = async () => {
@@ -104,8 +104,8 @@ const AskAIAboutBookModal: React.FC<AskAIAboutBookModalProps> = ({
             const authors = Array.isArray(book.authors) ? book.authors : (book.authors ? [String(book.authors)] : []);
             const modeConfig = MODES.find(m => m.key === mode);
             const hasAdditionalInput = currentQuestion.length > 0;
-            const displayLabel = isFirstTurn && mode !== 'custom' && !hasAdditionalInput ? modeConfig?.label : undefined;
-            const displayIcon = isFirstTurn && mode !== 'custom' && !hasAdditionalInput ? modeConfig?.icon : undefined;
+            const displayLabel = mode !== 'custom' && !hasAdditionalInput ? modeConfig?.label : undefined;
+            const displayIcon = mode !== 'custom' && !hasAdditionalInput ? modeConfig?.icon : undefined;
             const displayText = hasAdditionalInput ? currentQuestion : undefined;
 
             const { response, newHistory } = await chatAboutBook(
@@ -274,8 +274,20 @@ const AskAIAboutBookModal: React.FC<AskAIAboutBookModalProps> = ({
 
                         {error ? (
                             <View style={styles.errorBox}>
-                                <MaterialCommunityIcons name="alert-circle-outline" size={20} color={colors.delete} />
-                                <Text style={styles.errorText}>{error}</Text>
+                                <View style={styles.errorRow}>
+                                    <MaterialCommunityIcons name="alert-circle-outline" size={20} color={colors.delete} />
+                                    <Text style={styles.errorText}>{error}</Text>
+                                </View>
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        setError(null);
+                                        handleAsk();
+                                    }}
+                                    disabled={loading}
+                                    style={styles.retryButton}
+                                >
+                                    <Text style={styles.retryButtonText}>Yritä uudelleen</Text>
+                                </TouchableOpacity>
                             </View>
                         ) : null}
 
@@ -468,20 +480,37 @@ const styles = StyleSheet.create({
         color: colors.textPrimary,
     },
     errorBox: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        backgroundColor: colors.bgRec,
+        flexDirection: 'column',
+        backgroundColor: 'rgba(217, 83, 79, 0.1)',
         padding: 12,
         borderRadius: 8,
         marginBottom: 12,
-        borderLeftWidth: 4,
-        borderLeftColor: colors.delete,
+        borderWidth: 1,
+        borderColor: 'rgba(217, 83, 79, 0.35)',
+    },
+    errorRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
     },
     errorText: {
         flex: 1,
         fontSize: 14,
         color: colors.textPrimary,
+    },
+    retryButton: {
+        alignSelf: 'flex-start',
+        marginTop: 10,
+        paddingVertical: 8,
+        paddingHorizontal: 14,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: colors.delete,
+    },
+    retryButtonText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: colors.delete,
     },
     promptInput: {
         backgroundColor: '#FAFAFA',

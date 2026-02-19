@@ -176,40 +176,69 @@ export const chatAboutBook = async (
         return messages.map(m => ({ role: m.role, parts: [{ text: m.text }] }));
     };
 
-    try {
-        let userMessage: string;
-        let history = conversationHistory;
+    const isRetryableError = (e: unknown): boolean => {
+        const err = e as { message?: string; code?: string };
+        const msg = (err?.message ?? '').toLowerCase();
+        const code = err?.code ?? '';
+        const retryableCodes = ['ECONNABORTED', 'ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND', 'ENETUNREACH'];
+        if (retryableCodes.includes(code)) return true;
+        const retryableSubstrings = ['network', 'fetch', 'timeout', 'econnrefused', 'etimedout', 'econnreset', 'failed to fetch'];
+        return retryableSubstrings.some(s => msg.includes(s));
+    };
 
-        if (history.length === 0) {
+    const delay = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
+
+    const maxAttempts = 3;
+    const delayMs = 1000;
+
+    let userMessage: string;
+    let history = conversationHistory;
+
+    if (history.length === 0) {
+        userMessage = buildFirstPrompt();
+    } else {
+        const msg = (options.userMessage || '').trim();
+        if (!msg) {
+            if (options.mode === 'custom') return { response: '', newHistory: history };
             userMessage = buildFirstPrompt();
         } else {
-            const msg = (options.userMessage || '').trim();
-            if (!msg) return { response: '', newHistory: history };
             userMessage = msg;
         }
-
-        const geminiHistory = historyToGemini(history);
-        const chat = model.startChat({ history: geminiHistory });
-        const result = await chat.sendMessage(userMessage);
-        const response = result.response;
-        const text = response.text().trim();
-
-        const userMsg: ChatMessage = {
-            role: 'user',
-            text: userMessage,
-            ...(options.displayLabel != null && { displayLabel: options.displayLabel }),
-            ...(options.displayIcon != null && { displayIcon: options.displayIcon }),
-            ...(options.displayText != null && { displayText: options.displayText }),
-        };
-        const newHistory: ChatMessage[] = [
-            ...history,
-            userMsg,
-            { role: 'model', text },
-        ];
-
-        return { response: text, newHistory };
-    } catch (error) {
-        console.error('Error in chatAboutBook:', error);
-        throw error;
     }
+
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+            const geminiHistory = historyToGemini(history);
+            const chat = model.startChat({ history: geminiHistory });
+            const result = await chat.sendMessage(userMessage);
+            const response = result.response;
+            const text = response.text().trim();
+
+            const userMsg: ChatMessage = {
+                role: 'user',
+                text: userMessage,
+                ...(options.displayLabel != null && { displayLabel: options.displayLabel }),
+                ...(options.displayIcon != null && { displayIcon: options.displayIcon }),
+                ...(options.displayText != null && { displayText: options.displayText }),
+            };
+            const newHistory: ChatMessage[] = [
+                ...history,
+                userMsg,
+                { role: 'model', text },
+            ];
+
+            return { response: text, newHistory };
+        } catch (error) {
+            lastError = error;
+            console.error('Error in chatAboutBook:', error);
+            if (attempt < maxAttempts && isRetryableError(error)) {
+                await delay(delayMs);
+                continue;
+            }
+            throw error;
+        }
+    }
+
+    throw lastError;
 };
