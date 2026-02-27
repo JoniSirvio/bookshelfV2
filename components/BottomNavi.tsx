@@ -19,6 +19,19 @@ import { fetchNewBooksWithSideEffects } from '../utils/absNewBooksQuery';
 import { MiniPlayer } from './MiniPlayer';
 import { colors, headerStyle } from '../theme';
 
+const AIChatsHeaderButton = () => {
+  const navigation = useNavigation<any>();
+  const parent = navigation.getParent();
+  return (
+    <TouchableOpacity
+      onPress={() => parent?.navigate('AIChats')}
+      style={{ marginLeft: 12, padding: 8, borderRadius: 20, width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}
+    >
+      <MaterialCommunityIcons name="message-text-outline" size={24} />
+    </TouchableOpacity>
+  );
+};
+
 const NotificationBell = () => {
   const navigation = useNavigation<any>();
   const { url, token } = useABSCredentials();
@@ -210,6 +223,7 @@ export default function MyTabs() {
           ),
           headerStyle,
           tabBarActiveTintColor: colors.primary,
+          headerLeft: () => <AIChatsHeaderButton />,
           headerRight: () => <NotificationBell />,
         }}
       >

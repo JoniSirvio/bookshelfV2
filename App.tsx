@@ -4,6 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { Provider as PaperProvider, DefaultTheme } from 'react-native-paper';
 import { BooksProvider } from './context/BooksContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { AIChatProvider, AIChatModalHost } from './context/AIChatContext';
 import { AudioProvider } from './context/AudioContext'; // Import AudioProvider
 import BottomNavi from './components/BottomNavi';
 import LoginModal from './components/LoginModal';
@@ -29,6 +30,7 @@ const theme = {
 
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import NewBooksScreen from './screens/NewBooksScreen';
+import AIChatListScreen from './screens/AIChatListScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -47,25 +49,38 @@ const AppContent = () => {
     <>
       <AudioProvider>
         <BooksProvider>
-          <NavigationContainer>
-            <Stack.Navigator>
-              <Stack.Screen
-                name="Main"
-                component={BottomNavi}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="NewBooks"
-                component={NewBooksScreen}
-                options={{
-                  headerTitle: 'Uudet lisäykset',
-                  headerStyle,
-                  headerTintColor,
-                  headerBackTitle: 'Takaisin'
-                }}
-              />
-            </Stack.Navigator>
-          </NavigationContainer>
+          <AIChatProvider>
+            <NavigationContainer>
+              <Stack.Navigator>
+                <Stack.Screen
+                  name="Main"
+                  component={BottomNavi}
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="NewBooks"
+                  component={NewBooksScreen}
+                  options={{
+                    headerTitle: 'Uudet lisäykset',
+                    headerStyle,
+                    headerTintColor,
+                    headerBackTitle: 'Takaisin'
+                  }}
+                />
+                <Stack.Screen
+                  name="AIChats"
+                  component={AIChatListScreen}
+                  options={{
+                    headerTitle: 'AI-keskustelut',
+                    headerStyle,
+                    headerTintColor,
+                    headerBackTitle: 'Takaisin'
+                  }}
+                />
+              </Stack.Navigator>
+            </NavigationContainer>
+            <AIChatModalHost />
+          </AIChatProvider>
         </BooksProvider>
         <PlayerModal />
       </AudioProvider>

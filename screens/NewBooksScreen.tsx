@@ -4,7 +4,8 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const COLUMN_COUNT = 3;
 const ITEM_WIDTH = SCREEN_WIDTH / COLUMN_COUNT;
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useFocusEffect } from '@react-navigation/native';
 import { useABSCredentials } from '../hooks/useABSCredentials';
 import { fetchABSLibraries, getABSCoverUrl, ABSItem } from '../api/abs';
 import { BookList } from '../components/BookList';
@@ -13,18 +14,21 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import SearchBar from '../components/SearchBar';
 import ReviewModal from '../components/ReviewModal';
 import { fetchNewBooksWithSideEffects } from '../utils/absNewBooksQuery';
+import { setLastSeenNewBooksTime } from '../utils/notificationsStore';
 import { BookGridItem } from '../components/BookGridItem';
 import { useViewMode } from '../hooks/useViewMode';
 import { FlashList } from '@shopify/flash-list';
 
 import BookOptionsModal from '../components/BookOptionsModal';
-import AskAIAboutBookModal from '../components/AskAIAboutBookModal';
+import { useAIChat } from '../context/AIChatContext';
 import { FilterSortModal, SortOption, SortDirection, StatusFilter } from '../components/FilterSortModal';
 import { colors, loaderColor } from '../theme';
 
 export default function NewBooksScreen() {
+    const queryClient = useQueryClient();
     const { url, token, loading: credsLoading } = useABSCredentials();
     const { myBooks, readBooks, addBook, markAsRead } = useBooksContext();
+    const { openAIModal } = useAIChat();
     const [selectedType, setSelectedType] = useState<'all' | 'audio' | 'ebook'>('all');
     const [viewMode, setViewMode] = useViewMode('newbooks_view_mode', 'list');
     const [searchQuery, setSearchQuery] = useState('');
@@ -36,10 +40,6 @@ export default function NewBooksScreen() {
     // Options Modal State
     const [isOptionsModalVisible, setIsOptionsModalVisible] = useState(false);
     const [selectedBookForOptions, setSelectedBookForOptions] = useState<any | null>(null);
-
-    // Ask AI Modal State
-    const [bookForAI, setBookForAI] = useState<any | null>(null);
-    const [askAIModalVisible, setAskAIModalVisible] = useState(false);
 
     // Filter/Sort State
     const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
@@ -78,6 +78,17 @@ export default function NewBooksScreen() {
         enabled: !!url && !!token && !!libraries?.length,
         staleTime: 1000 * 60 * 10, // 10 min cache; persisted via PersistQueryClientProvider
     });
+
+    // Mark new books as seen when user views this screen so the bell badge clears (even when cache is used)
+    useFocusEffect(
+        useCallback(() => {
+            setLastSeenNewBooksTime(Date.now()).then(() => {
+                queryClient.invalidateQueries({ queryKey: ['hasNewBooks'] });
+                // Refetch so cache is updated immediately; bell may be unmounted (different stack) so invalidate alone doesn't refetch
+                queryClient.refetchQueries({ queryKey: ['hasNewBooks'] });
+            });
+        }, [queryClient])
+    );
 
     const allItems = newBooksData ?? [];
 
@@ -311,7 +322,7 @@ export default function NewBooksScreen() {
                     onAdd={addBook}
                     onMarkAsRead={handleMarkAsRead}
                     onRateAndReview={handleRateAndReview}
-                    onAskAI={(book) => { setBookForAI(book); setAskAIModalVisible(true); }}
+                    onAskAI={(book) => openAIModal(book)}
                     ListHeaderComponent={<SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Suodata uutuuksia..." />}
                     scrollEnabled={true}
                 />
@@ -376,14 +387,9 @@ export default function NewBooksScreen() {
                     setTimeout(() => handleRateAndReview(book), 500);
                 }}
                 onMarkAsRead={handleMarkAsRead}
-                onAskAI={(book) => { setBookForAI(book); setIsOptionsModalVisible(false); setAskAIModalVisible(true); }}
+                onAskAI={(book) => { setIsOptionsModalVisible(false); openAIModal(book); }}
             />
 
-            <AskAIAboutBookModal
-                isVisible={askAIModalVisible}
-                onClose={() => { setAskAIModalVisible(false); setBookForAI(null); }}
-                book={bookForAI}
-            />
         </View>
     );
 }
