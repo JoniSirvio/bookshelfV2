@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { FinnaSearchResult } from '../api/finna';
-import { chatAboutBook, ChatMessage, BookChatMode } from '../api/gemini';
+import { chatAboutBook, chatGeneralBookChat, ChatMessage, BookChatMode } from '../api/gemini';
 import { useAuth } from '../context/AuthContext';
 import { useBooksContext } from '../context/BooksContext';
 import { BookCoverPlaceholder } from './BookCoverPlaceholder';
@@ -95,54 +95,77 @@ const AskAIAboutBookModal: React.FC<AskAIAboutBookModalProps> = ({
         }
     }, [isVisible, initialConversation]);
 
+    const isGeneralChat = book?.id != null && book.id.startsWith('general');
     const readBooksTitles = readBooks.map(b => `${b.title} by ${(b.authors || []).join(', ')}`);
     const isFirstTurn = conversation.length === 0;
     const canSendFirst = isFirstTurn && (mode !== 'custom' || userQuestion.trim().length > 0);
     const canSendFollowUp = !isFirstTurn && (userQuestion.trim().length > 0 || mode !== 'custom');
-    const canSend = canSendFirst || canSendFollowUp;
+    const canSendGeneral = userQuestion.trim().length > 0;
+    const canSend = isGeneralChat ? canSendGeneral : (canSendFirst || canSendFollowUp);
 
     const handleAsk = async () => {
         if (!book || !canSend) return;
         setLoading(true);
         setError(null);
         const currentQuestion = userQuestion.trim();
-        if (!isFirstTurn) setUserQuestion('');
+        if (!isFirstTurn && !isGeneralChat) setUserQuestion('');
 
         try {
-            const authors = Array.isArray(book.authors) ? book.authors : (book.authors ? [String(book.authors)] : []);
-            const modeConfig = MODES.find(m => m.key === mode);
-            const hasAdditionalInput = currentQuestion.length > 0;
-            const displayLabel = mode !== 'custom' && !hasAdditionalInput ? modeConfig?.label : undefined;
-            const displayIcon = mode !== 'custom' && !hasAdditionalInput ? modeConfig?.icon : undefined;
-            const displayText = hasAdditionalInput ? currentQuestion : undefined;
-
-            const { response, newHistory } = await chatAboutBook(
-                { title: book.title, authors },
-                {
-                    mode,
-                    readBooksTitles: mode === 'goodfit' ? readBooksTitles : undefined,
-                    userMessage: isFirstTurn ? (mode === 'custom' ? currentQuestion : undefined) : currentQuestion,
-                    displayLabel,
-                    displayIcon,
-                    displayText,
-                },
-                conversation
-            );
-            setConversation(newHistory);
-            setUserQuestion('');
-            if (user) {
-                const { incrementAIUsage } = await import('../firebase/aiUsage');
-                incrementAIUsage(user.uid, 'chat').catch(() => {});
-                if (book.id) {
+            if (isGeneralChat) {
+                const { response, newHistory } = await chatGeneralBookChat(currentQuestion, conversation, readBooksTitles);
+                const history = Array.isArray(newHistory) ? newHistory : [];
+                setConversation(history);
+                setUserQuestion('');
+                if (user) {
+                    const { incrementAIUsage } = await import('../firebase/aiUsage');
+                    incrementAIUsage(user.uid, 'chat').catch(() => {});
                     const { saveAIChat } = await import('../firebase/aiChats');
-                    const authorsArr = Array.isArray(book.authors) ? book.authors : (book.authors ? [String(book.authors)] : []);
+                    const firstUserMsg = history.find(m => m?.role === 'user');
+                    const rawTitle = firstUserMsg ? String(firstUserMsg.displayText ?? firstUserMsg.text ?? '').trim() : '';
+                    const conversationTitle = rawTitle.length > 0 ? rawTitle.slice(0, 50) : undefined;
                     try {
-                        await saveAIChat(user.uid, book.id, { id: book.id, title: book.title, authors: authorsArr, images: book.images }, newHistory);
+                        await saveAIChat(user.uid, book.id, { id: book.id, title: 'Yleinen keskustelu', authors: [] }, history, conversationTitle);
                     } catch (err) {
                         console.warn('Failed to save AI chat:', err);
                     }
-                } else {
-                    console.warn('AI chat not saved: book.id is missing', { title: book.title });
+                }
+            } else {
+                if (isFirstTurn) setUserQuestion('');
+                const authors = Array.isArray(book.authors) ? book.authors : (book.authors ? [String(book.authors)] : []);
+                const modeConfig = MODES.find(m => m.key === mode);
+                const hasAdditionalInput = currentQuestion.length > 0;
+                const displayLabel = mode !== 'custom' && !hasAdditionalInput ? modeConfig?.label : undefined;
+                const displayIcon = mode !== 'custom' && !hasAdditionalInput ? modeConfig?.icon : undefined;
+                const displayText = hasAdditionalInput ? currentQuestion : undefined;
+
+                const { response, newHistory } = await chatAboutBook(
+                    { title: book.title, authors },
+                    {
+                        mode,
+                        readBooksTitles: mode === 'goodfit' ? readBooksTitles : undefined,
+                        userMessage: isFirstTurn ? (mode === 'custom' ? currentQuestion : undefined) : currentQuestion,
+                        displayLabel,
+                        displayIcon,
+                        displayText,
+                    },
+                    conversation
+                );
+                setConversation(newHistory);
+                setUserQuestion('');
+                if (user) {
+                    const { incrementAIUsage } = await import('../firebase/aiUsage');
+                    incrementAIUsage(user.uid, 'chat').catch(() => {});
+                    if (book.id) {
+                        const { saveAIChat } = await import('../firebase/aiChats');
+                        const authorsArr = Array.isArray(book.authors) ? book.authors : (book.authors ? [String(book.authors)] : []);
+                        try {
+                            await saveAIChat(user.uid, book.id, { id: book.id, title: book.title, authors: authorsArr, images: book.images }, newHistory);
+                        } catch (err) {
+                            console.warn('Failed to save AI chat:', err);
+                        }
+                    } else {
+                        console.warn('AI chat not saved: book.id is missing', { title: book.title });
+                    }
                 }
             }
         } catch (e) {
@@ -168,9 +191,11 @@ const AskAIAboutBookModal: React.FC<AskAIAboutBookModalProps> = ({
     const format = ((book as FinnaSearchResult).absProgress ? 'audiobook' : ((book as { format?: string }).format || 'book')) as 'book' | 'audiobook' | 'ebook';
     const coverUrl = book.images?.[0]?.url;
 
-    const inputPlaceholder = isFirstTurn
-        ? (mode === 'custom' ? 'Kirjoita kysymyksesi kirjasta...' : 'Voit kirjoittaa lisäkysymyksen (valinnainen)')
-        : 'Kysy lisää tai kirjoita uusi kysymys...';
+    const inputPlaceholder = isGeneralChat
+        ? 'Kysy suosituksia tai kirjakysymyksiä...'
+        : (isFirstTurn
+            ? (mode === 'custom' ? 'Kirjoita kysymyksesi kirjasta...' : 'Voit kirjoittaa lisäkysymyksen (valinnainen)')
+            : 'Kysy lisää tai kirjoita uusi kysymys...');
 
     return (
         <Modal
@@ -185,53 +210,72 @@ const AskAIAboutBookModal: React.FC<AskAIAboutBookModalProps> = ({
                 </TouchableWithoutFeedback>
                 <View style={styles.content}>
                         <View style={styles.header}>
-                            <View style={styles.headerImageContainer}>
-                                {coverUrl ? (
-                                    <View style={styles.coverImageWrapper}>
-                                        <Image source={{ uri: coverUrl }} style={styles.headerCoverImage} />
-                                        <FormatBadge format={format} />
+                            {isGeneralChat ? (
+                                <>
+                                    <View style={styles.headerImageContainer}>
+                                        <View style={[styles.coverImageWrapper, { backgroundColor: 'transparent', minWidth: 48 }]}>
+                                            <MaterialCommunityIcons name="message-text-outline" size={40} color={colors.primary} />
+                                        </View>
                                     </View>
-                                ) : (
-                                    <View style={[styles.coverImageWrapper, { backgroundColor: '#eee' }]}>
-                                        <BookCoverPlaceholder
-                                            id={book.id}
-                                            title={book.title}
-                                            authors={authors}
-                                            format={format}
-                                            compact={true}
-                                        />
+                                    <View style={styles.headerText}>
+                                        <Text style={styles.headerTitle} numberOfLines={2}>Yleinen keskustelu</Text>
                                     </View>
-                                )}
-                            </View>
-                            <View style={styles.headerText}>
-                                <Text style={styles.headerTitle} numberOfLines={2}>{book.title}</Text>
-                                {authorsStr ? <Text style={styles.author} numberOfLines={1}>{authorsStr}</Text> : null}
-                            </View>
+                                </>
+                            ) : (
+                                <>
+                                    <View style={styles.headerImageContainer}>
+                                        {coverUrl ? (
+                                            <View style={styles.coverImageWrapper}>
+                                                <Image source={{ uri: coverUrl }} style={styles.headerCoverImage} />
+                                                <FormatBadge format={format} />
+                                            </View>
+                                        ) : (
+                                            <View style={[styles.coverImageWrapper, { backgroundColor: '#eee' }]}>
+                                                <BookCoverPlaceholder
+                                                    id={book.id}
+                                                    title={book.title}
+                                                    authors={authors}
+                                                    format={format}
+                                                    compact={true}
+                                                />
+                                            </View>
+                                        )}
+                                    </View>
+                                    <View style={styles.headerText}>
+                                        <Text style={styles.headerTitle} numberOfLines={2}>{book.title}</Text>
+                                        {authorsStr ? <Text style={styles.author} numberOfLines={1}>{authorsStr}</Text> : null}
+                                    </View>
+                                </>
+                            )}
                             <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
                                 <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
                             </TouchableOpacity>
                         </View>
 
-                        <Text style={styles.modeLabel}>Mitä haluat kysyä?</Text>
-                        <View style={styles.modeRow}>
-                            {MODES.map((m) => (
-                                <TouchableOpacity
-                                    key={m.key}
-                                    style={[styles.modePill, mode === m.key && styles.modePillActive]}
-                                    onPress={() => { setMode(m.key); setError(null); }}
-                                    disabled={loading}
-                                >
-                                    <MaterialCommunityIcons
-                                        name={m.icon as any}
-                                        size={18}
-                                        color={mode === m.key ? colors.white : colors.textSecondaryAlt}
-                                    />
-                                    <Text style={[styles.modePillText, mode === m.key && styles.modePillTextActive]} numberOfLines={1}>
-                                        {m.label}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
+                        {!isGeneralChat && (
+                            <>
+                                <Text style={styles.modeLabel}>Mitä haluat kysyä?</Text>
+                                <View style={styles.modeRow}>
+                                    {MODES.map((m) => (
+                                        <TouchableOpacity
+                                            key={m.key}
+                                            style={[styles.modePill, mode === m.key && styles.modePillActive]}
+                                            onPress={() => { setMode(m.key); setError(null); }}
+                                            disabled={loading}
+                                        >
+                                            <MaterialCommunityIcons
+                                                name={m.icon as any}
+                                                size={18}
+                                                color={mode === m.key ? colors.white : colors.textSecondaryAlt}
+                                            />
+                                            <Text style={[styles.modePillText, mode === m.key && styles.modePillTextActive]} numberOfLines={1}>
+                                                {m.label}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </>
+                        )}
 
                         {conversation.length > 0 ? (
                             <ScrollView
@@ -285,9 +329,10 @@ const AskAIAboutBookModal: React.FC<AskAIAboutBookModalProps> = ({
                             </ScrollView>
                         ) : (
                             <Text style={styles.hint}>
-                                {mode === 'description' && 'AI tuottaa lyhyen kuvauksen kirjasta ilman spoilereita.'}
-                                {mode === 'goodfit' && 'AI vertaa kirjaa lukemaasi historiaan ja arvioi sopivuuden.'}
-                                {mode === 'custom' && 'Kirjoita oma kysymyksesi kirjasta.'}
+                                {isGeneralChat && 'Kysy suosituksia tai yleisiä kirjakysymyksiä. Vastaan aina suomeksi.'}
+                                {!isGeneralChat && mode === 'description' && 'AI tuottaa lyhyen kuvauksen kirjasta ilman spoilereita.'}
+                                {!isGeneralChat && mode === 'goodfit' && 'AI vertaa kirjaa lukemaasi historiaan ja arvioi sopivuuden.'}
+                                {!isGeneralChat && mode === 'custom' && 'Kirjoita oma kysymyksesi kirjasta.'}
                             </Text>
                         )}
 

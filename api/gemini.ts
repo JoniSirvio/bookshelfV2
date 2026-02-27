@@ -242,3 +242,84 @@ export const chatAboutBook = async (
 
     throw lastError;
 };
+
+/**
+ * General book chat: recommendations and open-ended book questions (no specific book).
+ * Uses the same ChatMessage shape and retry behaviour as chatAboutBook.
+ */
+export const chatGeneralBookChat = async (
+    userMessage: string,
+    conversationHistory: ChatMessage[] = [],
+    readBooksTitles?: string[]
+): Promise<{ response: string; newHistory: ChatMessage[] }> => {
+    if (!API_KEY) {
+        throw new Error("API-avain puuttuu. Aseta EXPO_PUBLIC_GEMINI_API_KEY.");
+    }
+
+    const historyToGemini = (messages: ChatMessage[]): { role: 'user' | 'model'; parts: { text: string }[] }[] => {
+        return messages.map(m => ({ role: m.role, parts: [{ text: m.text }] }));
+    };
+
+    const isRetryableError = (e: unknown): boolean => {
+        const err = e as { message?: string; code?: string };
+        const msg = (err?.message ?? '').toLowerCase();
+        const code = err?.code ?? '';
+        const retryableCodes = ['ECONNABORTED', 'ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND', 'ENETUNREACH'];
+        if (retryableCodes.includes(code)) return true;
+        const retryableSubstrings = ['network', 'fetch', 'timeout', 'econnrefused', 'etimedout', 'econnreset', 'failed to fetch'];
+        return retryableSubstrings.some(s => msg.includes(s));
+    };
+
+    const delay = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
+    const maxAttempts = 3;
+    const delayMs = 1000;
+
+    const msg = userMessage.trim();
+    if (!msg) return { response: '', newHistory: conversationHistory };
+
+    let history = conversationHistory;
+    let promptToSend: string;
+
+    if (history.length === 0) {
+        const readContext = (readBooksTitles?.length)
+            ? `Käyttäjä on lukenut mm.: ${readBooksTitles.join('; ')}. `
+            : '';
+        promptToSend = `Olet kirja-avustaja. Käyttäjä voi pyytää suosituksia tai kysyä yleisiä kirjakysymyksiä. ${readContext}Vastaa aina suomeksi. Suosittele vain suomenkielisiä tai Suomessa saatavia teoksia. Älä keksi kirjoja – mainitse oikeita teoksia. Käyttäjän kysymys: "${msg}"`;
+    } else {
+        promptToSend = msg;
+    }
+
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+            const geminiHistory = historyToGemini(history);
+            const chat = model.startChat({ history: geminiHistory });
+            const result = await chat.sendMessage(promptToSend);
+            const response = result.response;
+            const text = response.text().trim();
+
+            const userMsg: ChatMessage = {
+                role: 'user',
+                text: promptToSend,
+                displayText: msg,
+            };
+            const newHistory: ChatMessage[] = [
+                ...history,
+                userMsg,
+                { role: 'model', text },
+            ];
+
+            return { response: text, newHistory };
+        } catch (error) {
+            lastError = error;
+            console.error('Error in chatGeneralBookChat:', error);
+            if (attempt < maxAttempts && isRetryableError(error)) {
+                await delay(delayMs);
+                continue;
+            }
+            throw error;
+        }
+    }
+
+    throw lastError;
+};

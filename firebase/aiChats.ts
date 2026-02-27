@@ -15,6 +15,8 @@ export interface SavedAIChat {
     book: AIChatBookSnapshot;
     messages: ChatMessage[];
     updatedAt: Timestamp;
+    /** Optional display title for general chat (e.g. from first user message). */
+    conversationTitle?: string;
 }
 
 /**
@@ -25,19 +27,20 @@ export async function saveAIChat(
     userId: string,
     bookId: string,
     bookSnapshot: AIChatBookSnapshot,
-    messages: ChatMessage[]
+    messages: ChatMessage[],
+    conversationTitle?: string
 ): Promise<void> {
     const ref = doc(firestore, "users", userId, "aiChats", bookId);
-    await setDoc(
-        ref,
-        {
-            bookId,
-            book: bookSnapshot,
-            messages,
-            updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-    );
+    const payload: Record<string, unknown> = {
+        bookId,
+        book: bookSnapshot,
+        messages,
+        updatedAt: serverTimestamp(),
+    };
+    if (conversationTitle != null && conversationTitle.trim() !== '') {
+        payload.conversationTitle = conversationTitle.trim();
+    }
+    await setDoc(ref, payload, { merge: true });
 }
 
 /**
@@ -54,6 +57,7 @@ export async function getAIChats(userId: string): Promise<SavedAIChat[]> {
             book: data.book as AIChatBookSnapshot,
             messages: (data.messages ?? []) as ChatMessage[],
             updatedAt: data.updatedAt as Timestamp,
+            conversationTitle: data.conversationTitle as string | undefined,
         };
     });
 }
