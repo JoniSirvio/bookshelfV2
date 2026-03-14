@@ -11,7 +11,8 @@ import { useViewMode } from "../hooks/useViewMode";
 import { useABSFinishedDates } from "../hooks/useABSFinishedDates";
 import { FlashList } from "@shopify/flash-list";
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors } from "../theme";
+import { colors, typography } from "../theme";
+import { AnimatedFadeInView } from "../components/AnimatedFadeInView";
 
 export default function PastReadScreen() {
   const { readBooks, removeReadBook, reorderBooks } = useBooksContext();
@@ -119,9 +120,26 @@ export default function PastReadScreen() {
     setSelectedBookForOptions(null);
   };
 
-
-
-
+  const renderEmptyReadHistory = () => {
+    const noBooksAtAll = readBooks.length === 0;
+    return (
+      <AnimatedFadeInView style={styles.emptyReadContainer}>
+        <MaterialCommunityIcons
+          name={noBooksAtAll ? 'book-check-outline' : 'calendar-blank-outline'}
+          size={56}
+          color={colors.textSecondary}
+        />
+        <Text style={styles.emptyReadTitle}>
+          {noBooksAtAll ? 'Ei luettuja kirjoja vielä' : 'Ei kirjoja tässä kuussa'}
+        </Text>
+        <Text style={styles.emptyReadSubtitle}>
+          {noBooksAtAll
+            ? 'Merkitse kirja luetuksi Luettavat-välilehdeltä (pyyhkäise oikealle tai avaa kirja ja valitse Luettu), niin se ilmestyy tänne.'
+            : 'Valitse toinen kuukausi yllä tai paina Kaikki nähdäksesi kaikki luetut.'}
+        </Text>
+      </AnimatedFadeInView>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -160,6 +178,7 @@ export default function PastReadScreen() {
         <BookList
           books={filteredBooks}
           mode="read"
+          ListEmptyComponent={renderEmptyReadHistory()}
           onTriggerDelete={handleOpenDeleteModal}
           onReorder={(newList) => reorderBooks(newList, 'readBooks')}
           onBookPress={handleOpenOptionsModal}
@@ -168,6 +187,7 @@ export default function PastReadScreen() {
       ) : (
         <FlashList
           data={filteredBooks}
+          ListEmptyComponent={renderEmptyReadHistory()}
           renderItem={({ item }) => (
             <BookGridItem
               id={item.id}
@@ -212,17 +232,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
   },
   headerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   title: {
-    fontSize: 24,
-    fontWeight: "bold",
+    fontSize: typography.displaySize,
+    fontWeight: typography.displayWeight,
+    color: colors.textPrimary,
   },
   totalCount: {
     fontSize: 16,
@@ -241,7 +262,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.surfaceVariant,
     marginRight: 8,
   },
   activeFilterChip: {
@@ -253,5 +274,24 @@ const styles = StyleSheet.create({
   },
   activeFilterText: {
     color: colors.white,
+  },
+  emptyReadContainer: {
+    paddingVertical: 56,
+    paddingHorizontal: 28,
+    alignItems: 'center',
+  },
+  emptyReadTitle: {
+    fontSize: typography.sectionSize,
+    fontWeight: typography.sectionWeight,
+    color: colors.textPrimary,
+    marginTop: 20,
+    textAlign: 'center',
+  },
+  emptyReadSubtitle: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginTop: 10,
+    textAlign: 'center',
+    paddingHorizontal: 8,
   },
 });

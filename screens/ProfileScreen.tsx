@@ -69,13 +69,13 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "#e0f7fa",
+        backgroundColor: colors.surface,
     },
     title: {
         fontSize: 24,
         fontWeight: "bold",
         marginBottom: 24,
-        color: "#00796b",
+        color: colors.primary,
     },
     userInfo: {
         fontSize: 16,

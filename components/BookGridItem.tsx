@@ -39,7 +39,13 @@ export const BookGridItem: React.FC<BookGridItemProps> = ({ id, title, authors, 
     const cleanYear = formattedYear?.trim();
 
     return (
-        <TouchableOpacity style={styles.bookItem} onPress={onPress} activeOpacity={0.7}>
+        <TouchableOpacity
+            style={styles.bookItem}
+            onPress={onPress}
+            activeOpacity={0.7}
+            accessibilityLabel={`${title}${authors?.length ? `, ${authors.join(', ')}` : ''}. Avaa valinnat.`}
+            accessibilityRole="button"
+        >
             <View style={[
                 styles.coverContainer,
                 !coverUrl && { borderColor: colors.primary, borderWidth: 2 }
@@ -49,6 +55,7 @@ export const BookGridItem: React.FC<BookGridItemProps> = ({ id, title, authors, 
                         source={{ uri: coverUrl }}
                         style={styles.coverImage}
                         resizeMode="cover"
+                        accessible={false}
                     />
                 ) : (
                     <View style={[styles.coverImage, { overflow: 'hidden' }]}>
@@ -84,7 +91,7 @@ export const BookGridItem: React.FC<BookGridItemProps> = ({ id, title, authors, 
                                 )}
 
                                 {/* Progress Bar (Bottom) */}
-                                <View style={[styles.progressBarTrack, !coverUrl && { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
+                                <View style={[styles.progressBarTrack, !coverUrl && { backgroundColor: colors.overlay }]}>
                                     <View
                                         style={[
                                             styles.progressBarFill,
@@ -122,9 +129,9 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         overflow: 'hidden',
         marginBottom: 5,
-        backgroundColor: '#eee',
+        backgroundColor: colors.surfaceVariant,
         elevation: 3,
-        shadowColor: '#000',
+        shadowColor: colors.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
@@ -141,11 +148,11 @@ const styles = StyleSheet.create({
     },
     bookAuthor: {
         fontSize: 12,
-        color: '#888',
+        color: colors.textSecondary,
     },
     bookYear: {
         fontSize: 11,
-        color: '#999',
+        color: colors.textSecondary,
         marginTop: 2
     },
     /* Overlays */
@@ -153,7 +160,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: 8,
         right: 4,
-        backgroundColor: 'rgba(0, 0, 0, 0.75)',
+        backgroundColor: colors.overlayDark,
         paddingVertical: 2,
         paddingHorizontal: 6,
         borderRadius: 4,
@@ -172,7 +179,7 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         height: 6, // Increased height
-        backgroundColor: 'rgba(0,0,0,0.5)', // Darker track
+        backgroundColor: colors.overlay,
         width: '100%',
     },
     progressBarFill: {
@@ -183,7 +190,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: 10, // Slightly above the 6px bar
         right: 4,
-        backgroundColor: 'rgba(0, 0, 0, 0.75)',
+        backgroundColor: colors.overlayDark,
         paddingVertical: 2,
         paddingHorizontal: 4,
         borderRadius: 4,

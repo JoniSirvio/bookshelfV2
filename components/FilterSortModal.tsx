@@ -151,11 +151,11 @@ export const FilterSortModal: React.FC<FilterSortModalProps> = ({
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: colors.overlay,
         justifyContent: 'flex-end',
     },
     modalContent: {
-        backgroundColor: 'white',
+        backgroundColor: colors.surface,
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
         padding: 20,
@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 12,
         borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
+        borderBottomColor: colors.borderLight,
     },
     selectedOption: {
         backgroundColor: colors.bgRec,
@@ -220,9 +220,9 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         paddingHorizontal: 16,
         borderRadius: 20,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: colors.surfaceVariant,
         borderWidth: 1,
-        borderColor: '#eee',
+        borderColor: colors.border,
     },
     activePill: {
         backgroundColor: colors.primary,

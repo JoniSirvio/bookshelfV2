@@ -40,7 +40,6 @@ export const searchFinna = async (query: string): Promise<FinnaSearchResult[]> =
 
 
         if (!response.data || !response.data.records) {
-            console.log('No records found from Finna for query:', query);
             return [];
         }
 

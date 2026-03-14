@@ -24,6 +24,7 @@ interface BookListProps<T extends FinnaSearchResult> {
   onStartReading?: (book: T) => void;
   ListHeaderComponent?: React.ReactElement | null;
   ListFooterComponent?: React.ReactElement | null;
+  ListEmptyComponent?: React.ReactElement | null;
   scrollEnabled?: boolean;
   onRateAndReview?: (book: T) => void;
   onAskAI?: (book: T) => void;
@@ -32,7 +33,7 @@ interface BookListProps<T extends FinnaSearchResult> {
 // Underlay for Left Swipe (Add/Read)
 export const UnderlayLeft = ({ item, mode, toReadIds, readIds }: { item: FinnaSearchResult, mode: Mode, toReadIds?: string[], readIds?: string[] }) => {
   let content = null;
-  let backgroundColor = colors.primary;
+  let backgroundColor: string = colors.primary;
 
   if (mode === 'home') {
     content = (
@@ -136,16 +137,18 @@ const BookContent: React.FC<{
 
   const currentDaysRead = calculateDuration();
 
+  const authorStr = item.authors && item.authors.length > 0 ? item.authors.join(', ') : '';
+
   return (
     <View style={styles.listItem}>
       <View style={styles.itemRow}>
         {item.images?.length ? (
-          <View style={[styles.coverImage, { overflow: 'hidden' }]}>
-            <Image source={{ uri: item.images[0].url }} style={{ width: '100%', height: '100%' }} />
+          <View style={[styles.coverImage, { overflow: 'hidden' }]} accessible={false}>
+            <Image source={{ uri: item.images[0].url }} style={{ width: '100%', height: '100%' }} accessible={false} />
             <FormatBadge format={item.absProgress ? 'audiobook' : ((item as any).format || 'book')} />
           </View>
         ) : (
-          <View style={[styles.coverImage, { overflow: 'hidden' }]}>
+          <View style={[styles.coverImage, { overflow: 'hidden' }]} accessible={false}>
             <BookCoverPlaceholder
               id={item.id}
               title={item.title}
@@ -155,8 +158,8 @@ const BookContent: React.FC<{
           </View>
         )}
         <View style={styles.itemText}>
-          <Text style={styles.title}>{item.title || ''}</Text>
-          <Text>{item.authors && item.authors.length > 0 ? item.authors.join(', ') : ''}</Text>
+          <Text style={styles.title} numberOfLines={2}>{item.title || ''}</Text>
+          <Text numberOfLines={1}>{authorStr}</Text>
           <Text>{(() => {
             if (!item.publicationYear) return '';
             const y = item.publicationYear.split('-')[0];
@@ -335,11 +338,14 @@ function BookListItem<T extends FinnaSearchResult>({
           onPress={onPress}
           onLongPress={(mode === 'home' || mode === 'read') ? drag : undefined}
           disabled={isActive}
-          activeOpacity={1} // SwipeableItem handles opacity
+          activeOpacity={1}
           style={[
             styles.itemContainer,
-            isActive && { backgroundColor: '#f0f0f0', elevation: 5 }
+            isActive && { backgroundColor: colors.surfaceVariant, elevation: 5 }
           ]}
+          accessibilityLabel={`${item.title || 'Kirja'}${item.authors?.length ? `, ${item.authors.join(', ')}` : ''}. Avaa valinnat.`}
+          accessibilityRole="button"
+          accessibilityHint={mode === 'home' || mode === 'read' ? 'Pidä painettuna järjestelläksesi.' : undefined}
         >
           <BookContent item={item} mode={mode} toReadIds={toReadIds} readIds={readIds} />
         </TouchableOpacity>
@@ -387,6 +393,7 @@ export const BookList = <T extends FinnaSearchResult>({ books, mode = 'search', 
         containerStyle={styles.flatListContainer}
         ListHeaderComponent={(props as any).ListHeaderComponent}
         ListFooterComponent={(props as any).ListFooterComponent}
+        ListEmptyComponent={(props as any).ListEmptyComponent}
         scrollEnabled={props.scrollEnabled}
       />
       <BookOptionsModal
@@ -416,9 +423,9 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   itemContainer: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: colors.border,
   },
   underlayLeft: {
     position: 'absolute',
@@ -444,14 +451,14 @@ const styles = StyleSheet.create({
     paddingLeft: 20,
   },
   actionText: {
-    color: 'white',
+    color: colors.white,
     fontSize: 16,
     fontWeight: '600',
     paddingTop: 5,
   },
   listItem: {
     padding: 12,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
   },
   itemRow: {
     flexDirection: 'row',
@@ -466,7 +473,7 @@ const styles = StyleSheet.create({
   coverPlaceholder: {
     width: 100,
     height: 150,
-    backgroundColor: '#eee',
+    backgroundColor: colors.surfaceVariant,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -474,6 +481,7 @@ const styles = StyleSheet.create({
   },
   itemText: {
     flex: 1,
+    minWidth: 0,
   },
   title: {
     fontWeight: 'bold',
@@ -509,7 +517,7 @@ const styles = StyleSheet.create({
   },
   inShelfText: {
     marginLeft: 6,
-    color: '#2E7D32',
+    color: colors.primary,
     fontWeight: 'bold',
     fontSize: 12,
   },
@@ -554,7 +562,7 @@ const styles = StyleSheet.create({
   },
   recommendationText: {
     marginLeft: 6,
-    color: '#33691E',
+    color: colors.primary,
     fontStyle: 'italic',
     fontSize: 13,
     flex: 1,
@@ -571,7 +579,7 @@ const styles = StyleSheet.create({
   },
   absProgressBarBackground: {
     height: 4,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: colors.border,
     borderRadius: 2,
     marginBottom: 4,
     overflow: 'hidden',

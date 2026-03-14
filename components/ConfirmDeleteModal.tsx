@@ -21,9 +21,10 @@ const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
       transparent={true}
       visible={isVisible}
       onRequestClose={onClose}
+      accessibilityLabel={`Poista kirja: ${bookTitle}`}
     >
       <View style={styles.centeredView}>
-        <View style={styles.modalView}>
+        <View style={styles.modalView} accessibilityViewIsModal>
           <Text style={styles.modalText}>
             Haluatko varmasti poistaa kirjan "{bookTitle}" hyllystäsi?
           </Text>
@@ -31,12 +32,16 @@ const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
             <TouchableOpacity
               style={[styles.button, styles.confirmButton]}
               onPress={onConfirm}
+              accessibilityLabel="Vahvista poisto"
+              accessibilityRole="button"
             >
               <Text style={styles.buttonText}>Vahvista poisto</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.button, styles.cancelButton]}
               onPress={onClose}
+              accessibilityLabel="Peruuta"
+              accessibilityRole="button"
             >
               <Text style={styles.buttonText}>Peruuta</Text>
             </TouchableOpacity>
@@ -52,20 +57,20 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: colors.overlayDark,
   },
   modalView: {
     margin: 20,
-    backgroundColor: 'white',
+    backgroundColor: colors.surface,
     borderRadius: 15,
     padding: 25,
     alignItems: 'center',
     ...Platform.select({
       web: {
-        boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.25)',
+        boxShadow: `0px 2px 4px ${colors.overlay}`,
       },
       default: {
-        shadowColor: '#000',
+        shadowColor: colors.shadow,
         shadowOffset: {
           width: 0,
           height: 2,
@@ -83,6 +88,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 18,
     lineHeight: 24,
+    color: colors.textPrimary,
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -101,10 +107,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.delete,
   },
   cancelButton: {
-    backgroundColor: '#5bc0de', // Info blue for cancel
+    backgroundColor: colors.cancel,
   },
   buttonText: {
-    color: 'white',
+    color: colors.white,
     fontWeight: 'bold',
     textAlign: 'center',
     fontSize: 16,

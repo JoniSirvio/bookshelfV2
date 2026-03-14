@@ -77,7 +77,7 @@ const BookOptionsModal: React.FC<BookOptionsModalProps> = ({
                                     <FormatBadge format={format} />
                                 </View>
                             ) : (
-                                <View style={[styles.coverImageWrapper, { backgroundColor: '#eee' }]}>
+                                <View style={[styles.coverImageWrapper, { backgroundColor: colors.surfaceVariant }]}>
                                     <BookCoverPlaceholder
                                         id={book.id}
                                         title={book.title}
@@ -232,11 +232,11 @@ const BookOptionsModal: React.FC<BookOptionsModalProps> = ({
 const styles = StyleSheet.create({
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: colors.overlay,
         justifyContent: 'flex-end',
     },
     modalContent: {
-        backgroundColor: 'white',
+        backgroundColor: colors.surface,
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
         padding: 20,
@@ -247,13 +247,12 @@ const styles = StyleSheet.create({
         alignItems: 'flex-start',
         marginBottom: 20,
         borderBottomWidth: 1,
-        borderBottomColor: '#eee',
+        borderBottomColor: colors.border,
         paddingBottom: 15,
     },
     headerImageContainer: {
         marginRight: 15,
-        /* Add shadow for depth */
-        shadowColor: "#000",
+        shadowColor: colors.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.15,
         shadowRadius: 3.84,
@@ -294,7 +293,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 15,
         borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
+        borderBottomColor: colors.borderLight,
     },
     disabledOption: {
         opacity: 0.6,

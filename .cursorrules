@@ -148,3 +148,31 @@ For structure and data flow, see `.cursor/docs/codebase-overview.md` if present.
 - **Data**: Auth via `useAuth()`; shelf/read/recommendations via `useBooksContext()` (Firestore); ABS library/items via `useABSCredentials()` + `api/abs`; playback via `AudioContext`.
 - **Shared UI**: BookList, BookGridItem, SearchBar; modals — ReviewModal, ConfirmDeleteModal, BookOptionsModal, FilterSortModal, LoginModal, PlayerModal. Reuse these for new list/grid screens where possible.
 - **Navigation**: Bottom tabs in BottomNavi; stack screen NewBooks; header style and app title pattern as in Common Patterns above.
+
+---
+
+## Design Context
+
+### Users
+Primary user: a heavy reader (physical books and audiobooks) who uses the app at home to maintain a read list and a to-be-read list. The job to be done is personal library management and reading inspiration — not social or discovery-first.
+
+### Brand Personality
+**Three words:** Personal, relaxed, inspiring.  
+Voice is calm and modern; the app should feel like a private, well-kept library and encourage more reading without feeling pushy or gamified. It must feel **unique and own its persona** — not like a mass-market product. Goodreads-like in function (tracking, lists) is fine; no obligation to copy its UX or colors.
+
+### Aesthetic Direction
+- **Tone:** Modern, relaxed, warm. Relaxed but contemporary — not corporate, not dark/social, not generic.
+- **Primary color:** Olive green (`#636B2F`) leads; it defines the brand. Use consistently but not overwhelmingly.
+- **Accent:** Red only for destructive actions (delete, remove, errors). Do not use red for generic accents or notifications unless they are destructive/urgent.
+- **Backgrounds:** Light theme is current default. Preference: move from pure white toward **beige** for warmth; add a **dark theme** later. Theme should eventually follow **system settings** (light/dark).
+- **Anti-references:** Avoid generic, mass-product, or clone aesthetics. Prioritize a distinct, recognizable look.
+
+### Design Principles
+1. **Personal, not generic** — Every screen and component should feel like “my” bookshelf: unique, owned, with its own character. Avoid cookie-cutter patterns that could belong to any app.
+2. **Relaxed + modern** — Calm, warm, and contemporary. Use space, clear hierarchy, and restrained decoration. No visual noise or corporate stiffness.
+3. **Green-led, red for danger** — Olive green is the hero; red is only for delete/error/destructive actions. Keep the palette purposeful and consistent.
+4. **Inspiring without pressure** — Encourage reading and discovery through clarity and delight (e.g. progress, recommendations), not through gamification or guilt.
+5. **Warm and theme-ready** — Prefer warm neutrals (e.g. beige over pure white). Design with future dark theme and system theme in mind so new UI fits both light and dark without rework.
+
+### Accessibility
+Not yet specified. When adding or refining UI, consider contrast, touch targets, and reduced motion where relevant; formal WCAG or user-needs can be defined later.

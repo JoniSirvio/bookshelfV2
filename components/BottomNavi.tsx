@@ -17,22 +17,24 @@ import { useABSCredentials } from '../hooks/useABSCredentials';
 import { fetchABSLibraries, fetchABSLibraryItems } from '../api/abs';
 import { fetchNewBooksWithSideEffects } from '../utils/absNewBooksQuery';
 import { MiniPlayer } from './MiniPlayer';
-import { colors, headerStyle } from '../theme';
+import { colors, headerStyle, touchTargetMin } from '../theme';
 
-const AIChatsHeaderButton = () => {
+export const AIChatsHeaderButton: React.FC<{ onPress?: () => void }> = ({ onPress }) => {
   const navigation = useNavigation<any>();
   const parent = navigation.getParent();
   return (
     <TouchableOpacity
-      onPress={() => parent?.navigate('AIChats')}
-      style={{ marginLeft: 12, padding: 8, borderRadius: 20, width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}
+      onPress={() => (onPress ? onPress() : parent?.navigate('AIChats'))}
+      style={{ marginLeft: 12, padding: 8, borderRadius: 22, minWidth: touchTargetMin, minHeight: touchTargetMin, justifyContent: 'center', alignItems: 'center' }}
+      accessibilityLabel="Avaa AI-keskustelut"
+      accessibilityRole="button"
     >
       <MaterialCommunityIcons name="message-text-outline" size={24} />
     </TouchableOpacity>
   );
 };
 
-const NotificationBell = () => {
+export const NotificationBell = () => {
   const navigation = useNavigation<any>();
   const { url, token } = useABSCredentials();
   const [popoverVisible, setPopoverVisible] = useState(false);
@@ -81,12 +83,14 @@ const NotificationBell = () => {
         onPress={handlePress}
         style={{
           padding: 8,
-          borderRadius: 20,
-          width: 40,
-          height: 40,
+          borderRadius: 22,
+          minWidth: touchTargetMin,
+          minHeight: touchTargetMin,
           justifyContent: 'center',
           alignItems: 'center'
         }}
+        accessibilityLabel={newBooksData.hasNew ? `Uusia kirjoja, ${newBooksData.count} kpl. Avaa ilmoitukset.` : 'Ilmoitukset. Ei uusia kirjoja.'}
+        accessibilityRole="button"
       >
         <MaterialCommunityIcons name="bell-outline" size={24} />
         {newBooksData.hasNew && (
@@ -94,7 +98,7 @@ const NotificationBell = () => {
             position: 'absolute',
             top: 2,
             right: 2,
-            backgroundColor: colors.secondary,
+            backgroundColor: colors.badge,
             width: 10,
             height: 10,
             borderRadius: 5,
@@ -113,15 +117,15 @@ const NotificationBell = () => {
           animationType="fade"
         >
           <TouchableWithoutFeedback onPress={() => setPopoverVisible(false)}>
-            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.1)' }}>
+            <View style={{ flex: 1, backgroundColor: colors.overlay }}>
               <View style={{
                 position: 'absolute',
-                top: 105, // Adjusted for header height
+                top: 105,
                 right: 11,
-                backgroundColor: colors.white,
+                backgroundColor: colors.surface,
                 borderRadius: 8,
                 padding: 15,
-                shadowColor: "#000",
+                shadowColor: colors.shadow,
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.25,
                 shadowRadius: 3.84,
@@ -144,6 +148,8 @@ const NotificationBell = () => {
                         borderRadius: 5,
                         alignItems: 'center'
                       }}
+                      accessibilityLabel="Katso uutuudet"
+                      accessibilityRole="button"
                     >
                       <Text style={{ color: colors.white, fontWeight: 'bold' }}>Katso uutuudet</Text>
                     </TouchableOpacity>
@@ -170,7 +176,7 @@ const NotificationBell = () => {
                   borderStyle: 'solid',
                   borderLeftColor: 'transparent',
                   borderRightColor: 'transparent',
-                  borderBottomColor: colors.white,
+                  borderBottomColor: colors.surface,
                 }} />
               </View>
             </View>
@@ -232,6 +238,7 @@ export default function MyTabs() {
           component={HomeScreen}
           options={{
             tabBarLabel: 'Luettavat',
+            tabBarAccessibilityLabel: 'Luettavat, hylly',
             tabBarIcon: ({ color, size }) => (
               <MaterialCommunityIcons name="book-open-variant-outline" color={color} size={size} />
             ),
@@ -242,6 +249,7 @@ export default function MyTabs() {
           component={ABSLibraryScreen}
           options={{
             tabBarLabel: 'Kirjat',
+            tabBarAccessibilityLabel: 'Kirjat, äänikirjasto',
             tabBarIcon: ({ color, size }) => (
               <MaterialCommunityIcons name="bookshelf" size={size} color={color} />
             ),
@@ -252,6 +260,7 @@ export default function MyTabs() {
           component={PastReadScreen}
           options={{
             tabBarLabel: 'Luetut',
+            tabBarAccessibilityLabel: 'Luetut, lukuhistoria',
             tabBarIcon: ({ color, size }) => (
               <MaterialCommunityIcons name="book-check-outline" color={color} size={size} />
             ),

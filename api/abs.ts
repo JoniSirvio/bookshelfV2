@@ -126,7 +126,6 @@ export const loginToABS = async (baseUrl: string, username: string, password: st
 
 export const fetchABSMe = async (baseUrl: string, token: string): Promise<any> => {
     const cleanUrl = baseUrl.replace(/\/$/, "");
-    // console.log('[ABS API] Fetching /api/me...');
     try {
         const response = await axios.get(`${cleanUrl}/api/me`, {
             headers: { Authorization: `Bearer ${token}` }

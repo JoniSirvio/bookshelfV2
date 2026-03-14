@@ -14,7 +14,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { doc, updateDoc, setDoc } from 'firebase/firestore';
 import { firestore } from '../firebase/Config';
 import { useAuth } from '../context/AuthContext';
-import { colors, loaderColor } from '../theme';
+import { colors, loaderColor, typography, touchTargetMin } from '../theme';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const COLUMN_COUNT = 3;
@@ -354,30 +354,23 @@ export default function ABSLibraryScreen() {
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <View style={[styles.headerTop, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+                <View style={styles.headerRow}>
                     <Text style={styles.headerTitle}>
                         {searchSource === 'abs' ? 'Audiobookshelf' : 'Finna-haku'}
                     </Text>
                     <TouchableOpacity
                         onPress={() => setSearchSource(prev => prev === 'abs' ? 'finna' : 'abs')}
-                        style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            backgroundColor: colors.bgRec,
-                            paddingHorizontal: 12,
-                            paddingVertical: 6,
-                            borderRadius: 20,
-                            borderWidth: 1,
-                            borderColor: '#C5E1A5'
-                        }}
+                        style={styles.finnaButton}
+                        accessibilityLabel={searchSource === 'abs' ? 'Hae Finnasta' : 'Oma kirjasto'}
+                        accessibilityRole="button"
                     >
-                        <Text style={{ marginRight: 6, color: '#33691E', fontWeight: 'bold' }}>
+                        <Text style={styles.finnaButtonText}>
                             {searchSource === 'abs' ? 'Hae Finnasta' : 'Oma kirjasto'}
                         </Text>
                         <MaterialCommunityIcons
                             name={searchSource === 'abs' ? 'book-search' : 'bookshelf'}
                             size={20}
-                            color="#33691E"
+                            color={colors.primary}
                         />
                     </TouchableOpacity>
                 </View>
@@ -399,7 +392,12 @@ export default function ABSLibraryScreen() {
                             ))}
                         </ScrollView>
 
-                        <TouchableOpacity onPress={() => setViewMode(prev => prev === 'grid' ? 'list' : 'grid')} style={styles.viewToggle}>
+                        <TouchableOpacity
+                            onPress={() => setViewMode(prev => prev === 'grid' ? 'list' : 'grid')}
+                            style={styles.viewToggle}
+                            accessibilityLabel={viewMode === 'grid' ? 'Vaihda listanäkymään' : 'Vaihda ruudukkoviewiin'}
+                            accessibilityRole="button"
+                        >
                             <MaterialCommunityIcons
                                 name={viewMode === 'grid' ? "view-list" : "view-grid"}
                                 size={28}
@@ -407,7 +405,12 @@ export default function ABSLibraryScreen() {
                             />
                         </TouchableOpacity>
 
-                        <TouchableOpacity onPress={() => setIsFilterModalVisible(true)} style={styles.viewToggle}>
+                        <TouchableOpacity
+                            onPress={() => setIsFilterModalVisible(true)}
+                            style={styles.viewToggle}
+                            accessibilityLabel="Suodata ja lajittele"
+                            accessibilityRole="button"
+                        >
                             <MaterialCommunityIcons
                                 name="sort-variant"
                                 size={28}
@@ -535,19 +538,18 @@ export default function ABSLibraryScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.white,
-        padding: 16, // Added padding to match HomeScreen
+        backgroundColor: colors.surface,
+        padding: 16,
     },
     center: {
         flex: 1,
         justifyContent: 'center',
-        alignItems: 'center', // This centers the ScrollView horizontally
+        alignItems: 'center',
         padding: 20,
-        backgroundColor: colors.white,
+        backgroundColor: colors.surface,
     },
-    // ...
     scrollView: {
-        width: '100%', // ScrollView must take full width of center container
+        width: '100%',
     },
     formContent: {
         alignItems: 'center',
@@ -556,7 +558,7 @@ const styles = StyleSheet.create({
     input: {
         width: '100%',
         marginBottom: 15,
-        backgroundColor: 'white',
+        backgroundColor: colors.surfaceVariant,
     },
     // ...
     message: {
@@ -566,15 +568,36 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     header: {
-        marginBottom: 16,
+        marginBottom: 20,
     },
     headerTop: {
-        marginBottom: 16,
+        marginBottom: 12,
+    },
+    headerRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12,
     },
     headerTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        marginBottom: 0,
+        fontSize: typography.displaySize,
+        fontWeight: typography.displayWeight,
+        color: colors.textPrimary,
+    },
+    finnaButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.bgRec,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    finnaButtonText: {
+        marginRight: 6,
+        color: colors.primary,
+        fontWeight: '700',
     },
     tabsRow: {
         flexDirection: 'row',
@@ -587,13 +610,17 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     viewToggle: {
+        minWidth: touchTargetMin,
+        minHeight: touchTargetMin,
+        justifyContent: 'center',
+        alignItems: 'center',
         marginLeft: 10,
     },
     tab: {
         paddingVertical: 8,
         paddingHorizontal: 16,
         borderRadius: 20,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: colors.surfaceVariant,
     },
     activeTab: {
         backgroundColor: colors.primary,
@@ -625,9 +652,9 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         overflow: 'hidden',
         marginBottom: 5,
-        backgroundColor: '#eee',
+        backgroundColor: colors.surfaceVariant,
         elevation: 3,
-        shadowColor: '#000',
+        shadowColor: colors.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
@@ -648,12 +675,12 @@ const styles = StyleSheet.create({
     },
     bookAuthor: {
         fontSize: 12,
-        color: '#888',
+        color: colors.textSecondaryAlt,
     },
 
     title: {
-        fontSize: 24,
-        fontWeight: 'bold',
+        fontSize: typography.displaySize,
+        fontWeight: typography.displayWeight,
         color: colors.textPrimary,
         marginBottom: 10,
     },

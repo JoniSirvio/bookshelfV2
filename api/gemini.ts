@@ -59,11 +59,9 @@ export const getBookRecommendations = async (readBooks: string[], userWishes?: s
     `;
 
     try {
-        console.log("Sending prompt to Gemini:", prompt);
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const text = response.text();
-        console.log("Gemini response:", text);
 
         // Clean up markdown if Gemini adds it despite instructions
         const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();

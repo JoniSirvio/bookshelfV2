@@ -117,11 +117,20 @@ export default function AIChatListScreen() {
         return (
             <View style={styles.screenWrap}>
                 <View style={styles.center}>
-                    <MaterialCommunityIcons name="message-text-outline" size={48} color={colors.textSecondaryAlt} />
+                    <MaterialCommunityIcons name="message-text-outline" size={56} color={colors.textSecondaryAlt} />
                     <Text style={styles.emptyText}>Ei tallennettuja keskusteluja</Text>
-                    <Text style={styles.emptySubtext}>Aloita keskustelu saadaksesi suosituksia tai kysyä kirjoista.</Text>
+                    <Text style={styles.emptySubtext}>
+                        Täällä näet AI-keskustelusi kirjoista. Kysy suosituksia, kuvauksia tai oma kysymyksesi – vastaukset tallentuvat tänne.
+                    </Text>
+                    <Text style={styles.emptyCtaHint}>Aloita painamalla alla olevaa painiketta.</Text>
                 </View>
-                <TouchableOpacity style={styles.fab} onPress={openGeneralChat} activeOpacity={0.85}>
+                <TouchableOpacity
+                    style={styles.fab}
+                    onPress={openGeneralChat}
+                    activeOpacity={0.85}
+                    accessibilityLabel="Aloita uusi keskustelu"
+                    accessibilityRole="button"
+                >
                     <MaterialCommunityIcons name="plus" size={28} color={colors.white} />
                 </TouchableOpacity>
             </View>
@@ -192,7 +201,7 @@ const THUMB_HEIGHT = Math.round(THUMB_WIDTH * (3 / 2));
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.white,
+        backgroundColor: colors.surface,
     },
     content: {
         padding: 16,
@@ -200,14 +209,14 @@ const styles = StyleSheet.create({
     },
     screenWrap: {
         flex: 1,
-        backgroundColor: colors.white,
+        backgroundColor: colors.surface,
     },
     center: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
         padding: 24,
-        backgroundColor: colors.white,
+        backgroundColor: colors.surface,
     },
     emptyText: {
         fontSize: 16,
@@ -221,8 +230,14 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginTop: 8,
     },
+    emptyCtaHint: {
+        fontSize: 13,
+        color: colors.textSecondaryAlt,
+        textAlign: 'center',
+        marginTop: 12,
+    },
     emptyCtaWrap: {
-        backgroundColor: '#FAFAFA',
+        backgroundColor: colors.surfaceVariant,
         padding: 16,
         borderRadius: CARD_RADIUS,
         marginTop: 16,
@@ -242,7 +257,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         elevation: 4,
-        shadowColor: '#000',
+        shadowColor: colors.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.25,
         shadowRadius: 4,
@@ -260,7 +275,7 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         paddingHorizontal: 0,
         borderBottomWidth: 1,
-        borderBottomColor: '#eee',
+        borderBottomColor: colors.borderLight,
     },
     thumbnailWrap: {
         width: THUMB_WIDTH,
