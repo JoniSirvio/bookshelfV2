@@ -1,7 +1,7 @@
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { FormatBadge } from './FormatBadge';
-import { colors } from '../theme';
+import { colors, typography } from '../theme';
 
 interface BookCoverPlaceholderProps {
     id: string;
@@ -97,18 +97,15 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     title: {
-        fontFamily: Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' }),
-        fontSize: 16, // Base size, adjusted by numberOfLines/adjustsFontSizeToFit logic where possible, but RN Text behaves reliably with fixed size + lines
-        // User requested 18-22sp. Given 100px width covers, 18 might be large. Let's try 16-18.
-        // Actually grid items can be small. 
-        fontWeight: 'bold',
+        fontFamily: typography.fontFamilyDisplay,
+        fontSize: 16,
         textAlign: 'center',
         marginBottom: 6,
         lineHeight: 20,
     },
     author: {
         fontSize: 11,
-        fontWeight: '400',
+        fontFamily: typography.fontFamilyBody,
         textAlign: 'center',
     }
 });

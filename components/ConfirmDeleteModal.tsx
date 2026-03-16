@@ -1,6 +1,6 @@
 import React from 'react';
 import { Modal, View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
-import { colors } from '../theme';
+import { colors, typography } from '../theme';
 
 interface ConfirmDeleteModalProps {
   isVisible: boolean;
@@ -87,6 +87,7 @@ const styles = StyleSheet.create({
     marginBottom: 25,
     textAlign: 'center',
     fontSize: 18,
+    fontFamily: typography.fontFamilyBody,
     lineHeight: 24,
     color: colors.textPrimary,
   },
@@ -111,7 +112,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: colors.white,
-    fontWeight: 'bold',
+    fontFamily: typography.fontFamilyDisplay,
     textAlign: 'center',
     fontSize: 16,
   },

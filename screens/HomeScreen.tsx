@@ -27,6 +27,7 @@ const HomeScreen: React.FC = () => {
   const [generating, setGenerating] = useState(false);
   const [recommendationError, setRecommendationError] = useState<string | null>(null);
   const [userWishes, setUserWishes] = useState("");
+  const [wishesExpanded, setWishesExpanded] = useState(false);
   const [viewMode, setViewMode] = useViewMode('home_view_mode', 'list');
 
   // State for Options Modal (Grid View)
@@ -119,10 +120,11 @@ const HomeScreen: React.FC = () => {
       <TouchableOpacity
         onPress={() => setViewMode(prev => prev === 'list' ? 'grid' : 'list')}
         style={styles.viewModeButton}
-        accessibilityLabel={viewMode === 'list' ? 'Vaihda ruudukkoviewiin' : 'Vaihda listanäkymään'}
+        accessibilityLabel={viewMode === 'list' ? 'Vaihda ruudukkonäkymään' : 'Vaihda listanäkymään'}
         accessibilityRole="button"
       >
         <MaterialCommunityIcons name={viewMode === 'list' ? 'view-grid' : 'view-list'} size={28} color={colors.textPrimary} />
+        <Text style={styles.viewToggleLabel}>{viewMode === 'list' ? 'Ruudukko' : 'Lista'}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -135,7 +137,7 @@ const HomeScreen: React.FC = () => {
         Täällä näet luettavien listasi – kirjat, joita haluat lukea seuraavaksi.
       </Text>
       <Text style={styles.emptyShelfSubtitle}>
-        Lisää kirjoja äänikirjastosta tai hae tekoälysuosituksia alla. Voit merkitä kirjat luetuiksi ja pitää kirjaa edistymisestäsi.
+        Lisää kirjoja Kirjat-välilehdeltä (äänikirjasto ja Finna) tai hae tekoälysuosituksia alla. Voit merkitä kirjat luetuiksi ja pitää kirjaa edistymisestäsi.
       </Text>
       <AnimatedScalePressable
         onPress={handleGenerateRecommendations}
@@ -185,15 +187,36 @@ const HomeScreen: React.FC = () => {
         </View>
       )}
 
-      <TextInput
-        style={styles.wishesInput}
-        placeholder="Esim. 'Haluaisin lyhyitä scifi-kirjoja' (valinnainen)"
-        placeholderTextColor={colors.placeholder}
-        value={userWishes}
-        onChangeText={(t) => { setUserWishes(t); if (recommendationError) setRecommendationError(null); }}
-        editable={!generating}
-        multiline
-      />
+      {wishesExpanded ? (
+        <>
+          <TextInput
+            style={styles.wishesInput}
+            placeholder="Esim. lyhyitä scifi-kirjoja"
+            placeholderTextColor={colors.placeholder}
+            value={userWishes}
+            onChangeText={(t) => { setUserWishes(t); if (recommendationError) setRecommendationError(null); }}
+            editable={!generating}
+            multiline
+          />
+          <TouchableOpacity
+            onPress={() => setWishesExpanded(false)}
+            style={styles.wishesToggle}
+            accessibilityLabel="Piilota toiveet"
+            accessibilityRole="button"
+          >
+            <Text style={styles.wishesToggleText}>Piilota toiveet</Text>
+          </TouchableOpacity>
+        </>
+      ) : (
+        <TouchableOpacity
+          onPress={() => setWishesExpanded(true)}
+          style={styles.wishesToggle}
+          accessibilityLabel="Lisää toiveet suosituksille"
+          accessibilityRole="button"
+        >
+          <Text style={styles.wishesToggleText}>Lisää toiveet suosituksille (valinnainen)</Text>
+        </TouchableOpacity>
+      )}
 
       <TouchableOpacity
         onPress={handleGenerateRecommendations}
@@ -229,7 +252,7 @@ const HomeScreen: React.FC = () => {
       {viewMode === 'list' ? (
         <BookList
           ListHeaderComponent={renderHeader()}
-          ListFooterComponent={renderFooter()}
+          ListFooterComponent={combinedBooks.length > 0 ? renderFooter() : null}
           ListEmptyComponent={renderEmptyShelf()}
           books={combinedBooks}
           onTriggerDelete={handleOpenDeleteModal}
@@ -267,7 +290,7 @@ const HomeScreen: React.FC = () => {
           numColumns={3}
           estimatedItemSize={200}
           ListHeaderComponent={renderHeader()}
-          ListFooterComponent={renderFooter()}
+          ListFooterComponent={combinedBooks.length > 0 ? renderFooter() : null}
           contentContainerStyle={{ paddingBottom: 20 }}
         />
       )}
@@ -331,24 +354,33 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   viewModeButton: {
-    minWidth: touchTargetMin,
-    minHeight: touchTargetMin,
-    justifyContent: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
+    minHeight: touchTargetMin,
+    paddingHorizontal: 4,
+    gap: 6,
+  },
+  viewToggleLabel: {
+    fontSize: 14,
+    fontFamily: typography.fontFamilyBody,
+    color: colors.textSecondary,
   },
   title: {
     fontSize: typography.displaySize,
     fontWeight: typography.displayWeight,
+    fontFamily: typography.fontFamilyDisplay,
     color: colors.textPrimary,
   },
   sectionTitle: {
     fontSize: typography.sectionSize,
     fontWeight: typography.sectionWeight,
+    fontFamily: typography.fontFamilyDisplay,
     color: colors.textPrimary,
     marginBottom: 8,
   },
   sectionSubtitle: {
     fontSize: 14,
+    fontFamily: typography.fontFamilyBody,
     color: colors.textSecondaryAlt,
     marginBottom: 16,
   },
@@ -359,10 +391,22 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     fontSize: 14,
+    fontFamily: typography.fontFamilyBody,
     color: colors.textPrimary,
-    marginBottom: 16,
+    marginBottom: 8,
     minHeight: 60,
     textAlignVertical: 'top',
+  },
+  wishesToggle: {
+    alignSelf: 'flex-start',
+    paddingVertical: 8,
+    marginBottom: 16,
+  },
+  wishesToggleText: {
+    fontSize: 14,
+    fontFamily: typography.fontFamilyBody,
+    color: colors.primary,
+    fontWeight: '500',
   },
   footerContainer: {
     marginTop: 32,
@@ -392,7 +436,7 @@ const styles = StyleSheet.create({
   },
   generateButtonText: {
     color: colors.primary,
-    fontWeight: 'bold',
+    fontFamily: typography.fontFamilyDisplay,
     fontSize: 16,
   },
   recommendationsList: {
@@ -406,18 +450,21 @@ const styles = StyleSheet.create({
   emptyShelfTitle: {
     fontSize: typography.emptyHeroSize,
     fontWeight: typography.emptyHeroWeight,
+    fontFamily: typography.fontFamilyDisplay,
     color: colors.textPrimary,
     marginTop: 20,
     textAlign: 'center',
   },
   emptyShelfWhat: {
     fontSize: 15,
+    fontFamily: typography.fontFamilyBody,
     color: colors.textSecondary,
     marginTop: 10,
     textAlign: 'center',
   },
   emptyShelfSubtitle: {
     fontSize: 14,
+    fontFamily: typography.fontFamilyBody,
     color: colors.textSecondary,
     marginTop: 6,
     textAlign: 'center',
@@ -444,7 +491,7 @@ const styles = StyleSheet.create({
   },
   emptyShelfCtaPrimaryText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: typography.fontFamilyDisplay,
     color: colors.white,
   },
   emptyShelfCtaSecondary: {
@@ -461,7 +508,7 @@ const styles = StyleSheet.create({
   },
   emptyShelfCtaSecondaryText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: typography.fontFamilyDisplay,
     color: colors.primary,
   },
   recommendationErrorBox: {
@@ -475,6 +522,7 @@ const styles = StyleSheet.create({
   },
   recommendationErrorText: {
     fontSize: 14,
+    fontFamily: typography.fontFamilyBody,
     color: colors.textPrimary,
     marginTop: 6,
   },
@@ -488,7 +536,7 @@ const styles = StyleSheet.create({
   },
   retryButtonText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: typography.fontFamilyDisplay,
     color: colors.white,
   },
 });

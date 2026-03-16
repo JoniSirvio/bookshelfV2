@@ -2,7 +2,7 @@ import React from "react";
 import { View, TextInput as NativeTextInput, StyleSheet, TouchableOpacity } from "react-native";
 import { Button } from "react-native-paper";
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors } from '../theme';
+import { colors, typography } from '../theme';
 
 interface SearchBarProps {
     value?: string;
@@ -102,6 +102,7 @@ const styles = StyleSheet.create({
         height: 45,
         backgroundColor: 'transparent',
         fontSize: 16,
+        fontFamily: typography.fontFamilyBody,
         color: colors.textPrimary,
     },
     searchButton: {

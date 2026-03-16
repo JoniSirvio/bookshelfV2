@@ -3,6 +3,7 @@ import * as React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { Provider as PaperProvider, DefaultTheme } from 'react-native-paper';
 import { BooksProvider } from './context/BooksContext';
+import { SuccessToastProvider } from './context/SuccessToastContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AIChatProvider, AIChatModalHost } from './context/AIChatContext';
 import { AudioProvider } from './context/AudioContext'; // Import AudioProvider
@@ -12,12 +13,17 @@ import { PlayerModal } from './components/PlayerModal'; // Import PlayerModal
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useFonts } from 'expo-font';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import {
+  PlusJakartaSans_400Regular,
+  PlusJakartaSans_400Regular_Italic,
+  PlusJakartaSans_700Bold,
+} from '@expo-google-fonts/plus-jakarta-sans';
 import * as SplashScreen from 'expo-splash-screen';
 import { useCallback, useEffect } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { queryClient, clientPersister } from './utils/queryClient';
-import { headerStyle, headerTintColor, loaderColor } from './theme';
+import { headerStyle, headerTintColor, loaderColor, typography } from './theme';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -64,6 +70,7 @@ const AppContent = () => {
                     headerTitle: 'Uudet lisäykset',
                     headerStyle,
                     headerTintColor,
+                    headerTitleStyle: { fontFamily: typography.fontFamilyDisplay, fontSize: 18 },
                     headerBackTitle: 'Takaisin'
                   }}
                 />
@@ -74,6 +81,7 @@ const AppContent = () => {
                     headerTitle: 'AI-keskustelut',
                     headerStyle,
                     headerTintColor,
+                    headerTitleStyle: { fontFamily: typography.fontFamilyDisplay, fontSize: 18 },
                     headerBackTitle: 'Takaisin'
                   }}
                 />
@@ -92,6 +100,9 @@ const AppContent = () => {
 export default function App() {
   const [fontsLoaded] = useFonts({
     ...MaterialCommunityIcons.font,
+    PlusJakartaSans_400Regular,
+    PlusJakartaSans_400Regular_Italic,
+    PlusJakartaSans_700Bold,
   });
 
   useEffect(() => {
@@ -119,9 +130,11 @@ export default function App() {
         }}
       >
         <PersistQueryClientProvider client={queryClient} persistOptions={{ persister: clientPersister }}>
-          <AuthProvider>
-            <AppContent />
-          </AuthProvider>
+          <SuccessToastProvider>
+            <AuthProvider>
+              <AppContent />
+            </AuthProvider>
+          </SuccessToastProvider>
         </PersistQueryClientProvider>
       </PaperProvider>
     </GestureHandlerRootView>

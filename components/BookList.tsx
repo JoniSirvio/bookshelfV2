@@ -7,7 +7,7 @@ import { FinnaSearchResult } from '../api/finna';
 import BookOptionsModal from './BookOptionsModal';
 import { BookCoverPlaceholder } from './BookCoverPlaceholder';
 import { FormatBadge } from './FormatBadge';
-import { colors } from '../theme';
+import { colors, typography } from '../theme';
 
 type Mode = 'search' | 'home' | 'read' | 'recommendation';
 
@@ -88,13 +88,17 @@ export const UnderlayRight = () => {
 
 
 
+const RECOMMENDATION_REASON_MAX_LENGTH = 120;
+
 // This component renders the visible content of the book list item.
 const BookContent: React.FC<{
   item: FinnaSearchResult;
   mode: Mode;
   toReadIds?: string[];
   readIds?: string[];
-}> = ({ item, mode, toReadIds, readIds }) => {
+  recommendationExpanded?: boolean;
+  onToggleRecommendation?: () => void;
+}> = ({ item, mode, toReadIds, readIds, recommendationExpanded, onToggleRecommendation }) => {
   const renderStars = (rating: number) => {
     const stars = [];
     for (let i = 1; i <= 5; i++) {
@@ -210,12 +214,25 @@ const BookContent: React.FC<{
             </View>
           )}
 
-          {mode === 'recommendation' && (item as any).recommendationReason && (
-            <View style={styles.recommendationContainer}>
-              <MaterialCommunityIcons name="robot-outline" size={16} color={colors.primary} />
-              <Text style={styles.recommendationText}>"{(item as any).recommendationReason}"</Text>
-            </View>
-          )}
+          {mode === 'recommendation' && (item as any).recommendationReason && (() => {
+            const reason = (item as any).recommendationReason as string;
+            const isLong = reason.length > RECOMMENDATION_REASON_MAX_LENGTH;
+            const showTruncated = isLong && !recommendationExpanded;
+            const displayText = showTruncated ? reason.slice(0, RECOMMENDATION_REASON_MAX_LENGTH).trim() + '…' : reason;
+            return (
+              <View style={styles.recommendationContainer}>
+                <MaterialCommunityIcons name="robot-outline" size={16} color={colors.primary} />
+                <View style={styles.recommendationTextBlock}>
+                  <Text style={styles.recommendationText}>"{displayText}"</Text>
+                  {isLong && (
+                    <TouchableOpacity onPress={onToggleRecommendation} style={styles.recommendationToggle} accessibilityLabel={recommendationExpanded ? 'Näytä vähemmän' : 'Lue lisää'} accessibilityRole="button">
+                      <Text style={styles.recommendationToggleText}>{recommendationExpanded ? 'Näytä vähemmän' : 'Lue lisää'}</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            );
+          })()}
 
           {mode === 'read' && (
             <View style={styles.reviewDetails}>
@@ -280,7 +297,9 @@ function BookListItem<T extends FinnaSearchResult>({
   onMarkAsRead,
   onTriggerDelete,
   onAdd,
-  onRateAndReview
+  onRateAndReview,
+  recommendationExpanded,
+  onToggleRecommendation,
 }: {
   item: T;
   mode: Mode;
@@ -293,6 +312,8 @@ function BookListItem<T extends FinnaSearchResult>({
   onTriggerDelete?: (book: T) => void;
   onAdd?: (book: T) => void;
   onRateAndReview?: (book: T) => void;
+  recommendationExpanded?: boolean;
+  onToggleRecommendation?: () => void;
 }) {
 
   const itemRef = useRef<any>(null);
@@ -347,7 +368,14 @@ function BookListItem<T extends FinnaSearchResult>({
           accessibilityRole="button"
           accessibilityHint={mode === 'home' || mode === 'read' ? 'Pidä painettuna järjestelläksesi.' : undefined}
         >
-          <BookContent item={item} mode={mode} toReadIds={toReadIds} readIds={readIds} />
+          <BookContent
+            item={item}
+            mode={mode}
+            toReadIds={toReadIds}
+            readIds={readIds}
+            recommendationExpanded={recommendationExpanded}
+            onToggleRecommendation={onToggleRecommendation}
+          />
         </TouchableOpacity>
       </ScaleDecorator>
     </SwipeableItem>
@@ -357,11 +385,16 @@ function BookListItem<T extends FinnaSearchResult>({
 export const BookList = <T extends FinnaSearchResult>({ books, mode = 'search', onReorder, ...props }: BookListProps<T>) => {
   const [selectedBook, setSelectedBook] = useState<T | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [expandedReasons, setExpandedReasons] = useState<Record<string, boolean>>({});
 
   const handleBookPress = (book: T) => {
     setSelectedBook(book);
     setModalVisible(true);
   };
+
+  const toggleRecommendationReason = useCallback((itemId: string) => {
+    setExpandedReasons(prev => ({ ...prev, [itemId]: !prev[itemId] }));
+  }, []);
 
   const renderItem = useCallback(({ item, drag, isActive }: RenderItemParams<T>) => {
     return (
@@ -377,9 +410,11 @@ export const BookList = <T extends FinnaSearchResult>({ books, mode = 'search', 
         onTriggerDelete={props.onTriggerDelete}
         onAdd={props.onAdd}
         onRateAndReview={props.onRateAndReview}
+        recommendationExpanded={expandedReasons[item.id]}
+        onToggleRecommendation={() => toggleRecommendationReason(item.id)}
       />
     );
-  }, [mode, props]);
+  }, [mode, props, expandedReasons, toggleRecommendationReason]);
 
   return (
     <>
@@ -453,7 +488,7 @@ const styles = StyleSheet.create({
   actionText: {
     color: colors.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: typography.fontFamilyDisplay,
     paddingTop: 5,
   },
   listItem: {
@@ -484,7 +519,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   title: {
-    fontWeight: 'bold',
+    fontFamily: typography.fontFamilyDisplay,
     fontSize: 16,
   },
   reviewDetails: {
@@ -496,12 +531,13 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontFamily: typography.fontFamilyDisplay,
     color: colors.textPrimary,
     marginBottom: 2,
   },
   reviewText: {
     fontStyle: 'italic',
+    fontFamily: typography.fontFamilyBody,
     color: colors.textSecondary,
     fontSize: 13,
   },
@@ -517,8 +553,8 @@ const styles = StyleSheet.create({
   },
   inShelfText: {
     marginLeft: 6,
+    fontFamily: typography.fontFamilyDisplay,
     color: colors.primary,
-    fontWeight: 'bold',
     fontSize: 12,
   },
   readFormatContainer: {
@@ -529,7 +565,7 @@ const styles = StyleSheet.create({
   readFormatText: {
     marginLeft: 6,
     fontSize: 14,
-    fontWeight: 'bold',
+    fontFamily: typography.fontFamilyDisplay,
     color: colors.textPrimary,
   },
   readingStatusContainer: {
@@ -539,8 +575,8 @@ const styles = StyleSheet.create({
   },
   readingStatusText: {
     marginLeft: 5,
+    fontFamily: typography.fontFamilyDisplay,
     color: colors.primary,
-    fontWeight: 'bold',
   },
   dateContainer: {
     flexDirection: 'row',
@@ -550,6 +586,7 @@ const styles = StyleSheet.create({
   dateText: {
     marginLeft: 6,
     fontSize: 13,
+    fontFamily: typography.fontFamilyBody,
     color: colors.textSecondary,
   },
   recommendationContainer: {
@@ -560,12 +597,25 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'flex-start',
   },
-  recommendationText: {
+  recommendationTextBlock: {
     marginLeft: 6,
+    flex: 1,
+    minWidth: 0,
+  },
+  recommendationText: {
+    fontFamily: typography.fontFamilyBody,
     color: colors.primary,
     fontStyle: 'italic',
     fontSize: 13,
-    flex: 1,
+  },
+  recommendationToggle: {
+    marginTop: 4,
+    alignSelf: 'flex-start',
+  },
+  recommendationToggleText: {
+    fontSize: 13,
+    fontFamily: typography.fontFamilyDisplay,
+    color: colors.primary,
   },
   row: {
     flexDirection: 'row',
@@ -595,12 +645,13 @@ const styles = StyleSheet.create({
   },
   absProgressText: {
     fontSize: 12,
+    fontFamily: typography.fontFamilyBody,
     color: colors.textSecondaryAlt,
     fontWeight: '500',
   },
   placeholderTitle: {
     fontSize: 12,
-    fontWeight: 'bold',
+    fontFamily: typography.fontFamilyDisplay,
     color: colors.textSecondary,
     textAlign: 'center',
     padding: 4

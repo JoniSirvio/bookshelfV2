@@ -5,7 +5,7 @@ import { useAudio } from '../context/AudioContext';
 import { useABSCredentials } from '../hooks/useABSCredentials';
 import { getABSCoverUrl } from '../api/abs';
 import { BookCoverPlaceholder } from './BookCoverPlaceholder';
-import { colors, touchTargetMin } from '../theme';
+import { colors, touchTargetMin, typography } from '../theme';
 
 export const MiniPlayer = () => {
     const { currentBook, isPlaying, togglePlay, openPlayer, isLoading } = useAudio();
@@ -116,11 +116,12 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 14,
-        fontWeight: 'bold',
+        fontFamily: typography.fontFamilyDisplay,
         color: colors.textPrimary,
     },
     author: {
         fontSize: 12,
+        fontFamily: typography.fontFamilyBody,
         color: colors.textSecondaryAlt,
     },
     playButton: {

@@ -13,13 +13,13 @@
 - **No AI color palette:** No cyan-on-dark, purple-to-blue gradients, neon accents, or gradient text. Olive green leads; red is reserved for destructive actions. **Good.**
 - **No glassmorphism:** No decorative blur or glow. **Good.**
 - **No hero-metric template:** No “big number, small label, gradient accent” dashboard pattern. **Good.**
-- **Typography:** System fonts only; no Inter/Roboto overload but also no distinctive display/body pairing. Design Context asks for “unique” persona — type is clear and hierarchical (display/section/emptyHero) but not memorable. **Partial:** hierarchy exists, personality does not.
+- **Typography:** Plus Jakarta Sans is used app-wide (display Bold, body Regular) via theme tokens; typography is now distinctive and hierarchical. **Done.**
 - **Pure white:** Theme uses tinted surface (`#F5F4F0`) and surfaceVariant; screens and modals use `colors.surface`. Pure white still appears in a few spots (e.g. some list backgrounds). **Mostly addressed.**
 - **Modals:** ConfirmDelete, Review, BookOptions, FilterSort, Login, AskAI, Player — many flows are modal-heavy. Frontend-design: “Don’t use modals unless there’s no better alternative.” On mobile, confirmations and full-screen player are reasonable; the volume of modals still makes the product feel “modal-first” rather than “flow-first.” **Minor tell.**
 - **Rounded rectangles + shadow:** Cards and CTAs use consistent radius (12–16) and olive-tinted shadow on primary button. Not the “generic gray drop shadow on every card” pattern; shadow is purposeful. **Acceptable.**
 - **Gray on color:** Recommendation and shelf badges use primary-tinted text (`colors.primary`) on light green (`bgRec`); no gray-on-colored-background washout. **Good.**
 
-**The test:** If you said “AI made this,” someone might guess it was tool-assisted (consistent tokens, clear structure) but would not immediately think “generic 2024 AI UI.” The olive+beige, Finnish copy, and restrained motion read as intentional. The main gap is typography and one clear “signature” moment — something that makes the app unmistakably BookShelf.
+**The test:** If you said “AI made this,” someone might guess it was tool-assisted (consistent tokens, clear structure) but would not immediately think “generic 2024 AI UI.” The olive+beige, Finnish copy, and restrained motion read as intentional. The typography gap is closed; the remaining opportunity is one clear “signature” moment — something that makes the app unmistakably BookShelf.
 
 ---
 
@@ -27,7 +27,7 @@
 
 **What works:** The app feels calm, warm, and task-focused. The palette is coherent; empty states explain and guide; primary actions (e.g. “Hae suosituksia,” “Siirry kirjoihin”) are easy to find. Hierarchy (display vs section vs body) is clear. Accessibility and reduced motion have been considered.
 
-**What doesn’t:** Typography is safe, not distinctive. There is no single “hero” moment that defines the experience. Some screens still compete for attention (e.g. Luettavat has both empty shelf and recommendations section). Modals dominate the interaction model. A few labels and flows could be clearer.
+**What doesn’t:** There is no single “hero” moment that defines the experience. Modals still dominate the interaction model. Two remaining gaps: discovery of "Kirjat" (where to add books) and success feedback after add or mark read.
 
 **Biggest opportunity:** Own one signature moment — either the empty shelf, the “Luettavien hylly” header, or the first time a user sees recommendations — and make it unmistakably “this is my library, not another reading app.” That could be type, one bold layout choice, or a deliberate micro-interaction.
 
@@ -48,48 +48,42 @@
 
 ## Priority Issues
 
-### 1. No distinctive typography
+### 1. No distinctive typography — DONE
 
-- **What:** All type uses system fonts with a clear but generic scale (26 / 23 / 25 px, weight 700). Design Context and frontend-design ask for a recognizable, non-generic persona.
-- **Why it matters:** Typography is the fastest way to signal “this is BookShelf.” Right now it could be any well-structured reading app.
-- **Fix:** Introduce one distinctive font — e.g. a display face for “Luettavien hylly” and empty-state titles, or a single refined serif/sans that’s not system default. Keep the existing scale; change the face.
-- **Command:** Design/typography decision first; then implement (could be documented in Design Context; no single skill covers “add a font”).
+- Plus Jakarta Sans applied app-wide (display/section/empty-state use Bold; body and lists use Regular). See `.cursor/docs/typography-plus-jakarta.md` and Design Context in `.cursorrules`.
 
-### 2. Two competing focal points on HomeScreen (Luettavat)
+### 2. Two competing focal points on HomeScreen (Luettavat) — DONE
 
-- **What:** When the shelf has books, the main list and the “Mitä lukea seuraavaksi?” section (with input + “Hae suosituksia”) both demand attention. When the shelf is empty, the empty state and the same recommendation block appear together; the primary CTA is clear, but the section below still competes.
-- **Why it matters:** Users may be unsure whether to scroll, tap the CTA, or use the footer. Hierarchy is good within each block but not across the full screen.
-- **Fix:** When shelf is empty, consider hiding or collapsing the footer recommendation block so the only primary action is the empty-state CTA. When shelf has books, make the section title + one primary button the clear “next step” and reduce visual weight of the optional wishes input (e.g. collapsed by default).
-- **Command:** `/distill` or `/clarify` — simplify hierarchy and copy so one primary action dominates per context.
+- **What:** When the shelf had books, the main list and the "Mitä lukea seuraavaksi?" section both demanded attention; when empty, the empty state and recommendation block appeared together.
+- **Done:** Footer ("Mitä lukea seuraavaksi?") is shown only when the shelf has books. Wishes block is collapsed by default ("Lisää toiveet" / "Piilota toiveet"). One primary action when empty; optional wishes when shelf has books.
 
-### 3. Modal-heavy flows
+### 3. Modal-heavy flows — PARTIALLY DONE
 
-- **What:** Book actions (options, review, delete, AI) and filters all use modals. User often goes: list → tap item → modal → close → back to list. No inline expansion or bottom sheet pattern for “quick” actions.
-- **Why it matters:** Frontend-design cautions against modals as default. Heavy modal use can feel interruptive and make the list feel like a launcher rather than the main workspace.
-- **Fix:** Keep modals for confirmations (delete, destructive) and full-screen experiences (Player, possibly Review). For “what do you want to do with this book?” consider a bottom sheet or inline actions so context (the list) stays visible. Filter/sort could be a slide-over or sheet instead of a centered modal.
-- **Command:** `/distill` or design spike; then implement (no single skill).
+- **What:** Book actions and filters use modals; user goes list → tap → modal → close → list.
+- **Done (partial):** BookOptionsModal and FilterSortModal use `presentationStyle="pageSheet"` on iOS so the list stays visible behind the sheet. Confirmations and Player remain modal (acceptable). Remaining: same sheet pattern on Android if desired; long-press + sheet for book options optional.
 
-### 4. “Kirjasto” vs “Kirjat” and discovery
+
+### 4. “Kirjasto” vs “Kirjat” and discovery — DONE
 
 - **What:** Bottom tab is “Kirjat” (Books); inside it the main title is “Audiobookshelf” and a “Hae Finnasta” toggle. New users may not understand that “Kirjat” = ABS library + Finna search, or where to add books first.
 - **Why it matters:** Information architecture should make “where do I add books?” obvious. Right now it’s clear only after opening the tab and reading the header.
 - **Fix:** Consider a short onboarding tip or tab label that hints at “Kirjat = oma kirjasto + haku” (or keep label and add one line of subcopy on first visit). Ensure empty states on Luettavat point to “Kirjat” as the place to add from library/Finna.
-- **Command:** `/onboard` or `/clarify` — copy and possibly one-time hint.
+- **Done:** Permanent subcopy "Oma kirjasto ja Finna-haku" on Kirjat screen; empty-shelf and hint already point to Kirjat.
 
-### 5. Success and loading feedback
+### 5. Success and loading feedback — DONE
 
 - **What:** After “Hae suosituksia,” loading is clear (spinner, “Haetaan…”). After adding a book from search or recommendation, feedback is often just the list updating or a modal closing. No brief “Lisätty hyllylle” toast or inline confirmation.
 - **Why it matters:** Users need to know the action succeeded, especially when the result is not obvious (e.g. adding from Finna and staying on the same screen).
-- **Fix:** Add a short, non-blocking success state: toast, inline banner, or checkmark animation when a book is added to the shelf or marked as read. Keep it calm and dismissible.
-- **Command:** `/delight` or `/harden` — confirm success states and reduce doubt.
+- **Done:** Success toast ("Lisätty hyllylle" / "Merkitty luetuksi") via SuccessToastContext on add and mark-as-read from all entry points.
 
 ---
 
 ## Minor Observations
 
-- **Luettujen hylly view toggle:** The list/grid switch has no label next to it; tooltip/accessibility label helps. Already has a11y label; consider a visible “Lista” / “Ruudukko” for clarity.
-- **Recommendation reason copy:** Recommendation rows show AI reason in quotes; type is small and italic. Readable but could be one line + “Lue lisää” if long, to keep list scan-friendly.
+- **View toggle:** Visible "Lista" / "Ruudukko" added on HomeScreen and PastReadScreen. “Lista” / “Ruudukko” **Addressed.**
+- **Recommendation reason:** Recommendation rows show AI reason in quotes; type is small and italic. Long reasons have Lue lisää / Näytä vähemmän in BookList. **Addressed.**
 - **Filter chips (PastReadScreen, NewBooksScreen, ABSLibraryScreen):** Inactive chip uses `surfaceVariant`; active uses primary. Contrast is good; chip shape and padding are consistent.
+- **Recommendation reason (duplicate line removed):** readable but could be one line + “Lue lisää” - **Filter chips (PastReadScreen, NewBooksScreen, ABSLibraryScreen):** Inactive chip uses `surfaceVariant`; active uses primary. Contrast is good; chip shape and padding are consistent.
 - **Player modal:** Speed control (1.0x–2.0x) is discoverable once the control is visible; consider a first-time hint or default-open state for new users.
 - **Copy consistency:** “Hylly” is used for “shelf” (Luettavien hylly, Luettujen hylly). “Kirjasto” in tab = library (ABS). Terminology is consistent in Finnish.
 
@@ -107,4 +101,4 @@
 
 ## Summary
 
-The interface avoids generic AI slop: palette and semantics are coherent, empty states and accessibility have been improved, and the product feels calm and warm. The main gaps are **typography** (no distinctive voice), **hierarchy on HomeScreen** (two competing blocks), **modal usage** (heavy), **discovery of “Kirjat”** (add books), and **success feedback** (add/read confirmations). Addressing these in that order would strengthen the “personal, relaxed, inspiring” promise and make BookShelf feel more intentional and memorable.
+The interface avoids generic AI slop: palette and semantics are coherent, empty states and accessibility have been improved, and the product feels calm and warm. **Done:** typography (Plus Jakarta Sans app-wide), HomeScreen hierarchy (footer only when shelf has books, wishes collapsed by default), modal usage (options and filter/sort as iOS pageSheet). Kirjat discovery and success feedback are done. “Kirjat” ; view toggle labels and recommendation Lue lisää are in place. No remaining priority issues; the promise is strengthened; “personal, relaxed, inspiring” 

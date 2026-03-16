@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions } from 'rea
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { BookCoverPlaceholder } from './BookCoverPlaceholder';
 import { FormatBadge } from './FormatBadge';
-import { colors } from '../theme';
+import { colors, typography } from '../theme';
 
 const COLUMN_COUNT = 3;
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -142,16 +142,19 @@ const styles = StyleSheet.create({
     },
     bookTitle: {
         fontSize: 14,
+        fontFamily: typography.fontFamilyBody,
         fontWeight: '600',
         color: colors.textPrimary,
         marginBottom: 2,
     },
     bookAuthor: {
         fontSize: 12,
+        fontFamily: typography.fontFamilyBody,
         color: colors.textSecondary,
     },
     bookYear: {
         fontSize: 11,
+        fontFamily: typography.fontFamilyBody,
         color: colors.textSecondary,
         marginTop: 2
     },
@@ -171,7 +174,7 @@ const styles = StyleSheet.create({
     finishedText: {
         color: colors.white,
         fontSize: 10,
-        fontWeight: 'bold',
+        fontFamily: typography.fontFamilyDisplay,
     },
     progressBarTrack: {
         position: 'absolute',
@@ -200,6 +203,7 @@ const styles = StyleSheet.create({
     timeBadgeText: {
         color: colors.white,
         fontSize: 10,
+        fontFamily: typography.fontFamilyBody,
         fontWeight: '600',
     }
 });

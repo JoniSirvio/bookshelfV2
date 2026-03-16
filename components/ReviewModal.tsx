@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Modal, View, Text, TextInput, StyleSheet, TouchableOpacity, Platform, TouchableWithoutFeedback, Keyboard, Switch, ScrollView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SegmentedButtons } from 'react-native-paper';
-import { colors } from '../theme';
+import { colors, typography } from '../theme';
 
 interface ReviewModalProps {
   isVisible: boolean;
@@ -272,14 +272,15 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   modalTitle: {
-    fontSize: 20, // Slightly smaller title to save space
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontFamily: typography.fontFamilyDisplay,
     marginBottom: 15,
     textAlign: 'center',
     color: colors.textPrimary,
   },
   label: {
     fontSize: 16,
+    fontFamily: typography.fontFamilyBody,
     fontWeight: '600',
     marginTop: 10,
     marginBottom: 5,
@@ -295,6 +296,7 @@ const styles = StyleSheet.create({
   currentRatingText: {
     marginBottom: 10,
     fontSize: 15,
+    fontFamily: typography.fontFamilyBody,
     color: colors.textSecondary,
   },
   reviewInputWrapper: {
@@ -307,11 +309,12 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   reviewInput: {
-    flex: 1, // Fill the wrapper
+    flex: 1,
     textAlignVertical: 'top',
     fontSize: 16,
+    fontFamily: typography.fontFamilyBody,
     color: colors.textPrimary,
-    padding: 0, // Remove padding from input itself to avoid scroll issues
+    padding: 0,
   },
   buttonContainer: {
     width: '100%',
@@ -342,7 +345,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: colors.white,
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: typography.fontFamilyDisplay,
   },
   secondaryButton: {
     backgroundColor: colors.primary,
@@ -350,7 +353,7 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     color: colors.white,
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: typography.fontFamilyDisplay,
     textAlign: 'center',
   },
   cancelButton: {
@@ -359,7 +362,7 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: colors.white,
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: typography.fontFamilyDisplay,
   },
   segmentedButtons: {
     marginBottom: 15, // Reduced margin
@@ -379,6 +382,7 @@ const styles = StyleSheet.create({
   },
   switchLabel: {
     fontSize: 16,
+    fontFamily: typography.fontFamilyBody,
     color: colors.textPrimary,
     fontWeight: '500',
   },
@@ -390,6 +394,7 @@ const styles = StyleSheet.create({
   checkboxLabel: {
     marginLeft: 8,
     fontSize: 16,
+    fontFamily: typography.fontFamilyBody,
     color: colors.textPrimary,
     fontWeight: '500',
   },
@@ -405,7 +410,7 @@ const styles = StyleSheet.create({
   },
   yearText: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: typography.fontFamilyDisplay,
     color: colors.textPrimary,
   },
   monthsGrid: {
@@ -431,13 +436,15 @@ const styles = StyleSheet.create({
   },
   monthText: {
     fontSize: 14,
+    fontFamily: typography.fontFamilyBody,
     color: colors.textPrimary,
   },
   selectedMonthText: {
+    fontFamily: typography.fontFamilyDisplay,
     color: colors.white,
-    fontWeight: 'bold',
   },
   disabledMonthText: {
+    fontFamily: typography.fontFamilyBody,
     color: colors.textSecondary,
   },
 });

@@ -37,9 +37,9 @@ This document serves as the "source of truth" for the AI assistant ("Antigravity
 
 ### Typography & Branding
 - **App Title**: Treated as two parts:
-  - "Book" -> `fontStyle: 'italic'`
-  - "Shelf" -> `fontWeight: 'bold'`
-- **Fonts**: default system fonts are used.
+ - "Book" -> `fontStyle: 'italic'`
+ - "Shelf" -> `fontWeight: 'bold'`
+- **Fonts**: **Plus Jakarta Sans** (see theme.ts `typography.fontFamilyDisplay` and `fontFamilyBody`). Used app-wide for all text; display/headlines use Bold (700), body and lists use Regular (400). Scale (display 26, section 23, emptyHero 25) unchanged.
 
 ### UI Components
 - **Icons**: Always use `MaterialCommunityIcons` from `@expo/vector-icons`.

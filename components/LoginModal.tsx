@@ -3,7 +3,7 @@ import { View, StyleSheet, Modal, Text } from 'react-native';
 import { TextInput, Button } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
-import { colors } from '../theme';
+import { colors, typography } from '../theme';
 
 interface LoginModalProps {
     visible: boolean;
@@ -111,6 +111,7 @@ const styles = StyleSheet.create({
     },
     titleContainer: {
         fontSize: 24,
+        fontFamily: typography.fontFamilyBody,
         marginTop: 10,
         color: colors.textPrimary,
     },
@@ -118,10 +119,11 @@ const styles = StyleSheet.create({
         fontStyle: 'italic',
     },
     titleShelf: {
-        fontWeight: 'bold',
+        fontFamily: typography.fontFamilyDisplay,
     },
     subtitle: {
         fontSize: 18,
+        fontFamily: typography.fontFamilyBody,
         fontWeight: '600',
         marginBottom: 15,
         textAlign: 'center',

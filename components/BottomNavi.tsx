@@ -17,7 +17,7 @@ import { useABSCredentials } from '../hooks/useABSCredentials';
 import { fetchABSLibraries, fetchABSLibraryItems } from '../api/abs';
 import { fetchNewBooksWithSideEffects } from '../utils/absNewBooksQuery';
 import { MiniPlayer } from './MiniPlayer';
-import { colors, headerStyle, touchTargetMin } from '../theme';
+import { colors, headerStyle, touchTargetMin, typography } from '../theme';
 
 export const AIChatsHeaderButton: React.FC<{ onPress?: () => void }> = ({ onPress }) => {
   const navigation = useNavigation<any>();
@@ -134,10 +134,10 @@ export const NotificationBell = () => {
               }}>
                 {newBooksData.hasNew ? (
                   <>
-                    <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 5 }}>
+                    <Text style={{ fontFamily: typography.fontFamilyDisplay, fontSize: 16, marginBottom: 5 }}>
                       Uusia kirjoja!
                     </Text>
-                    <Text style={{ fontSize: 14, color: colors.textSecondaryAlt, marginBottom: 10 }}>
+                    <Text style={{ fontFamily: typography.fontFamilyBody, fontSize: 14, color: colors.textSecondaryAlt, marginBottom: 10 }}>
                       Kirjastoon on lisätty {newBooksData.count} {newBooksData.count === 1 ? 'uusi kirja' : 'uutta kirjaa'}.
                     </Text>
                     <TouchableOpacity
@@ -151,15 +151,15 @@ export const NotificationBell = () => {
                       accessibilityLabel="Katso uutuudet"
                       accessibilityRole="button"
                     >
-                      <Text style={{ color: colors.white, fontWeight: 'bold' }}>Katso uutuudet</Text>
+                      <Text style={{ color: colors.white, fontFamily: typography.fontFamilyDisplay }}>Katso uutuudet</Text>
                     </TouchableOpacity>
                   </>
                 ) : (
                   <>
-                    <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 5 }}>
+                    <Text style={{ fontFamily: typography.fontFamilyDisplay, fontSize: 16, marginBottom: 5 }}>
                       Ei uusia ilmoituksia
                     </Text>
-                    <Text style={{ fontSize: 14, color: colors.textSecondaryAlt, marginBottom: 5 }}>
+                    <Text style={{ fontFamily: typography.fontFamilyBody, fontSize: 14, color: colors.textSecondaryAlt, marginBottom: 5 }}>
                       Olet ajan tasalla kirjaston valikoimasta.
                     </Text>
                   </>
@@ -219,12 +219,12 @@ export default function MyTabs() {
         screenOptions={{
           headerShown: true,
           tabBarStyle: { height: 80 },
-          tabBarLabelStyle: { fontSize: 12 },
+          tabBarLabelStyle: { fontSize: 12, fontFamily: typography.fontFamilyBody },
           tabBarLabelPosition: 'below-icon',
           headerTitle: () => (
-            <Text style={{ fontSize: 20 }}>
-              <Text style={{ fontStyle: 'italic' }}>Book</Text>
-              <Text style={{ fontWeight: 'bold' }}>Shelf</Text>
+            <Text style={{ fontSize: 20, fontFamily: typography.fontFamilyBody }}>
+              <Text style={{ fontFamily: typography.fontFamilyBodyItalic }}>Book</Text>
+              <Text style={{ fontFamily: typography.fontFamilyDisplay }}>Shelf</Text>
             </Text>
           ),
           headerStyle,

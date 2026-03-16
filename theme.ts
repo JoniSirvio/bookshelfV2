@@ -51,7 +51,7 @@ export const loaderColor = colors.primary;
 /** Minimum touch target size in pt (iOS HIG / Android: 44–48). Use for buttons, icons, list rows. */
 export const touchTargetMin = 44;
 
-/** Typography scale for hierarchy: hero/display vs section vs body. */
+/** Typography scale and font family. Plus Jakarta Sans for a distinctive, readable persona. */
 export const typography = {
   /** Screen title and hero empty-state title (e.g. "Luettavien hylly", "Hylly on tyhjä"). */
   displaySize: 26,
@@ -62,4 +62,10 @@ export const typography = {
   /** Empty-state supporting title (slightly smaller than display). */
   emptyHeroSize: 25,
   emptyHeroWeight: '700' as const,
+  /** Display/section/empty-state headlines — Plus Jakarta Sans Bold. */
+  fontFamilyDisplay: 'PlusJakartaSans_700Bold',
+  /** Body text, list items, labels — Plus Jakarta Sans Regular. */
+  fontFamilyBody: 'PlusJakartaSans_400Regular',
+  /** Italic body (e.g. "Book" in header) — use for true italic slant. */
+  fontFamilyBodyItalic: 'PlusJakartaSans_400Regular_Italic',
 } as const;

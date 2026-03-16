@@ -6,7 +6,7 @@ import { useABSCredentials } from '../hooks/useABSCredentials';
 import { getABSCoverUrl } from '../api/abs';
 import Slider from '@react-native-community/slider';
 import { BookCoverPlaceholder } from './BookCoverPlaceholder';
-import { colors, touchTargetMin } from '../theme';
+import { colors, touchTargetMin, typography } from '../theme';
 
 const { width } = Dimensions.get('window');
 
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         fontSize: 14,
-        fontWeight: 'bold',
+        fontFamily: typography.fontFamilyDisplay,
         color: colors.textSecondaryAlt,
         textTransform: 'uppercase',
         letterSpacing: 1,
@@ -277,13 +277,14 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 22,
-        fontWeight: 'bold',
+        fontFamily: typography.fontFamilyDisplay,
         color: colors.textPrimary,
         textAlign: 'center',
         marginBottom: 8,
     },
     author: {
         fontSize: 16,
+        fontFamily: typography.fontFamilyBody,
         color: colors.primary,
         textAlign: 'center',
         marginBottom: 8,
@@ -297,11 +298,13 @@ const styles = StyleSheet.create({
     },
     infoText: {
         fontSize: 13,
+        fontFamily: typography.fontFamilyBody,
         color: colors.textSecondaryAlt,
         fontWeight: '600',
     },
     infoSeparator: {
         fontSize: 13,
+        fontFamily: typography.fontFamilyBody,
         color: colors.textSecondary,
     },
     progressContainer: {
@@ -321,6 +324,7 @@ const styles = StyleSheet.create({
     },
     timeText: {
         fontSize: 12,
+        fontFamily: typography.fontFamilyBody,
         color: colors.textSecondary,
         fontVariant: ['tabular-nums'],
     },
@@ -362,7 +366,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.border,
     },
     speedButtonText: {
-        fontWeight: 'bold',
+        fontFamily: typography.fontFamilyDisplay,
         color: colors.primary,
         fontSize: 14,
     },
@@ -381,7 +385,7 @@ const styles = StyleSheet.create({
     },
     speedValueInline: {
         fontSize: 12,
-        fontWeight: 'bold',
+        fontFamily: typography.fontFamilyDisplay,
         color: colors.textSecondaryAlt,
         marginLeft: 8,
         fontVariant: ['tabular-nums'],

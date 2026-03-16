@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Appbar } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { typography } from '../theme';
 
 
 interface AppBarProps {
@@ -23,7 +24,7 @@ const AppBar: React.FC<AppBarProps> = ({ navigation, route, back }) => {
                 title="BookShelf"
                 titleStyle={{
                     fontSize: 20,
-                    fontWeight: 'bold',
+                    fontFamily: typography.fontFamilyDisplay,
                 }} />
             <Appbar.Action
                 icon={({ color, size }) => (

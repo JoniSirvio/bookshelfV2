@@ -7,7 +7,7 @@ import { useAIChat } from '../context/AIChatContext';
 import { getAIChats, SavedAIChat } from '../firebase/aiChats';
 import { BookCoverPlaceholder } from '../components/BookCoverPlaceholder';
 import SearchBar from '../components/SearchBar';
-import { colors } from '../theme';
+import { colors, typography } from '../theme';
 import type { FinnaSearchResult } from '../api/finna';
 
 export const GENERAL_CHAT_BOOK: FinnaSearchResult = {
@@ -220,18 +220,21 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         fontSize: 16,
+        fontFamily: typography.fontFamilyBody,
         color: colors.textPrimary,
         textAlign: 'center',
         marginTop: 12,
     },
     emptySubtext: {
         fontSize: 14,
+        fontFamily: typography.fontFamilyBody,
         color: colors.textSecondary,
         textAlign: 'center',
         marginTop: 8,
     },
     emptyCtaHint: {
         fontSize: 13,
+        fontFamily: typography.fontFamilyBody,
         color: colors.textSecondaryAlt,
         textAlign: 'center',
         marginTop: 12,
@@ -264,6 +267,7 @@ const styles = StyleSheet.create({
     },
     noResults: {
         fontSize: 14,
+        fontFamily: typography.fontFamilyBody,
         color: colors.textSecondary,
         textAlign: 'center',
         marginTop: 24,
@@ -296,16 +300,19 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 16,
+        fontFamily: typography.fontFamilyBody,
         fontWeight: '600',
         color: colors.textPrimary,
     },
     authors: {
         fontSize: 14,
+        fontFamily: typography.fontFamilyBody,
         color: colors.textSecondary,
         marginTop: 2,
     },
     date: {
         fontSize: 12,
+        fontFamily: typography.fontFamilyBody,
         color: colors.textSecondaryAlt,
         marginTop: 4,
     },

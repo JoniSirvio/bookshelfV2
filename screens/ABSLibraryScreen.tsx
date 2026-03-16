@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Image, Dimensions, KeyboardAvoidingView, Platform, ScrollView, Alert, TextInput as NativeTextInput } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TextInput, Button } from 'react-native-paper';
 import { useQuery } from '@tanstack/react-query';
 import { FlashList } from '@shopify/flash-list';
@@ -28,8 +29,11 @@ import BookOptionsModal from '../components/BookOptionsModal';
 import { useAIChat } from '../context/AIChatContext';
 import { FilterSortModal, SortOption, SortDirection, StatusFilter } from '../components/FilterSortModal';
 
+const HAS_SEEN_KIRJAT_HINT_KEY = 'hasSeenKirjatHint';
+
 export default function ABSLibraryScreen() {
     const { url, token, loading: credsLoading } = useABSCredentials();
+    const [showKirjatHint, setShowKirjatHint] = useState<boolean | null>(null);
     const [selectedLibraryId, setSelectedLibraryId] = useState<string | null>(null);
     const [viewMode, setViewMode] = useViewMode('library_view_mode', 'grid');
     const [searchQuery, setSearchQuery] = useState('');
@@ -74,6 +78,17 @@ export default function ABSLibraryScreen() {
             setSelectedLibraryId(libraries[0].id);
         }
     }, [libraries]);
+
+    // First-time hint: "Kirjat = oma kirjasto + haku"
+    useEffect(() => {
+        AsyncStorage.getItem(HAS_SEEN_KIRJAT_HINT_KEY).then((val) => {
+            setShowKirjatHint(val !== '1');
+        });
+    }, []);
+    const dismissKirjatHint = useCallback(() => {
+        setShowKirjatHint(false);
+        AsyncStorage.setItem(HAS_SEEN_KIRJAT_HINT_KEY, '1');
+    }, []);
 
     // 2. Fetch Items for selected library
     const { data: items, isLoading: itemsLoading, refetch } = useQuery({
@@ -355,9 +370,12 @@ export default function ABSLibraryScreen() {
         <View style={styles.container}>
             <View style={styles.header}>
                 <View style={styles.headerRow}>
-                    <Text style={styles.headerTitle}>
-                        {searchSource === 'abs' ? 'Audiobookshelf' : 'Finna-haku'}
-                    </Text>
+                    <View style={styles.headerTitleBlock}>
+                        <Text style={styles.headerTitle}>
+                            {searchSource === 'abs' ? 'Audiobookshelf' : 'Finna-haku'}
+                        </Text>
+                        <Text style={styles.headerSubcopy}>Oma kirjasto ja Finna-haku</Text>
+                    </View>
                     <TouchableOpacity
                         onPress={() => setSearchSource(prev => prev === 'abs' ? 'finna' : 'abs')}
                         style={styles.finnaButton}
@@ -370,10 +388,24 @@ export default function ABSLibraryScreen() {
                         <MaterialCommunityIcons
                             name={searchSource === 'abs' ? 'book-search' : 'bookshelf'}
                             size={20}
-                            color={colors.primary}
+                            color={colors.white}
                         />
                     </TouchableOpacity>
                 </View>
+
+                {showKirjatHint === true && (
+                    <View style={styles.kirjatHint}>
+                        <Text style={styles.kirjatHintText}>Täältä lisäät kirjoja äänikirjastosta ja Finnan haulla.</Text>
+                        <TouchableOpacity
+                            onPress={dismissKirjatHint}
+                            style={styles.kirjatHintClose}
+                            accessibilityLabel="Sulje vihje"
+                            accessibilityRole="button"
+                        >
+                            <MaterialCommunityIcons name="close" size={20} color={colors.textSecondaryAlt} />
+                        </TouchableOpacity>
+                    </View>
+                )}
 
                 {searchSource === 'abs' && (
                     <View style={styles.tabsRow}>
@@ -564,6 +596,7 @@ const styles = StyleSheet.create({
     message: {
         marginTop: 10,
         fontSize: 16,
+        fontFamily: typography.fontFamilyBody,
         color: colors.textSecondaryAlt,
         textAlign: 'center',
     },
@@ -579,25 +612,60 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 12,
     },
+    headerTitleBlock: {
+        flex: 1,
+    },
     headerTitle: {
         fontSize: typography.displaySize,
         fontWeight: typography.displayWeight,
+        fontFamily: typography.fontFamilyDisplay,
         color: colors.textPrimary,
+    },
+    headerSubcopy: {
+        marginTop: 2,
+        fontSize: 14,
+        fontFamily: typography.fontFamilyBody,
+        color: colors.textSecondary,
     },
     finnaButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: colors.bgRec,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
+        backgroundColor: colors.primary,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
         borderRadius: 20,
-        borderWidth: 1,
-        borderColor: colors.border,
+        shadowColor: colors.shadowPrimary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 4,
+        shadowOpacity: 1,
+        elevation: 3,
     },
     finnaButtonText: {
         marginRight: 6,
-        color: colors.primary,
-        fontWeight: '700',
+        fontFamily: typography.fontFamilyDisplay,
+        color: colors.white,
+    },
+    kirjatHint: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: colors.surfaceVariant,
+        paddingVertical: 12,
+        paddingHorizontal: 14,
+        borderRadius: 8,
+        marginTop: 8,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    kirjatHintText: {
+        flex: 1,
+        fontSize: 14,
+        fontFamily: typography.fontFamilyBody,
+        color: colors.textPrimary,
+    },
+    kirjatHintClose: {
+        padding: 4,
+        marginLeft: 8,
     },
     tabsRow: {
         flexDirection: 'row',
@@ -626,12 +694,13 @@ const styles = StyleSheet.create({
         backgroundColor: colors.primary,
     },
     tabText: {
+        fontFamily: typography.fontFamilyBody,
         color: colors.textSecondaryAlt,
         fontWeight: '500',
     },
     activeTabText: {
+        fontFamily: typography.fontFamilyDisplay,
         color: colors.white,
-        fontWeight: 'bold',
     },
     listContent: {
         padding: 10,
@@ -669,23 +738,27 @@ const styles = StyleSheet.create({
     },
     bookTitle: {
         fontSize: 14,
+        fontFamily: typography.fontFamilyBody,
         fontWeight: '600',
         color: colors.textPrimary,
         marginBottom: 2,
     },
     bookAuthor: {
         fontSize: 12,
+        fontFamily: typography.fontFamilyBody,
         color: colors.textSecondaryAlt,
     },
 
     title: {
         fontSize: typography.displaySize,
         fontWeight: typography.displayWeight,
+        fontFamily: typography.fontFamilyDisplay,
         color: colors.textPrimary,
         marginBottom: 10,
     },
     subtitle: {
         fontSize: 16,
+        fontFamily: typography.fontFamilyBody,
         color: colors.textSecondaryAlt,
         marginBottom: 30,
         textAlign: 'center',
@@ -699,7 +772,7 @@ const styles = StyleSheet.create({
     },
     placeholderTitle: {
         fontSize: 12,
-        fontWeight: 'bold',
+        fontFamily: typography.fontFamilyDisplay,
         color: colors.textSecondary,
         textAlign: 'center',
         padding: 4

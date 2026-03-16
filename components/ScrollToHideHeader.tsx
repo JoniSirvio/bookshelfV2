@@ -2,8 +2,7 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, useAnimatedReaction, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { headerStyle } from '../theme';
-import { colors } from '../theme';
+import { headerStyle, colors, typography } from '../theme';
 import { useScrollToHideHeader } from '../context/ScrollHeaderContext';
 import { AIChatsHeaderButton, NotificationBell } from './BottomNavi';
 import { useReduceMotion } from '../hooks/useReduceMotion';
@@ -85,11 +84,12 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
+    fontFamily: typography.fontFamilyBody,
   },
   titleItalic: {
-    fontStyle: 'italic',
+    fontFamily: typography.fontFamilyBodyItalic,
   },
   titleBold: {
-    fontWeight: 'bold',
+    fontFamily: typography.fontFamilyDisplay,
   },
 });

@@ -1,12 +1,13 @@
 import React from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, Image, Platform, ScrollView } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { FinnaSearchResult } from '../api/finna';
 import { BookCoverPlaceholder } from './BookCoverPlaceholder';
 import { FormatBadge } from './FormatBadge';
 import { useAudio } from '../context/AudioContext';
 import { ABSItem } from '../api/abs';
-import { colors } from '../theme';
+import { colors, touchTargetMin, typography } from '../theme';
 
 type Mode = 'search' | 'home' | 'read' | 'recommendation';
 
@@ -59,53 +60,48 @@ const BookOptionsModal: React.FC<BookOptionsModalProps> = ({
         }
     };
 
-    return (
-        <Modal
-            visible={isVisible}
-            transparent={true}
-            animationType="slide"
-            onRequestClose={onClose}
-        >
-            <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
-                <View style={styles.modalContent}>
-                    <View style={styles.header}>
-                        {/* Cover Image Wrapper */}
-                        <View style={styles.headerImageContainer}>
-                            {book.images?.length ? (
-                                <View style={styles.coverImageWrapper}>
-                                    <Image source={{ uri: book.images[0].url }} style={styles.headerCoverImage} />
-                                    <FormatBadge format={format} />
-                                </View>
-                            ) : (
-                                <View style={[styles.coverImageWrapper, { backgroundColor: colors.surfaceVariant }]}>
-                                    <BookCoverPlaceholder
-                                        id={book.id}
-                                        title={book.title}
-                                        authors={book.authors}
-                                        format={format}
-                                        compact={true}
-                                    />
-                                    {/* Placeholder has its own badge logic often, but consistent badge overlay is fine too if placeholder doesn't double up or we want unified style. 
-                                        Actually placeholder has it built-in. Let's rely on placeholder's own if no image, OR overlay our new badge. 
-                                        Our new badge is better styled. Let's use our new badge on top if we want consistency, 
-                                        BUT BookCoverPlaceholder already has one. Let's stick to just Image wrapper for now.
-                                        Wait, BookList uses Placeholder when no image. 
-                                        Let's just use our wrapper + image/placeholder pattern.
-                                    */}
-                                </View>
-                            )}
-                        </View>
+    const isIOSSheet = Platform.OS === 'ios';
+    const insets = useSafeAreaInsets();
 
-                        <View style={styles.headerTextContent}>
-                            <Text style={styles.title} numberOfLines={2}>{book.title}</Text>
-                            {book.authors && <Text style={styles.author} numberOfLines={1}>{book.authors.join(', ')}</Text>}
-                        </View>
-
-                        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                            <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
-                        </TouchableOpacity>
+    const headerBlock = (
+        <View style={styles.header}>
+            <View style={styles.headerImageContainer}>
+                {book.images?.length ? (
+                    <View style={styles.coverImageWrapper}>
+                        <Image source={{ uri: book.images[0].url }} style={styles.headerCoverImage} />
+                        <FormatBadge format={format} />
                     </View>
+                ) : (
+                    <View style={[styles.coverImageWrapper, { backgroundColor: colors.surfaceVariant }]}>
+                        <BookCoverPlaceholder
+                            id={book.id}
+                            title={book.title}
+                            authors={book.authors}
+                            format={format}
+                            compact={true}
+                        />
+                    </View>
+                )}
+            </View>
 
+            <View style={styles.headerTextContent}>
+                <Text style={styles.title} numberOfLines={2}>{book.title}</Text>
+                {book.authors && <Text style={styles.author} numberOfLines={1}>{book.authors.join(', ')}</Text>}
+            </View>
+
+            <TouchableOpacity
+                onPress={onClose}
+                style={styles.closeButton}
+                accessibilityLabel="Sulje"
+                accessibilityRole="button"
+            >
+                <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
+            </TouchableOpacity>
+        </View>
+    );
+
+    const optionsBody = (
+        <>
                     {/* Ask AI (all modes) */}
                     {onAskAI && (
                         <TouchableOpacity
@@ -222,14 +218,54 @@ const BookOptionsModal: React.FC<BookOptionsModalProps> = ({
                             )}
                         </>
                     )}
+        </>
+    );
 
-                </View>
-            </TouchableOpacity>
+    const content = (
+        <View style={[styles.modalContent, isIOSSheet && styles.modalContentSheet]}>
+            {headerBlock}
+            {optionsBody}
+        </View>
+    );
+
+    const contentIOS = (
+        <View style={[styles.modalContent, styles.modalContentSheet]}>
+            {headerBlock}
+            <ScrollView
+                style={styles.sheetScroll}
+                contentContainerStyle={[styles.sheetScrollContent, { paddingBottom: Math.max(insets.bottom, 16) }]}
+                showsVerticalScrollIndicator={false}
+            >
+                {optionsBody}
+            </ScrollView>
+        </View>
+    );
+
+    return (
+        <Modal
+            visible={isVisible}
+            transparent={!isIOSSheet}
+            animationType="slide"
+            onRequestClose={onClose}
+            presentationStyle={isIOSSheet ? 'pageSheet' : undefined}
+        >
+            {isIOSSheet ? (
+                <SafeAreaView style={styles.sheetContainer} edges={['top']}>
+                    {contentIOS}
+                </SafeAreaView>
+            ) : (
+                <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
+                    {content}
+                </TouchableOpacity>
+            )}
         </Modal>
     );
 };
 
 const styles = StyleSheet.create({
+    sheetContainer: {
+        flex: 1,
+    },
     modalOverlay: {
         flex: 1,
         backgroundColor: colors.overlay,
@@ -242,10 +278,21 @@ const styles = StyleSheet.create({
         padding: 20,
         paddingBottom: 40,
     },
+    modalContentSheet: {
+        flex: 1,
+        maxHeight: undefined,
+        paddingBottom: 0,
+    },
+    sheetScroll: {
+        flex: 1,
+    },
+    sheetScrollContent: {
+        paddingBottom: 16,
+    },
     header: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        marginBottom: 20,
+        marginBottom: 12,
         borderBottomWidth: 1,
         borderBottomColor: colors.border,
         paddingBottom: 15,
@@ -276,17 +323,21 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 18,
-        fontWeight: 'bold',
+        fontFamily: typography.fontFamilyDisplay,
         color: colors.textPrimary,
         marginBottom: 4,
     },
     author: {
         fontSize: 14,
+        fontFamily: typography.fontFamilyBody,
         color: colors.textSecondaryAlt,
     },
     closeButton: {
         marginLeft: 10,
-        padding: 4,
+        minWidth: touchTargetMin,
+        minHeight: touchTargetMin,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     option: {
         flexDirection: 'row',
@@ -300,6 +351,7 @@ const styles = StyleSheet.create({
     },
     optionText: {
         fontSize: 16,
+        fontFamily: typography.fontFamilyBody,
         marginLeft: 15,
         color: colors.textPrimary,
     },

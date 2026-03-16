@@ -3,7 +3,7 @@ import { TextInput, Button } from "react-native-paper";
 import React, { useEffect, useState } from "react";
 import { useProfile } from "../hooks/useProfile";
 import { useAuth } from "../context/AuthContext";
-import { colors } from "../theme";
+import { colors, typography } from "../theme";
 
 const ProfileScreen: React.FC = () => {
     const [profile, setProfile] = useState({ email: '', phone: '' });
@@ -73,12 +73,13 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 24,
-        fontWeight: "bold",
+        fontFamily: typography.fontFamilyDisplay,
         marginBottom: 24,
         color: colors.primary,
     },
     userInfo: {
         fontSize: 16,
+        fontFamily: typography.fontFamilyBody,
         marginBottom: 20,
         color: colors.textPrimary,
     },

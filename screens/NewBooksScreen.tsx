@@ -433,6 +433,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: typography.displaySize,
         fontWeight: typography.displayWeight,
+        fontFamily: typography.fontFamilyDisplay,
         color: colors.textPrimary,
     },
     headerActions: {
@@ -461,11 +462,12 @@ const styles = StyleSheet.create({
         backgroundColor: colors.primary,
     },
     pillText: {
+        fontFamily: typography.fontFamilyBody,
         color: colors.textSecondaryAlt,
         fontWeight: '500',
     },
     activePillText: {
+        fontFamily: typography.fontFamilyDisplay,
         color: colors.white,
-        fontWeight: 'bold',
     },
 });

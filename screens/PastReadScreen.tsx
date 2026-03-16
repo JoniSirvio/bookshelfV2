@@ -145,8 +145,14 @@ export default function PastReadScreen() {
     <View style={styles.container}>
       <View style={styles.headerContainer}>
         <Text style={styles.title}>Luettujen hylly</Text>
-        <TouchableOpacity onPress={() => setViewMode(prev => prev === 'list' ? 'grid' : 'list')}>
+        <TouchableOpacity
+          onPress={() => setViewMode(prev => prev === 'list' ? 'grid' : 'list')}
+          style={styles.viewToggleButton}
+          accessibilityLabel={viewMode === 'list' ? 'Vaihda ruudukkonäkymään' : 'Vaihda listanäkymään'}
+          accessibilityRole="button"
+        >
           <MaterialCommunityIcons name={viewMode === 'list' ? 'view-grid' : 'view-list'} size={28} color={colors.textPrimary} />
+          <Text style={styles.viewToggleLabel}>{viewMode === 'list' ? 'Ruudukko' : 'Lista'}</Text>
         </TouchableOpacity>
       </View>
 
@@ -243,10 +249,22 @@ const styles = StyleSheet.create({
   title: {
     fontSize: typography.displaySize,
     fontWeight: typography.displayWeight,
+    fontFamily: typography.fontFamilyDisplay,
     color: colors.textPrimary,
+  },
+  viewToggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  viewToggleLabel: {
+    fontSize: 14,
+    fontFamily: typography.fontFamilyBody,
+    color: colors.textSecondary,
   },
   totalCount: {
     fontSize: 16,
+    fontFamily: typography.fontFamilyBody,
     color: colors.textSecondaryAlt,
     marginBottom: 16,
   },
@@ -269,6 +287,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   filterText: {
+    fontFamily: typography.fontFamilyBody,
     color: colors.textPrimary,
     fontWeight: '500',
   },
@@ -283,12 +302,14 @@ const styles = StyleSheet.create({
   emptyReadTitle: {
     fontSize: typography.sectionSize,
     fontWeight: typography.sectionWeight,
+    fontFamily: typography.fontFamilyDisplay,
     color: colors.textPrimary,
     marginTop: 20,
     textAlign: 'center',
   },
   emptyReadSubtitle: {
     fontSize: 14,
+    fontFamily: typography.fontFamilyBody,
     color: colors.textSecondary,
     marginTop: 10,
     textAlign: 'center',
