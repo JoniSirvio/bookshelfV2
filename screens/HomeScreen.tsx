@@ -6,7 +6,6 @@ import { useBooksContext } from "../context/BooksContext";
 import ReviewModal from '../components/ReviewModal';
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
 import BookOptionsModal from '../components/BookOptionsModal';
-import { useAIChat } from '../context/AIChatContext';
 import { useState, useRef } from "react";
 import { FinnaSearchResult } from "../api/finna";
 import { BookGridItem } from "../components/BookGridItem";
@@ -22,7 +21,6 @@ const HomeScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { myBooks, readBooks, removeBook, markAsRead, startReading, reorderBooks, recommendations, generateRecommendations, removeRecommendation, addBook } = useBooksContext();
   const { inProgressBooks, loading: absLoading } = useABSInProgress(readBooks);
-  const { openAIModal } = useAIChat();
 
   const [generating, setGenerating] = useState(false);
   const [recommendationError, setRecommendationError] = useState<string | null>(null);
@@ -266,7 +264,7 @@ const HomeScreen: React.FC = () => {
             reorderBooks(localBooksOnly as any, 'myBooks')
           }}
           onStartReading={(book) => !book.id.startsWith('abs-') && startReading(book.id)}
-          onAskAI={(book) => openAIModal(book)}
+          onAskAI={(book) => navigation.navigate('AskAIBook', { book })}
         />
       ) : (
         <FlashList
@@ -334,7 +332,7 @@ const HomeScreen: React.FC = () => {
           onStartReading={(book) => !book.id.startsWith('abs-') && startReading(book.id)}
           onRateAndReview={handleRateAndReview}
           showStartReading={!selectedBookForOptions.startedReading}
-          onAskAI={(book) => { setIsOptionsModalVisible(false); openAIModal(book); }}
+          onAskAI={(book) => { setIsOptionsModalVisible(false); navigation.navigate('AskAIBook', { book }); }}
         />
       )}
     </View>

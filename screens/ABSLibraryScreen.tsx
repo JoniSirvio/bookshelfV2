@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Image, Dimensions, KeyboardAvoidingView, Platform, ScrollView, Alert, TextInput as NativeTextInput } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation } from '@react-navigation/native';
 import { TextInput, Button } from 'react-native-paper';
 import { useQuery } from '@tanstack/react-query';
 import { FlashList } from '@shopify/flash-list';
@@ -26,12 +27,12 @@ import { useFinnaSearchResults } from '../hooks/useBooks';
 import ReviewModal from '../components/ReviewModal';
 
 import BookOptionsModal from '../components/BookOptionsModal';
-import { useAIChat } from '../context/AIChatContext';
 import { FilterSortModal, SortOption, SortDirection, StatusFilter } from '../components/FilterSortModal';
 
 const HAS_SEEN_KIRJAT_HINT_KEY = 'hasSeenKirjatHint';
 
 export default function ABSLibraryScreen() {
+    const navigation = useNavigation<any>();
     const { url, token, loading: credsLoading } = useABSCredentials();
     const [showKirjatHint, setShowKirjatHint] = useState<boolean | null>(null);
     const [selectedLibraryId, setSelectedLibraryId] = useState<string | null>(null);
@@ -39,7 +40,6 @@ export default function ABSLibraryScreen() {
     const [searchQuery, setSearchQuery] = useState('');
     const { myBooks, readBooks, addBook, markAsRead } = useBooksContext();
     const { user } = useAuth();
-    const { openAIModal } = useAIChat();
     const [inputUrl, setInputUrl] = useState('');
     const [inputUsername, setInputUsername] = useState('');
     const [inputPassword, setInputPassword] = useState('');
@@ -478,7 +478,7 @@ export default function ABSLibraryScreen() {
                             onAdd={addBook}
                             onMarkAsRead={handleMarkAsRead}
                             onRateAndReview={handleRateAndReview}
-                            onAskAI={(book) => openAIModal(book)}
+                            onAskAI={(book) => navigation.navigate('AskAIBook', { book })}
                             scrollEnabled={true}
                             ListHeaderComponent={<SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Hae kirjaa tai kirjailijaa..." />}
                         />
@@ -503,7 +503,7 @@ export default function ABSLibraryScreen() {
                         onAdd={addBook}
                         onMarkAsRead={handleMarkAsRead}
                         onRateAndReview={handleRateAndReview}
-                        onAskAI={(book) => openAIModal(book)}
+                        onAskAI={(book) => navigation.navigate('AskAIBook', { book })}
                         mode="search"
                         scrollEnabled={true}
                     />
@@ -560,7 +560,7 @@ export default function ABSLibraryScreen() {
                     setTimeout(() => handleRateAndReview(book), 500);
                 }}
                 onMarkAsRead={handleMarkAsRead}
-                onAskAI={(book) => { setIsOptionsModalVisible(false); openAIModal(book); }}
+                onAskAI={(book) => { setIsOptionsModalVisible(false); navigation.navigate('AskAIBook', { book }); }}
             />
 
         </View>

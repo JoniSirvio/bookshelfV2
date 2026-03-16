@@ -20,15 +20,15 @@ import { useViewMode } from '../hooks/useViewMode';
 import { FlashList } from '@shopify/flash-list';
 
 import BookOptionsModal from '../components/BookOptionsModal';
-import { useAIChat } from '../context/AIChatContext';
+import { useNavigation } from '@react-navigation/native';
 import { FilterSortModal, SortOption, SortDirection, StatusFilter } from '../components/FilterSortModal';
 import { colors, loaderColor, typography, touchTargetMin } from '../theme';
 
 export default function NewBooksScreen() {
     const queryClient = useQueryClient();
+    const navigation = useNavigation<any>();
     const { url, token, loading: credsLoading } = useABSCredentials();
     const { myBooks, readBooks, addBook, markAsRead } = useBooksContext();
-    const { openAIModal } = useAIChat();
     const [selectedType, setSelectedType] = useState<'all' | 'audio' | 'ebook'>('all');
     const [viewMode, setViewMode] = useViewMode('newbooks_view_mode', 'list');
     const [searchQuery, setSearchQuery] = useState('');
@@ -333,7 +333,7 @@ export default function NewBooksScreen() {
                     onAdd={addBook}
                     onMarkAsRead={handleMarkAsRead}
                     onRateAndReview={handleRateAndReview}
-                    onAskAI={(book) => openAIModal(book)}
+                    onAskAI={(book) => navigation.navigate('AskAIBook', { book })}
                     ListHeaderComponent={<SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Suodata uutuuksia..." />}
                     scrollEnabled={true}
                 />
@@ -398,7 +398,7 @@ export default function NewBooksScreen() {
                     setTimeout(() => handleRateAndReview(book), 500);
                 }}
                 onMarkAsRead={handleMarkAsRead}
-                onAskAI={(book) => { setIsOptionsModalVisible(false); openAIModal(book); }}
+                onAskAI={(book) => { setIsOptionsModalVisible(false); navigation.navigate('AskAIBook', { book }); }}
             />
 
         </View>

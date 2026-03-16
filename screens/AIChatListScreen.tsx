@@ -1,9 +1,8 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView, Image } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
-import { useAIChat } from '../context/AIChatContext';
 import { getAIChats, SavedAIChat } from '../firebase/aiChats';
 import { BookCoverPlaceholder } from '../components/BookCoverPlaceholder';
 import SearchBar from '../components/SearchBar';
@@ -40,8 +39,8 @@ function getChatSearchText(chat: SavedAIChat): string {
 }
 
 export default function AIChatListScreen() {
+    const navigation = useNavigation<any>();
     const { user } = useAuth();
-    const { openAIModal, isModalVisible } = useAIChat();
     const prevModalVisible = useRef(false);
     const [chats, setChats] = useState<SavedAIChat[]>([]);
     const [loading, setLoading] = useState(true);
@@ -65,13 +64,6 @@ export default function AIChatListScreen() {
         }, [loadChats])
     );
 
-    useEffect(() => {
-        if (prevModalVisible.current && !isModalVisible) {
-            loadChats();
-        }
-        prevModalVisible.current = isModalVisible;
-    }, [isModalVisible, loadChats]);
-
     const handlePress = (chat: SavedAIChat) => {
         const bookAsFinna: FinnaSearchResult = {
             id: chat.book.id,
@@ -79,7 +71,7 @@ export default function AIChatListScreen() {
             authors: chat.book.authors,
             images: chat.book.images,
         };
-        openAIModal(bookAsFinna, chat.messages);
+        navigation.navigate('AskAIBook', { book: bookAsFinna, initialConversation: chat.messages });
     };
 
     const openGeneralChat = () => {
@@ -88,7 +80,7 @@ export default function AIChatListScreen() {
             title: 'Yleinen keskustelu',
             authors: [],
         };
-        openAIModal(newBook, []);
+        navigation.navigate('AskAIBook', { book: newBook, initialConversation: [] });
     };
 
     const filteredChats = useMemo(() => {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, View, Text, TextInput, StyleSheet, TouchableOpacity, Platform, TouchableWithoutFeedback, Keyboard, Switch, ScrollView } from 'react-native';
+import { Modal, View, Text, TextInput, StyleSheet, TouchableOpacity, Platform, TouchableWithoutFeedback, Keyboard, Switch, ScrollView, KeyboardAvoidingView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SegmentedButtons } from 'react-native-paper';
 import { colors, typography } from '../theme';
@@ -100,8 +100,11 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
       onRequestClose={onClose}
       accessibilityLabel={`Arvostele kirja: ${bookTitle}`}
     >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={styles.centeredView}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.centeredView}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.modalView} accessibilityViewIsModal>
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
               <Text style={styles.modalTitle}>
@@ -229,8 +232,8 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
               </View>
             </ScrollView>
           </View>
-        </View>
-      </TouchableWithoutFeedback>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };

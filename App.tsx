@@ -5,7 +5,7 @@ import { Provider as PaperProvider, DefaultTheme } from 'react-native-paper';
 import { BooksProvider } from './context/BooksContext';
 import { SuccessToastProvider } from './context/SuccessToastContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { AIChatProvider, AIChatModalHost } from './context/AIChatContext';
+import { AIChatProvider } from './context/AIChatContext';
 import { AudioProvider } from './context/AudioContext'; // Import AudioProvider
 import BottomNavi from './components/BottomNavi';
 import LoginModal from './components/LoginModal';
@@ -37,6 +37,7 @@ const theme = {
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import NewBooksScreen from './screens/NewBooksScreen';
 import AIChatListScreen from './screens/AIChatListScreen';
+import AskAIBookScreen from './screens/AskAIBookScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -85,9 +86,19 @@ const AppContent = () => {
                     headerBackTitle: 'Takaisin'
                   }}
                 />
+                <Stack.Screen
+                  name="AskAIBook"
+                  component={AskAIBookScreen}
+                  options={{
+                    headerTitle: 'AI-keskustelu',
+                    headerStyle,
+                    headerTintColor,
+                    headerTitleStyle: { fontFamily: typography.fontFamilyDisplay, fontSize: 18 },
+                    headerBackTitle: 'Takaisin'
+                  }}
+                />
               </Stack.Navigator>
             </NavigationContainer>
-            <AIChatModalHost />
           </AIChatProvider>
         </BooksProvider>
         <PlayerModal />

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Modal, Text } from 'react-native';
+import { View, StyleSheet, Modal, Text, KeyboardAvoidingView, Platform } from 'react-native';
 import { TextInput, Button } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
@@ -40,7 +40,10 @@ export default function LoginModal({ visible }: LoginModalProps) {
 
     return (
         <Modal visible={visible} animationType="slide" transparent={true}>
-            <View style={styles.container}>
+            <KeyboardAvoidingView
+                style={styles.container}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            >
                 <View style={styles.content}>
                     <View style={styles.header}>
                         <MaterialCommunityIcons name="book-open-page-variant" size={40} color={colors.primary} />
@@ -87,7 +90,7 @@ export default function LoginModal({ visible }: LoginModalProps) {
                         {'Kirjaudu'}
                     </Button>
                 </View>
-            </View>
+            </KeyboardAvoidingView>
         </Modal>
     );
 }

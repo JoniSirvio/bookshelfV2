@@ -5,7 +5,7 @@ import { useState, useMemo } from "react";
 import { FinnaSearchResult } from "../api/finna";
 import ConfirmDeleteModal from "../components/ConfirmDeleteModal";
 import BookOptionsModal from "../components/BookOptionsModal";
-import { useAIChat } from "../context/AIChatContext";
+import { useNavigation } from "@react-navigation/native";
 import { BookGridItem } from "../components/BookGridItem";
 import { useViewMode } from "../hooks/useViewMode";
 import { useABSFinishedDates } from "../hooks/useABSFinishedDates";
@@ -15,8 +15,8 @@ import { colors, typography } from "../theme";
 import { AnimatedFadeInView } from "../components/AnimatedFadeInView";
 
 export default function PastReadScreen() {
+  const navigation = useNavigation<any>();
   const { readBooks, removeReadBook, reorderBooks } = useBooksContext();
-  const { openAIModal } = useAIChat();
   const absFinishedDates = useABSFinishedDates();
   const [viewMode, setViewMode] = useViewMode('history_view_mode', 'list');
 
@@ -188,7 +188,7 @@ export default function PastReadScreen() {
           onTriggerDelete={handleOpenDeleteModal}
           onReorder={(newList) => reorderBooks(newList, 'readBooks')}
           onBookPress={handleOpenOptionsModal}
-          onAskAI={(book) => openAIModal(book)}
+          onAskAI={(book) => navigation.navigate('AskAIBook', { book })}
         />
       ) : (
         <FlashList
@@ -226,7 +226,7 @@ export default function PastReadScreen() {
           mode="read"
           onTriggerDelete={handleOpenDeleteModal}
           showStartReading={false}
-          onAskAI={(book) => { handleCloseOptionsModal(); openAIModal(book); }}
+          onAskAI={(book) => { handleCloseOptionsModal(); navigation.navigate('AskAIBook', { book }); }}
         />
       )}
 

@@ -1,12 +1,13 @@
 import React from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, Image, Platform, ScrollView } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { FinnaSearchResult } from '../api/finna';
 import { BookCoverPlaceholder } from './BookCoverPlaceholder';
 import { FormatBadge } from './FormatBadge';
 import { useAudio } from '../context/AudioContext';
 import { ABSItem } from '../api/abs';
+import BottomSheet from './BottomSheet';
 import { colors, touchTargetMin, typography } from '../theme';
 
 type Mode = 'search' | 'home' | 'read' | 'recommendation';
@@ -60,7 +61,6 @@ const BookOptionsModal: React.FC<BookOptionsModalProps> = ({
         }
     };
 
-    const isIOSSheet = Platform.OS === 'ios';
     const insets = useSafeAreaInsets();
 
     const headerBlock = (
@@ -221,14 +221,7 @@ const BookOptionsModal: React.FC<BookOptionsModalProps> = ({
         </>
     );
 
-    const content = (
-        <View style={[styles.modalContent, isIOSSheet && styles.modalContentSheet]}>
-            {headerBlock}
-            {optionsBody}
-        </View>
-    );
-
-    const contentIOS = (
+    const sheetContent = (
         <View style={[styles.modalContent, styles.modalContentSheet]}>
             {headerBlock}
             <ScrollView
@@ -242,35 +235,17 @@ const BookOptionsModal: React.FC<BookOptionsModalProps> = ({
     );
 
     return (
-        <Modal
+        <BottomSheet
             visible={isVisible}
-            transparent={!isIOSSheet}
-            animationType="slide"
-            onRequestClose={onClose}
-            presentationStyle={isIOSSheet ? 'pageSheet' : undefined}
+            onClose={onClose}
+            accessibilityLabel={`Kirjan ${book.title} valinnat`}
         >
-            {isIOSSheet ? (
-                <SafeAreaView style={styles.sheetContainer} edges={['top']}>
-                    {contentIOS}
-                </SafeAreaView>
-            ) : (
-                <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
-                    {content}
-                </TouchableOpacity>
-            )}
-        </Modal>
+            {sheetContent}
+        </BottomSheet>
     );
 };
 
 const styles = StyleSheet.create({
-    sheetContainer: {
-        flex: 1,
-    },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: colors.overlay,
-        justifyContent: 'flex-end',
-    },
     modalContent: {
         backgroundColor: colors.surface,
         borderTopLeftRadius: 20,

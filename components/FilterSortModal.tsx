@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, TouchableWithoutFeedback, Platform } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors, touchTargetMin, typography } from '../theme';
+import BottomSheet from './BottomSheet';
 
 export type SortOption = 'added' | 'title' | 'author' | 'year' | 'duration';
 export type SortDirection = 'asc' | 'desc';
@@ -43,7 +44,6 @@ export const FilterSortModal: React.FC<FilterSortModalProps> = ({
         onClose();
     };
 
-    const isIOSSheet = Platform.OS === 'ios';
     const insets = useSafeAreaInsets();
 
     const getDirectionLabel = (option: SortOption, dir: SortDirection) => {
@@ -128,7 +128,7 @@ export const FilterSortModal: React.FC<FilterSortModalProps> = ({
     );
 
     const filterContent = (
-        <View style={[styles.modalContent, isIOSSheet && styles.modalContentSheet]}>
+        <View style={[styles.modalContent, styles.modalContentSheet]}>
             <View style={styles.header}>
                 <Text style={styles.title}>Järjestä ja Suodata</Text>
                 <TouchableOpacity
@@ -156,76 +156,31 @@ export const FilterSortModal: React.FC<FilterSortModalProps> = ({
         </View>
     );
 
-    const filterContentIOS = (
-        <View style={[styles.modalContent, styles.modalContentSheet]}>
-            <View style={styles.header}>
-                <Text style={styles.title}>Järjestä ja Suodata</Text>
-                <TouchableOpacity
-                    onPress={onClose}
-                    style={styles.closeButton}
-                    accessibilityLabel="Sulje"
-                    accessibilityRole="button"
-                >
-                    <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
-                </TouchableOpacity>
-            </View>
-
+    const sheetContent = (
+        <View style={styles.sheetContainer}>
             <ScrollView
                 style={styles.sheetScroll}
-                contentContainerStyle={styles.sheetScrollContent}
+                contentContainerStyle={[styles.sheetScrollContent, { paddingBottom: Math.max(insets.bottom, 16) }]}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
             >
-                {sortAndFilterBody}
+                {filterContent}
             </ScrollView>
-
-            <View style={[styles.applyButtonWrap, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-                <TouchableOpacity
-                    style={styles.applyButton}
-                    onPress={handleApply}
-                    accessibilityLabel="Käytä valitut järjestys- ja suodatusasetukset"
-                    accessibilityRole="button"
-                >
-                    <Text style={styles.applyButtonText}>Käytä</Text>
-                </TouchableOpacity>
-            </View>
         </View>
     );
 
     return (
-        <Modal
-            transparent={!isIOSSheet}
+        <BottomSheet
             visible={visible}
-            animationType="slide"
-            onRequestClose={onClose}
-            presentationStyle={isIOSSheet ? 'pageSheet' : undefined}
+            onClose={onClose}
+            accessibilityLabel="Järjestä ja suodata"
         >
-            {isIOSSheet ? (
-                <SafeAreaView style={styles.sheetContainer} edges={['top']}>
-                    {filterContentIOS}
-                </SafeAreaView>
-            ) : (
-                <TouchableWithoutFeedback onPress={onClose}>
-                    <View style={styles.overlay}>
-                        <TouchableWithoutFeedback>
-                            {filterContent}
-                        </TouchableWithoutFeedback>
-                    </View>
-                </TouchableWithoutFeedback>
-            )}
-        </Modal>
+            {sheetContent}
+        </BottomSheet>
     );
 };
 
 const styles = StyleSheet.create({
-    sheetContainer: {
-        flex: 1,
-    },
-    overlay: {
-        flex: 1,
-        backgroundColor: colors.overlay,
-        justifyContent: 'flex-end',
-    },
     modalContent: {
         backgroundColor: colors.surface,
         borderTopLeftRadius: 20,
