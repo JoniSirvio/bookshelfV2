@@ -24,6 +24,7 @@ import { View, ActivityIndicator } from 'react-native';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { queryClient, clientPersister } from './utils/queryClient';
 import { headerStyle, headerTintColor, loaderColor, typography } from './theme';
+import { TouchableOpacity } from 'react-native';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -72,30 +73,19 @@ const AppContent = () => {
                     headerStyle,
                     headerTintColor,
                     headerTitleStyle: { fontFamily: typography.fontFamilyDisplay, fontSize: 18 },
-                    headerBackTitle: 'Takaisin'
+                    headerBackTitleVisible: false,
+                    headerBackButtonDisplayMode: 'minimal',
                   }}
                 />
                 <Stack.Screen
                   name="AIChats"
                   component={AIChatListScreen}
-                  options={{
-                    headerTitle: 'AI-keskustelut',
-                    headerStyle,
-                    headerTintColor,
-                    headerTitleStyle: { fontFamily: typography.fontFamilyDisplay, fontSize: 18 },
-                    headerBackTitle: 'Takaisin'
-                  }}
+                  options={{ headerShown: false }}
                 />
                 <Stack.Screen
                   name="AskAIBook"
                   component={AskAIBookScreen}
-                  options={{
-                    headerTitle: 'AI-keskustelu',
-                    headerStyle,
-                    headerTintColor,
-                    headerTitleStyle: { fontFamily: typography.fontFamilyDisplay, fontSize: 18 },
-                    headerBackTitle: 'Takaisin'
-                  }}
+                  options={{ headerShown: false }}
                 />
               </Stack.Navigator>
             </NavigationContainer>

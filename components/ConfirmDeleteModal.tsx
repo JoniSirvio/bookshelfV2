@@ -7,6 +7,10 @@ interface ConfirmDeleteModalProps {
   onClose: () => void;
   onConfirm: () => void;
   bookTitle: string;
+  message?: string;
+  confirmButtonLabel?: string;
+  cancelButtonLabel?: string;
+  accessibilityLabel?: string;
 }
 
 const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
@@ -14,36 +18,41 @@ const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
   onClose,
   onConfirm,
   bookTitle,
+  message,
+  confirmButtonLabel = 'Vahvista poisto',
+  cancelButtonLabel = 'Peruuta',
+  accessibilityLabel,
 }) => {
+  const modalMessage = message ?? `Haluatko varmasti poistaa kirjan "${bookTitle}" hyllystäsi?`;
+  const modalAccessibilityLabel = accessibilityLabel ?? `Poista kirja: ${bookTitle}`;
+
   return (
     <Modal
       animationType="fade"
       transparent={true}
       visible={isVisible}
       onRequestClose={onClose}
-      accessibilityLabel={`Poista kirja: ${bookTitle}`}
+      accessibilityLabel={modalAccessibilityLabel}
     >
       <View style={styles.centeredView}>
         <View style={styles.modalView} accessibilityViewIsModal>
-          <Text style={styles.modalText}>
-            Haluatko varmasti poistaa kirjan "{bookTitle}" hyllystäsi?
-          </Text>
+          <Text style={styles.modalText}>{modalMessage}</Text>
           <View style={styles.buttonContainer}>
             <TouchableOpacity
               style={[styles.button, styles.confirmButton]}
               onPress={onConfirm}
-              accessibilityLabel="Vahvista poisto"
+              accessibilityLabel={confirmButtonLabel}
               accessibilityRole="button"
             >
-              <Text style={styles.buttonText}>Vahvista poisto</Text>
+              <Text style={styles.buttonText}>{confirmButtonLabel}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.button, styles.cancelButton]}
               onPress={onClose}
-              accessibilityLabel="Peruuta"
+              accessibilityLabel={cancelButtonLabel}
               accessibilityRole="button"
             >
-              <Text style={styles.buttonText}>Peruuta</Text>
+              <Text style={styles.buttonText}>{cancelButtonLabel}</Text>
             </TouchableOpacity>
           </View>
         </View>

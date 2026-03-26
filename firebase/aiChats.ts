@@ -1,4 +1,4 @@
-import { doc, setDoc, collection, getDocs, query, orderBy, serverTimestamp, Timestamp } from "firebase/firestore";
+import { doc, setDoc, collection, getDocs, query, orderBy, serverTimestamp, Timestamp, deleteDoc } from "firebase/firestore";
 import { firestore } from "./Config";
 import type { ChatMessage } from "../api/gemini";
 
@@ -60,4 +60,10 @@ export async function getAIChats(userId: string): Promise<SavedAIChat[]> {
             conversationTitle: data.conversationTitle as string | undefined,
         };
     });
+}
+
+/** Delete a saved AI chat for a user. */
+export async function deleteAIChat(userId: string, chatId: string): Promise<void> {
+    const ref = doc(firestore, "users", userId, "aiChats", chatId);
+    await deleteDoc(ref);
 }

@@ -1,15 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView, TextInput, Keyboard, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import Markdown from 'react-native-markdown-display';
 import { FinnaSearchResult } from '../api/finna';
 import { chatAboutBook, chatGeneralBookChat, ChatMessage, BookChatMode } from '../api/gemini';
 import { useAuth } from '../context/AuthContext';
 import { useBooksContext } from '../context/BooksContext';
+import ConfirmDeleteModal from './ConfirmDeleteModal';
 import { BookCoverPlaceholder } from './BookCoverPlaceholder';
 import { FormatBadge } from './FormatBadge';
 import { colors, loaderColor, typography, touchTargetMin } from '../theme';
 import BottomSheet from './BottomSheet';
+import { deleteAIChat } from '../firebase/aiChats';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const markdownStyles = StyleSheet.create({
   body: {
@@ -104,6 +108,7 @@ interface BookAIChatProps {
 }
 
 export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversation = [] }) => {
+  const navigation = useNavigation<any>();
   const { user } = useAuth();
   const { readBooks } = useBooksContext();
   const [mode, setMode] = useState<BookChatMode>('description');
@@ -112,6 +117,8 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPresetSheetVisible, setIsPresetSheetVisible] = useState(false);
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+  const [isDeletingConversation, setIsDeletingConversation] = useState(false);
 
   useEffect(() => {
     // Seed initial conversation only once (or when there is no local history yet)
@@ -122,6 +129,7 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
   }, [initialConversation, conversation.length]);
 
   const isGeneralChat = book?.id != null && book.id.startsWith('general');
+  const canDeleteConversation = Boolean(user?.uid && book?.id && conversation.length > 0);
   const readBooksTitles = readBooks.map(b => `${b.title} by ${(b.authors || []).join(', ')}`);
   const isFirstTurn = conversation.length === 0;
   const canSendFirst = isFirstTurn && (mode !== 'custom' || userQuestion.trim().length > 0);
@@ -198,6 +206,22 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
       setError('Vastaus epäonnistui. Tarkista verkko ja kokeile uudelleen.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteConversation = async () => {
+    if (!user?.uid || !book?.id) return;
+    setIsDeletingConversation(true);
+    setError(null);
+    try {
+      await deleteAIChat(user.uid, book.id);
+      setIsDeleteModalVisible(false);
+      navigation.goBack();
+    } catch (deleteError) {
+      console.warn('Failed to delete AI chat:', deleteError);
+      setError('Keskustelun poisto epäonnistui. Yritä uudelleen.');
+    } finally {
+      setIsDeletingConversation(false);
     }
   };
 
@@ -427,8 +451,41 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={80}
     >
-      <View style={styles.container}>
-        {renderHeader()}
+      <View style={styles.screenContainer}>
+        <SafeAreaView edges={['top']} style={styles.topBarSafeArea}>
+          <View style={styles.topBar}>
+            <View style={styles.topBarLeftSlot}>
+              <TouchableOpacity
+                onPress={() => navigation.goBack()}
+                accessibilityRole="button"
+                accessibilityLabel="Takaisin"
+                style={styles.backButton}
+              >
+                <MaterialCommunityIcons name="chevron-left" size={24} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.topBarTitle} numberOfLines={1}>
+              AI-keskustelu
+            </Text>
+            <View style={styles.topBarRightSlot}>
+              {canDeleteConversation ? (
+                <TouchableOpacity
+                  onPress={() => setIsDeleteModalVisible(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Poista tallennettu keskustelu"
+                  style={styles.deleteButton}
+                >
+                  <MaterialCommunityIcons name="trash-can-outline" size={20} color={colors.white} />
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.deleteButtonPlaceholder} />
+              )}
+            </View>
+          </View>
+        </SafeAreaView>
+
+        <View style={styles.contentContainer}>
+          {renderHeader()}
         {renderModes()}
         {renderPresetChip()}
         {renderMessages()}
@@ -487,15 +544,81 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
             ))}
           </View>
         </BottomSheet>
+        <ConfirmDeleteModal
+          isVisible={isDeleteModalVisible}
+          onClose={() => {
+            if (!isDeletingConversation) {
+              setIsDeleteModalVisible(false);
+            }
+          }}
+          onConfirm={handleDeleteConversation}
+          bookTitle={book.title}
+          message={`Haluatko varmasti poistaa tallennetun keskustelun "${isGeneralChat ? 'Yleinen keskustelu' : book.title}"?`}
+          confirmButtonLabel={isDeletingConversation ? 'Poistetaan...' : 'Vahvista poisto'}
+          accessibilityLabel="Poista AI-keskustelu"
+        />
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  screenContainer: {
     flex: 1,
     backgroundColor: colors.surface,
+  },
+  topBarSafeArea: {
+    backgroundColor: colors.primary,
+  },
+  topBar: {
+    height: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    backgroundColor: colors.primary,
+  },
+  topBarLeftSlot: {
+    width: 44,
+    alignItems: 'flex-start',
+  },
+  topBarRightSlot: {
+    width: 44,
+    alignItems: 'flex-end',
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surfaceVariant,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  topBarTitle: {
+    flex: 1,
+    textAlign: 'center',
+    fontFamily: typography.fontFamilyDisplay,
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.white,
+  },
+  deleteButtonPlaceholder: {
+    width: 44,
+    height: 44,
+  },
+  deleteButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.delete,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  contentContainer: {
+    flex: 1,
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 24, // extra space below the prompt field
@@ -507,6 +630,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     paddingBottom: 16,
+  },
+  headerDeleteButton: {
+    // Legacy style (kept to avoid breaking references); delete button now lives in the custom top bar.
+    minWidth: touchTargetMin,
+    minHeight: touchTargetMin,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerImageContainer: {
     marginRight: 14,
