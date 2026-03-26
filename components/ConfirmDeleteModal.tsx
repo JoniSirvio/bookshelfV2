@@ -1,12 +1,16 @@
 import React from 'react';
 import { Modal, View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
-import { colors } from '../theme';
+import { colors, typography } from '../theme';
 
 interface ConfirmDeleteModalProps {
   isVisible: boolean;
   onClose: () => void;
   onConfirm: () => void;
   bookTitle: string;
+  message?: string;
+  confirmButtonLabel?: string;
+  cancelButtonLabel?: string;
+  accessibilityLabel?: string;
 }
 
 const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
@@ -14,31 +18,41 @@ const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
   onClose,
   onConfirm,
   bookTitle,
+  message,
+  confirmButtonLabel = 'Vahvista poisto',
+  cancelButtonLabel = 'Peruuta',
+  accessibilityLabel,
 }) => {
+  const modalMessage = message ?? `Haluatko varmasti poistaa kirjan "${bookTitle}" hyllystäsi?`;
+  const modalAccessibilityLabel = accessibilityLabel ?? `Poista kirja: ${bookTitle}`;
+
   return (
     <Modal
       animationType="fade"
       transparent={true}
       visible={isVisible}
       onRequestClose={onClose}
+      accessibilityLabel={modalAccessibilityLabel}
     >
       <View style={styles.centeredView}>
-        <View style={styles.modalView}>
-          <Text style={styles.modalText}>
-            Haluatko varmasti poistaa kirjan "{bookTitle}" hyllystäsi?
-          </Text>
+        <View style={styles.modalView} accessibilityViewIsModal>
+          <Text style={styles.modalText}>{modalMessage}</Text>
           <View style={styles.buttonContainer}>
             <TouchableOpacity
               style={[styles.button, styles.confirmButton]}
               onPress={onConfirm}
+              accessibilityLabel={confirmButtonLabel}
+              accessibilityRole="button"
             >
-              <Text style={styles.buttonText}>Vahvista poisto</Text>
+              <Text style={styles.buttonText}>{confirmButtonLabel}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.button, styles.cancelButton]}
               onPress={onClose}
+              accessibilityLabel={cancelButtonLabel}
+              accessibilityRole="button"
             >
-              <Text style={styles.buttonText}>Peruuta</Text>
+              <Text style={styles.buttonText}>{cancelButtonLabel}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -52,20 +66,20 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: colors.overlayDark,
   },
   modalView: {
     margin: 20,
-    backgroundColor: 'white',
+    backgroundColor: colors.surface,
     borderRadius: 15,
     padding: 25,
     alignItems: 'center',
     ...Platform.select({
       web: {
-        boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.25)',
+        boxShadow: `0px 2px 4px ${colors.overlay}`,
       },
       default: {
-        shadowColor: '#000',
+        shadowColor: colors.shadow,
         shadowOffset: {
           width: 0,
           height: 2,
@@ -82,7 +96,9 @@ const styles = StyleSheet.create({
     marginBottom: 25,
     textAlign: 'center',
     fontSize: 18,
+    fontFamily: typography.fontFamilyBody,
     lineHeight: 24,
+    color: colors.textPrimary,
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -101,11 +117,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.delete,
   },
   cancelButton: {
-    backgroundColor: '#5bc0de', // Info blue for cancel
+    backgroundColor: colors.cancel,
   },
   buttonText: {
-    color: 'white',
-    fontWeight: 'bold',
+    color: colors.white,
+    fontFamily: typography.fontFamilyDisplay,
     textAlign: 'center',
     fontSize: 16,
   },

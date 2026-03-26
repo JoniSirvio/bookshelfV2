@@ -6,7 +6,7 @@ import { useABSCredentials } from '../hooks/useABSCredentials';
 import { getABSCoverUrl } from '../api/abs';
 import Slider from '@react-native-community/slider';
 import { BookCoverPlaceholder } from './BookCoverPlaceholder';
-import { colors } from '../theme';
+import { colors, touchTargetMin, typography } from '../theme';
 
 const { width } = Dimensions.get('window');
 
@@ -78,7 +78,12 @@ export const PlayerModal = () => {
             <SafeAreaView style={styles.container}>
                 {/* Header */}
                 <View style={styles.header}>
-                    <TouchableOpacity onPress={hidePlayer} style={styles.headerButton}>
+                    <TouchableOpacity
+                        onPress={hidePlayer}
+                        style={styles.headerButton}
+                        accessibilityLabel="Sulje soittimo"
+                        accessibilityRole="button"
+                    >
                         <MaterialCommunityIcons name="chevron-down" size={32} color={colors.textPrimary} />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Toistetaan nyt</Text>
@@ -138,7 +143,7 @@ export const PlayerModal = () => {
                                 setIsSeeking(false);
                             }}
                             minimumTrackTintColor={colors.primary}
-                            maximumTrackTintColor="#ddd"
+                            maximumTrackTintColor={colors.border}
                             thumbTintColor={colors.primary}
                         />
                         <View style={styles.timeRow}>
@@ -154,7 +159,13 @@ export const PlayerModal = () => {
                             <MaterialCommunityIcons name="rewind-30" size={36} color={colors.textPrimary} />
                         </TouchableOpacity>
 
-                        <TouchableOpacity onPress={togglePlay} style={styles.mainControl}>
+                        <TouchableOpacity
+                            onPress={togglePlay}
+                            style={styles.mainControl}
+                            accessibilityLabel={isPlaying ? 'Tauko' : 'Toisto'}
+                            accessibilityRole="button"
+                            accessibilityState={{ disabled: isLoading }}
+                        >
                             {isLoading ? (
                                 <MaterialCommunityIcons name="loading" size={48} color={colors.textPrimary} />
                             ) : (
@@ -197,7 +208,7 @@ export const PlayerModal = () => {
                                     value={playbackRate}
                                     onValueChange={(val) => setRate(parseFloat(val.toFixed(2)))}
                                     minimumTrackTintColor={colors.primary}
-                                    maximumTrackTintColor="#f0f0f0"
+                                    maximumTrackTintColor={colors.surfaceVariant}
                                     thumbTintColor={colors.primary}
                                 />
                                 <Text style={styles.speedValueInline}>{playbackRate.toFixed(2)}x</Text>
@@ -213,7 +224,7 @@ export const PlayerModal = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.white,
+        backgroundColor: colors.surface,
     },
     header: {
         flexDirection: 'row',
@@ -224,12 +235,14 @@ const styles = StyleSheet.create({
         height: 60,
     },
     headerButton: {
-        width: 40,
+        minWidth: touchTargetMin,
+        minHeight: touchTargetMin,
+        justifyContent: 'center',
         alignItems: 'center',
     },
     headerTitle: {
         fontSize: 14,
-        fontWeight: 'bold',
+        fontFamily: typography.fontFamilyDisplay,
         color: colors.textSecondaryAlt,
         textTransform: 'uppercase',
         letterSpacing: 1,
@@ -244,12 +257,12 @@ const styles = StyleSheet.create({
         width: width * 0.8,
         height: width * 0.8,
         borderRadius: 12,
-        shadowColor: '#000',
+        shadowColor: colors.shadow,
         shadowOffset: { width: 0, height: 10 },
         shadowOpacity: 0.2,
         shadowRadius: 20,
         elevation: 10,
-        backgroundColor: '#f0f0f0',
+        backgroundColor: colors.surfaceVariant,
         marginBottom: 30,
     },
     artwork: {
@@ -264,13 +277,14 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 22,
-        fontWeight: 'bold',
+        fontFamily: typography.fontFamilyDisplay,
         color: colors.textPrimary,
         textAlign: 'center',
         marginBottom: 8,
     },
     author: {
         fontSize: 16,
+        fontFamily: typography.fontFamilyBody,
         color: colors.primary,
         textAlign: 'center',
         marginBottom: 8,
@@ -284,12 +298,14 @@ const styles = StyleSheet.create({
     },
     infoText: {
         fontSize: 13,
+        fontFamily: typography.fontFamilyBody,
         color: colors.textSecondaryAlt,
         fontWeight: '600',
     },
     infoSeparator: {
         fontSize: 13,
-        color: '#ccc',
+        fontFamily: typography.fontFamilyBody,
+        color: colors.textSecondary,
     },
     progressContainer: {
         width: '100%',
@@ -308,7 +324,8 @@ const styles = StyleSheet.create({
     },
     timeText: {
         fontSize: 12,
-        color: '#888',
+        fontFamily: typography.fontFamilyBody,
+        color: colors.textSecondary,
         fontVariant: ['tabular-nums'],
     },
     controls: {
@@ -319,10 +336,17 @@ const styles = StyleSheet.create({
         marginBottom: 20, // Reduced bottom margin to fit speed button
     },
     subControl: {
+        minWidth: touchTargetMin,
+        minHeight: touchTargetMin,
+        justifyContent: 'center',
+        alignItems: 'center',
         padding: 10,
     },
     mainControl: {
-        // padding: 0,
+        minWidth: touchTargetMin,
+        minHeight: touchTargetMin,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     speedContainer: {
         flexDirection: 'row',
@@ -335,14 +359,14 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         paddingHorizontal: 16,
         borderRadius: 20,
-        backgroundColor: '#f0f0f0',
+        backgroundColor: colors.surfaceVariant,
         marginRight: 10,
     },
     speedButtonActive: {
-        backgroundColor: '#e0e0e0',
+        backgroundColor: colors.border,
     },
     speedButtonText: {
-        fontWeight: 'bold',
+        fontFamily: typography.fontFamilyDisplay,
         color: colors.primary,
         fontSize: 14,
     },
@@ -350,7 +374,7 @@ const styles = StyleSheet.create({
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#f9f9f9',
+        backgroundColor: colors.surfaceVariant,
         borderRadius: 20,
         paddingHorizontal: 10,
         paddingVertical: 4,
@@ -361,7 +385,7 @@ const styles = StyleSheet.create({
     },
     speedValueInline: {
         fontSize: 12,
-        fontWeight: 'bold',
+        fontFamily: typography.fontFamilyDisplay,
         color: colors.textSecondaryAlt,
         marginLeft: 8,
         fontVariant: ['tabular-nums'],

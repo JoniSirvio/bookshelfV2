@@ -34,7 +34,7 @@ export const FormatBadge: React.FC<FormatBadgeProps> = ({ format, compact = fals
 const styles = StyleSheet.create({
     container: {
         position: 'absolute',
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        backgroundColor: colors.overlayDark,
         borderRadius: 12, // Circle or pill
         alignItems: 'center',
         justifyContent: 'center',

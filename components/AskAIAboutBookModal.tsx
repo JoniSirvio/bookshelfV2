@@ -20,7 +20,7 @@ import { useBooksContext } from '../context/BooksContext';
 import { BookCoverPlaceholder } from './BookCoverPlaceholder';
 import { FormatBadge } from './FormatBadge';
 import Markdown from 'react-native-markdown-display';
-import { colors, loaderColor } from '../theme';
+import { colors, loaderColor, typography } from '../theme';
 
 interface AskAIAboutBookModalProps {
     isVisible: boolean;
@@ -31,6 +31,7 @@ interface AskAIAboutBookModalProps {
 
 const markdownStyles = StyleSheet.create({
     body: {
+        fontFamily: typography.fontFamilyBody,
         color: colors.textPrimary,
         fontSize: 14,
         lineHeight: 22,
@@ -38,18 +39,18 @@ const markdownStyles = StyleSheet.create({
         alignSelf: 'stretch',
     },
     paragraph: { marginTop: 0, marginBottom: 8 },
-    strong: { fontWeight: 'bold', color: colors.textPrimary },
-    em: { fontStyle: 'italic', color: colors.textPrimary },
-    text: { color: colors.textPrimary },
+    strong: { fontFamily: typography.fontFamilyDisplay, color: colors.textPrimary },
+    em: { fontStyle: 'italic', fontFamily: typography.fontFamilyBody, color: colors.textPrimary },
+    text: { fontFamily: typography.fontFamilyBody, color: colors.textPrimary },
     bullet_list: { marginBottom: 8 },
-    bullet_list_icon: { color: colors.primary, marginLeft: 2, marginRight: 8, fontSize: 14 },
+    bullet_list_icon: { fontFamily: typography.fontFamilyBody, color: colors.primary, marginLeft: 2, marginRight: 8, fontSize: 14 },
     bullet_list_content: { flex: 1 },
     ordered_list: { marginBottom: 8 },
-    ordered_list_icon: { color: colors.primary, marginLeft: 2, marginRight: 8, fontSize: 14 },
+    ordered_list_icon: { fontFamily: typography.fontFamilyBody, color: colors.primary, marginLeft: 2, marginRight: 8, fontSize: 14 },
     list_item: { marginBottom: 6 },
-    heading1: { fontSize: 17, fontWeight: 'bold', color: colors.textPrimary, marginBottom: 6, marginTop: 4 },
-    heading2: { fontSize: 16, fontWeight: 'bold', color: colors.textPrimary, marginBottom: 4, marginTop: 2 },
-    heading3: { fontSize: 15, fontWeight: '600', color: colors.textPrimary, marginBottom: 4, marginTop: 2 },
+    heading1: { fontSize: 17, fontFamily: typography.fontFamilyDisplay, color: colors.textPrimary, marginBottom: 6, marginTop: 4 },
+    heading2: { fontSize: 16, fontFamily: typography.fontFamilyDisplay, color: colors.textPrimary, marginBottom: 4, marginTop: 2 },
+    heading3: { fontSize: 15, fontFamily: typography.fontFamilyBody, fontWeight: '600', color: colors.textPrimary, marginBottom: 4, marginTop: 2 },
     blockquote: {
         backgroundColor: 'rgba(99, 107, 47, 0.08)',
         borderLeftColor: colors.primary,
@@ -60,7 +61,8 @@ const markdownStyles = StyleSheet.create({
         borderRadius: 0,
     },
     code_inline: {
-        backgroundColor: 'rgba(0,0,0,0.07)',
+        fontFamily: typography.fontFamilyBody,
+        backgroundColor: colors.surfaceVariant,
         paddingHorizontal: 6,
         paddingVertical: 2,
         borderRadius: 4,
@@ -230,7 +232,7 @@ const AskAIAboutBookModal: React.FC<AskAIAboutBookModalProps> = ({
                                                 <FormatBadge format={format} />
                                             </View>
                                         ) : (
-                                            <View style={[styles.coverImageWrapper, { backgroundColor: '#eee' }]}>
+                                            <View style={[styles.coverImageWrapper, { backgroundColor: colors.surfaceVariant }]}>
                                                 <BookCoverPlaceholder
                                                     id={book.id}
                                                     title={book.title}
@@ -358,7 +360,7 @@ const AskAIAboutBookModal: React.FC<AskAIAboutBookModalProps> = ({
                         <TextInput
                             style={styles.promptInput}
                             placeholder={inputPlaceholder}
-                            placeholderTextColor="#999"
+                            placeholderTextColor={colors.placeholder}
                             value={userQuestion}
                             onChangeText={setUserQuestion}
                             editable={!loading}
@@ -390,7 +392,7 @@ const AskAIAboutBookModal: React.FC<AskAIAboutBookModalProps> = ({
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: colors.overlay,
         justifyContent: 'flex-end',
     },
     overlayTouchable: {
@@ -401,7 +403,7 @@ const styles = StyleSheet.create({
         bottom: 0,
     },
     content: {
-        backgroundColor: colors.white,
+        backgroundColor: colors.surface,
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
         padding: 20,
@@ -415,7 +417,7 @@ const styles = StyleSheet.create({
     },
     headerImageContainer: {
         marginRight: 12,
-        shadowColor: '#000',
+        shadowColor: colors.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.15,
         shadowRadius: 3.84,
@@ -439,12 +441,13 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         fontSize: 18,
-        fontWeight: 'bold',
+        fontFamily: typography.fontFamilyDisplay,
         color: colors.textPrimary,
         marginBottom: 4,
     },
     author: {
         fontSize: 14,
+        fontFamily: typography.fontFamilyBody,
         color: colors.textSecondaryAlt,
     },
     closeButton: {
@@ -452,6 +455,7 @@ const styles = StyleSheet.create({
     },
     modeLabel: {
         fontSize: 13,
+        fontFamily: typography.fontFamilyBody,
         fontWeight: '600',
         color: colors.textPrimary,
         marginBottom: 8,
@@ -469,22 +473,24 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         paddingHorizontal: 12,
         borderRadius: 20,
-        backgroundColor: '#f0f0f0',
+        backgroundColor: colors.surfaceVariant,
     },
     modePillActive: {
         backgroundColor: colors.primary,
     },
     modePillText: {
         fontSize: 13,
+        fontFamily: typography.fontFamilyBody,
         color: colors.textSecondaryAlt,
         maxWidth: 100,
     },
     modePillTextActive: {
+        fontFamily: typography.fontFamilyDisplay,
         color: colors.white,
-        fontWeight: '600',
     },
     hint: {
         fontSize: 13,
+        fontFamily: typography.fontFamilyBody,
         color: colors.textSecondaryAlt,
         marginBottom: 12,
     },
@@ -493,7 +499,7 @@ const styles = StyleSheet.create({
         minHeight: 280,
         marginBottom: 12,
         borderWidth: 1,
-        borderColor: '#eee',
+        borderColor: colors.border,
         borderRadius: 8,
         padding: 10,
     },
@@ -537,6 +543,7 @@ const styles = StyleSheet.create({
     messageText: {
         flex: 1,
         fontSize: 14,
+        fontFamily: typography.fontFamilyBody,
         color: colors.textPrimary,
         lineHeight: 20,
     },
@@ -545,12 +552,12 @@ const styles = StyleSheet.create({
     },
     errorBox: {
         flexDirection: 'column',
-        backgroundColor: 'rgba(217, 83, 79, 0.1)',
+        backgroundColor: colors.errorBg,
         padding: 12,
         borderRadius: 8,
         marginBottom: 12,
         borderWidth: 1,
-        borderColor: 'rgba(217, 83, 79, 0.35)',
+        borderColor: colors.errorBorder,
     },
     errorRow: {
         flexDirection: 'row',
@@ -560,6 +567,7 @@ const styles = StyleSheet.create({
     errorText: {
         flex: 1,
         fontSize: 14,
+        fontFamily: typography.fontFamilyBody,
         color: colors.textPrimary,
     },
     retryButton: {
@@ -573,16 +581,17 @@ const styles = StyleSheet.create({
     },
     retryButtonText: {
         fontSize: 14,
-        fontWeight: '600',
+        fontFamily: typography.fontFamilyDisplay,
         color: colors.delete,
     },
     promptInput: {
-        backgroundColor: '#FAFAFA',
+        backgroundColor: colors.surfaceVariant,
         borderWidth: 1,
-        borderColor: '#E0E0E0',
+        borderColor: colors.border,
         borderRadius: 12,
         padding: 12,
         fontSize: 14,
+        fontFamily: typography.fontFamilyBody,
         color: colors.textPrimary,
         marginBottom: 12,
         minHeight: 48,
@@ -602,7 +611,7 @@ const styles = StyleSheet.create({
     },
     askButtonText: {
         fontSize: 16,
-        fontWeight: '600',
+        fontFamily: typography.fontFamilyDisplay,
         color: colors.white,
     },
 });

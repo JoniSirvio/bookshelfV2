@@ -3,8 +3,9 @@ import * as React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { Provider as PaperProvider, DefaultTheme } from 'react-native-paper';
 import { BooksProvider } from './context/BooksContext';
+import { SuccessToastProvider } from './context/SuccessToastContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { AIChatProvider, AIChatModalHost } from './context/AIChatContext';
+import { AIChatProvider } from './context/AIChatContext';
 import { AudioProvider } from './context/AudioContext'; // Import AudioProvider
 import BottomNavi from './components/BottomNavi';
 import LoginModal from './components/LoginModal';
@@ -12,12 +13,18 @@ import { PlayerModal } from './components/PlayerModal'; // Import PlayerModal
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useFonts } from 'expo-font';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import {
+  PlusJakartaSans_400Regular,
+  PlusJakartaSans_400Regular_Italic,
+  PlusJakartaSans_700Bold,
+} from '@expo-google-fonts/plus-jakarta-sans';
 import * as SplashScreen from 'expo-splash-screen';
 import { useCallback, useEffect } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { queryClient, clientPersister } from './utils/queryClient';
-import { headerStyle, headerTintColor, loaderColor } from './theme';
+import { headerStyle, headerTintColor, loaderColor, typography } from './theme';
+import { TouchableOpacity } from 'react-native';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -31,6 +38,7 @@ const theme = {
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import NewBooksScreen from './screens/NewBooksScreen';
 import AIChatListScreen from './screens/AIChatListScreen';
+import AskAIBookScreen from './screens/AskAIBookScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -64,22 +72,23 @@ const AppContent = () => {
                     headerTitle: 'Uudet lisäykset',
                     headerStyle,
                     headerTintColor,
-                    headerBackTitle: 'Takaisin'
+                    headerTitleStyle: { fontFamily: typography.fontFamilyDisplay, fontSize: 18 },
+                    headerBackTitleVisible: false,
+                    headerBackButtonDisplayMode: 'minimal',
                   }}
                 />
                 <Stack.Screen
                   name="AIChats"
                   component={AIChatListScreen}
-                  options={{
-                    headerTitle: 'AI-keskustelut',
-                    headerStyle,
-                    headerTintColor,
-                    headerBackTitle: 'Takaisin'
-                  }}
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="AskAIBook"
+                  component={AskAIBookScreen}
+                  options={{ headerShown: false }}
                 />
               </Stack.Navigator>
             </NavigationContainer>
-            <AIChatModalHost />
           </AIChatProvider>
         </BooksProvider>
         <PlayerModal />
@@ -92,6 +101,9 @@ const AppContent = () => {
 export default function App() {
   const [fontsLoaded] = useFonts({
     ...MaterialCommunityIcons.font,
+    PlusJakartaSans_400Regular,
+    PlusJakartaSans_400Regular_Italic,
+    PlusJakartaSans_700Bold,
   });
 
   useEffect(() => {
@@ -119,9 +131,11 @@ export default function App() {
         }}
       >
         <PersistQueryClientProvider client={queryClient} persistOptions={{ persister: clientPersister }}>
-          <AuthProvider>
-            <AppContent />
-          </AuthProvider>
+          <SuccessToastProvider>
+            <AuthProvider>
+              <AppContent />
+            </AuthProvider>
+          </SuccessToastProvider>
         </PersistQueryClientProvider>
       </PaperProvider>
     </GestureHandlerRootView>

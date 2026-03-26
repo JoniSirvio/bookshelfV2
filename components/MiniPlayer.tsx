@@ -5,7 +5,7 @@ import { useAudio } from '../context/AudioContext';
 import { useABSCredentials } from '../hooks/useABSCredentials';
 import { getABSCoverUrl } from '../api/abs';
 import { BookCoverPlaceholder } from './BookCoverPlaceholder';
-import { colors } from '../theme';
+import { colors, touchTargetMin, typography } from '../theme';
 
 export const MiniPlayer = () => {
     const { currentBook, isPlaying, togglePlay, openPlayer, isLoading } = useAudio();
@@ -24,9 +24,6 @@ export const MiniPlayer = () => {
             onPress={openPlayer}
             activeOpacity={0.9}
         >
-            {/* Progress Bar Line could go here */}
-            {/* <View style={{height: 2, width: `${(position/duration)*100}%`, backgroundColor: '#636B2F'}} /> */}
-
             <View style={styles.content}>
                 {/* Cover */}
                 <View style={styles.coverContainer}>
@@ -60,7 +57,7 @@ export const MiniPlayer = () => {
                         e.stopPropagation();
                         togglePlay();
                     }}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
                     {isLoading ? (
                         <MaterialCommunityIcons name="loading" size={28} color={colors.textPrimary} />
@@ -83,12 +80,12 @@ const styles = StyleSheet.create({
         bottom: 80, // Height of Tab Bar
         left: 0,
         right: 0,
-        backgroundColor: colors.white,
+        backgroundColor: colors.surface,
         borderTopWidth: 1,
-        borderTopColor: '#eee',
+        borderTopColor: colors.border,
         height: 60,
         elevation: 5,
-        shadowColor: '#000',
+        shadowColor: colors.shadow,
         shadowOffset: { width: 0, height: -2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
@@ -105,7 +102,7 @@ const styles = StyleSheet.create({
         height: 40,
         borderRadius: 4,
         overflow: 'hidden',
-        backgroundColor: '#eee',
+        backgroundColor: colors.surfaceVariant,
         marginRight: 10,
     },
     cover: {
@@ -119,14 +116,19 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 14,
-        fontWeight: 'bold',
+        fontFamily: typography.fontFamilyDisplay,
         color: colors.textPrimary,
     },
     author: {
         fontSize: 12,
+        fontFamily: typography.fontFamilyBody,
         color: colors.textSecondaryAlt,
     },
     playButton: {
+        minWidth: touchTargetMin,
+        minHeight: touchTargetMin,
+        justifyContent: 'center',
+        alignItems: 'center',
         padding: 5,
     }
 });

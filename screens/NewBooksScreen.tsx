@@ -20,15 +20,15 @@ import { useViewMode } from '../hooks/useViewMode';
 import { FlashList } from '@shopify/flash-list';
 
 import BookOptionsModal from '../components/BookOptionsModal';
-import { useAIChat } from '../context/AIChatContext';
+import { useNavigation } from '@react-navigation/native';
 import { FilterSortModal, SortOption, SortDirection, StatusFilter } from '../components/FilterSortModal';
-import { colors, loaderColor } from '../theme';
+import { colors, loaderColor, typography, touchTargetMin } from '../theme';
 
 export default function NewBooksScreen() {
     const queryClient = useQueryClient();
+    const navigation = useNavigation<any>();
     const { url, token, loading: credsLoading } = useABSCredentials();
     const { myBooks, readBooks, addBook, markAsRead } = useBooksContext();
-    const { openAIModal } = useAIChat();
     const [selectedType, setSelectedType] = useState<'all' | 'audio' | 'ebook'>('all');
     const [viewMode, setViewMode] = useViewMode('newbooks_view_mode', 'list');
     const [searchQuery, setSearchQuery] = useState('');
@@ -283,15 +283,26 @@ export default function NewBooksScreen() {
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                    <Text style={[styles.headerTitle, { marginBottom: 0 }]}>Uudet lisäykset</Text>
-                    <TouchableOpacity onPress={() => setViewMode(prev => prev === 'list' ? 'grid' : 'list')}>
-                        <MaterialCommunityIcons name={viewMode === 'list' ? 'view-grid' : 'view-list'} size={28} color={colors.textPrimary} />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity onPress={() => setIsFilterModalVisible(true)} style={{ marginLeft: 10 }}>
-                        <MaterialCommunityIcons name="sort-variant" size={28} color={colors.textPrimary} />
-                    </TouchableOpacity>
+                <View style={styles.headerRow}>
+                    <Text style={styles.headerTitle}>Uudet lisäykset</Text>
+                    <View style={styles.headerActions}>
+                        <TouchableOpacity
+                            onPress={() => setViewMode(prev => prev === 'list' ? 'grid' : 'list')}
+                            style={styles.iconButton}
+                            accessibilityLabel={viewMode === 'list' ? 'Vaihda ruudukkoviewiin' : 'Vaihda listanäkymään'}
+                            accessibilityRole="button"
+                        >
+                            <MaterialCommunityIcons name={viewMode === 'list' ? 'view-grid' : 'view-list'} size={28} color={colors.textPrimary} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => setIsFilterModalVisible(true)}
+                            style={styles.iconButton}
+                            accessibilityLabel="Suodata ja lajittele"
+                            accessibilityRole="button"
+                        >
+                            <MaterialCommunityIcons name="sort-variant" size={28} color={colors.textPrimary} />
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 {/* Type Toggles */}
@@ -322,7 +333,7 @@ export default function NewBooksScreen() {
                     onAdd={addBook}
                     onMarkAsRead={handleMarkAsRead}
                     onRateAndReview={handleRateAndReview}
-                    onAskAI={(book) => openAIModal(book)}
+                    onAskAI={(book) => navigation.navigate('AskAIBook', { book })}
                     ListHeaderComponent={<SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Suodata uutuuksia..." />}
                     scrollEnabled={true}
                 />
@@ -387,7 +398,7 @@ export default function NewBooksScreen() {
                     setTimeout(() => handleRateAndReview(book), 500);
                 }}
                 onMarkAsRead={handleMarkAsRead}
-                onAskAI={(book) => { setIsOptionsModalVisible(false); openAIModal(book); }}
+                onAskAI={(book) => { setIsOptionsModalVisible(false); navigation.navigate('AskAIBook', { book }); }}
             />
 
         </View>
@@ -397,47 +408,66 @@ export default function NewBooksScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.white,
-        padding: 16
+        backgroundColor: colors.surface,
+        padding: 16,
     },
     center: {
         flex: 1,
         justifyContent: 'center',
-        alignItems: 'center'
+        alignItems: 'center',
+        backgroundColor: colors.surface,
     },
     bookItemWrapper: {
         flex: 1,
         maxWidth: ITEM_WIDTH,
     },
     header: {
-        marginBottom: 10
+        marginBottom: 20,
+    },
+    headerRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12,
     },
     headerTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        marginBottom: 10,
-        color: colors.textPrimary
+        fontSize: typography.displaySize,
+        fontWeight: typography.displayWeight,
+        fontFamily: typography.fontFamilyDisplay,
+        color: colors.textPrimary,
+    },
+    headerActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    iconButton: {
+        minWidth: touchTargetMin,
+        minHeight: touchTargetMin,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginLeft: 8,
     },
     toggles: {
         flexDirection: 'row',
-        marginBottom: 10,
-        gap: 10
+        marginBottom: 12,
+        gap: 10,
     },
     pill: {
-        paddingVertical: 6,
-        paddingHorizontal: 12,
+        paddingVertical: 8,
+        paddingHorizontal: 16,
         borderRadius: 20,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: colors.surfaceVariant,
     },
     activePill: {
         backgroundColor: colors.primary,
     },
     pillText: {
+        fontFamily: typography.fontFamilyBody,
         color: colors.textSecondaryAlt,
-        fontWeight: '500'
+        fontWeight: '500',
     },
     activePillText: {
+        fontFamily: typography.fontFamilyDisplay,
         color: colors.white,
-        fontWeight: 'bold'
-    }
+    },
 });

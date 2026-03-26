@@ -68,8 +68,6 @@ export const useABSCredentials = (): ABSCredentials => {
                 if (newToken) SecureStore.setItemAsync(STORAGE_KEY_TOKEN, newToken);
                 else SecureStore.deleteItemAsync(STORAGE_KEY_TOKEN);
 
-            } else {
-                console.log("User document does not exist");
             }
             setLoading(false);
         }, (error) => {

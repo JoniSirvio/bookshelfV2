@@ -5,17 +5,18 @@ import { useState, useMemo } from "react";
 import { FinnaSearchResult } from "../api/finna";
 import ConfirmDeleteModal from "../components/ConfirmDeleteModal";
 import BookOptionsModal from "../components/BookOptionsModal";
-import { useAIChat } from "../context/AIChatContext";
+import { useNavigation } from "@react-navigation/native";
 import { BookGridItem } from "../components/BookGridItem";
 import { useViewMode } from "../hooks/useViewMode";
 import { useABSFinishedDates } from "../hooks/useABSFinishedDates";
 import { FlashList } from "@shopify/flash-list";
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors } from "../theme";
+import { colors, typography } from "../theme";
+import { AnimatedFadeInView } from "../components/AnimatedFadeInView";
 
 export default function PastReadScreen() {
+  const navigation = useNavigation<any>();
   const { readBooks, removeReadBook, reorderBooks } = useBooksContext();
-  const { openAIModal } = useAIChat();
   const absFinishedDates = useABSFinishedDates();
   const [viewMode, setViewMode] = useViewMode('history_view_mode', 'list');
 
@@ -119,16 +120,39 @@ export default function PastReadScreen() {
     setSelectedBookForOptions(null);
   };
 
-
-
-
+  const renderEmptyReadHistory = () => {
+    const noBooksAtAll = readBooks.length === 0;
+    return (
+      <AnimatedFadeInView style={styles.emptyReadContainer}>
+        <MaterialCommunityIcons
+          name={noBooksAtAll ? 'book-check-outline' : 'calendar-blank-outline'}
+          size={56}
+          color={colors.textSecondary}
+        />
+        <Text style={styles.emptyReadTitle}>
+          {noBooksAtAll ? 'Ei luettuja kirjoja vielä' : 'Ei kirjoja tässä kuussa'}
+        </Text>
+        <Text style={styles.emptyReadSubtitle}>
+          {noBooksAtAll
+            ? 'Merkitse kirja luetuksi Luettavat-välilehdeltä (pyyhkäise oikealle tai avaa kirja ja valitse Luettu), niin se ilmestyy tänne.'
+            : 'Valitse toinen kuukausi yllä tai paina Kaikki nähdäksesi kaikki luetut.'}
+        </Text>
+      </AnimatedFadeInView>
+    );
+  };
 
   return (
     <View style={styles.container}>
       <View style={styles.headerContainer}>
         <Text style={styles.title}>Luettujen hylly</Text>
-        <TouchableOpacity onPress={() => setViewMode(prev => prev === 'list' ? 'grid' : 'list')}>
+        <TouchableOpacity
+          onPress={() => setViewMode(prev => prev === 'list' ? 'grid' : 'list')}
+          style={styles.viewToggleButton}
+          accessibilityLabel={viewMode === 'list' ? 'Vaihda ruudukkonäkymään' : 'Vaihda listanäkymään'}
+          accessibilityRole="button"
+        >
           <MaterialCommunityIcons name={viewMode === 'list' ? 'view-grid' : 'view-list'} size={28} color={colors.textPrimary} />
+          <Text style={styles.viewToggleLabel}>{viewMode === 'list' ? 'Ruudukko' : 'Lista'}</Text>
         </TouchableOpacity>
       </View>
 
@@ -160,14 +184,16 @@ export default function PastReadScreen() {
         <BookList
           books={filteredBooks}
           mode="read"
+          ListEmptyComponent={renderEmptyReadHistory()}
           onTriggerDelete={handleOpenDeleteModal}
           onReorder={(newList) => reorderBooks(newList, 'readBooks')}
           onBookPress={handleOpenOptionsModal}
-          onAskAI={(book) => openAIModal(book)}
+          onAskAI={(book) => navigation.navigate('AskAIBook', { book })}
         />
       ) : (
         <FlashList
           data={filteredBooks}
+          ListEmptyComponent={renderEmptyReadHistory()}
           renderItem={({ item }) => (
             <BookGridItem
               id={item.id}
@@ -200,7 +226,7 @@ export default function PastReadScreen() {
           mode="read"
           onTriggerDelete={handleOpenDeleteModal}
           showStartReading={false}
-          onAskAI={(book) => { handleCloseOptionsModal(); openAIModal(book); }}
+          onAskAI={(book) => { handleCloseOptionsModal(); navigation.navigate('AskAIBook', { book }); }}
         />
       )}
 
@@ -212,20 +238,33 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
   },
   headerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   title: {
-    fontSize: 24,
-    fontWeight: "bold",
+    fontSize: typography.displaySize,
+    fontWeight: typography.displayWeight,
+    fontFamily: typography.fontFamilyDisplay,
+    color: colors.textPrimary,
+  },
+  viewToggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  viewToggleLabel: {
+    fontSize: 14,
+    fontFamily: typography.fontFamilyBody,
+    color: colors.textSecondary,
   },
   totalCount: {
     fontSize: 16,
+    fontFamily: typography.fontFamilyBody,
     color: colors.textSecondaryAlt,
     marginBottom: 16,
   },
@@ -241,17 +280,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.surfaceVariant,
     marginRight: 8,
   },
   activeFilterChip: {
     backgroundColor: colors.primary,
   },
   filterText: {
+    fontFamily: typography.fontFamilyBody,
     color: colors.textPrimary,
     fontWeight: '500',
   },
   activeFilterText: {
     color: colors.white,
+  },
+  emptyReadContainer: {
+    paddingVertical: 56,
+    paddingHorizontal: 28,
+    alignItems: 'center',
+  },
+  emptyReadTitle: {
+    fontSize: typography.sectionSize,
+    fontWeight: typography.sectionWeight,
+    fontFamily: typography.fontFamilyDisplay,
+    color: colors.textPrimary,
+    marginTop: 20,
+    textAlign: 'center',
+  },
+  emptyReadSubtitle: {
+    fontSize: 14,
+    fontFamily: typography.fontFamilyBody,
+    color: colors.textSecondary,
+    marginTop: 10,
+    textAlign: 'center',
+    paddingHorizontal: 8,
   },
 });

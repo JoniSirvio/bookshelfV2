@@ -1,27 +1,31 @@
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, ScrollView, Dimensions } from "react-native";
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { BookList } from "../components/BookList";
 import { useBooksContext } from "../context/BooksContext";
 import ReviewModal from '../components/ReviewModal';
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
 import BookOptionsModal from '../components/BookOptionsModal';
-import { useAIChat } from '../context/AIChatContext';
 import { useState, useRef } from "react";
 import { FinnaSearchResult } from "../api/finna";
 import { BookGridItem } from "../components/BookGridItem";
 import { useViewMode } from "../hooks/useViewMode";
 import { FlashList } from "@shopify/flash-list";
+import { AnimatedFadeInView } from "../components/AnimatedFadeInView";
+import { AnimatedScalePressable } from "../components/AnimatedScalePressable";
 
 import { useABSInProgress } from "../hooks/useABSInProgress";
-import { colors } from "../theme";
+import { colors, loaderColor, touchTargetMin, typography } from "../theme";
 
 const HomeScreen: React.FC = () => {
+  const navigation = useNavigation<any>();
   const { myBooks, readBooks, removeBook, markAsRead, startReading, reorderBooks, recommendations, generateRecommendations, removeRecommendation, addBook } = useBooksContext();
-  const { inProgressBooks, loading: absLoading } = useABSInProgress(readBooks); // Fetch ABS items
-  const { openAIModal } = useAIChat();
+  const { inProgressBooks, loading: absLoading } = useABSInProgress(readBooks);
 
   const [generating, setGenerating] = useState(false);
+  const [recommendationError, setRecommendationError] = useState<string | null>(null);
   const [userWishes, setUserWishes] = useState("");
+  const [wishesExpanded, setWishesExpanded] = useState(false);
   const [viewMode, setViewMode] = useViewMode('home_view_mode', 'list');
 
   // State for Options Modal (Grid View)
@@ -98,10 +102,11 @@ const HomeScreen: React.FC = () => {
     lastCallTime.current = now;
 
     setGenerating(true);
+    setRecommendationError(null);
     try {
       await generateRecommendations(userWishes);
     } catch (error: any) {
-      alert(`Virhe suositusten haussa: ${error.message || 'Tuntematon virhe'}`);
+      setRecommendationError(error?.message || 'Tuntematon virhe');
     } finally {
       setGenerating(false);
     }
@@ -110,10 +115,54 @@ const HomeScreen: React.FC = () => {
   const renderHeader = () => (
     <View style={styles.headerContainer}>
       <Text style={styles.title}>Luettavien hylly</Text>
-      <TouchableOpacity onPress={() => setViewMode(prev => prev === 'list' ? 'grid' : 'list')}>
+      <TouchableOpacity
+        onPress={() => setViewMode(prev => prev === 'list' ? 'grid' : 'list')}
+        style={styles.viewModeButton}
+        accessibilityLabel={viewMode === 'list' ? 'Vaihda ruudukkonäkymään' : 'Vaihda listanäkymään'}
+        accessibilityRole="button"
+      >
         <MaterialCommunityIcons name={viewMode === 'list' ? 'view-grid' : 'view-list'} size={28} color={colors.textPrimary} />
+        <Text style={styles.viewToggleLabel}>{viewMode === 'list' ? 'Ruudukko' : 'Lista'}</Text>
       </TouchableOpacity>
     </View>
+  );
+
+  const renderEmptyShelf = () => (
+    <AnimatedFadeInView style={styles.emptyShelfContainer}>
+      <MaterialCommunityIcons name="bookshelf" size={80} color={colors.textSecondary} />
+      <Text style={styles.emptyShelfTitle}>Hylly on tyhjä</Text>
+      <Text style={styles.emptyShelfWhat}>
+        Täällä näet luettavien listasi – kirjat, joita haluat lukea seuraavaksi.
+      </Text>
+      <Text style={styles.emptyShelfSubtitle}>
+        Lisää kirjoja Kirjat-välilehdeltä (äänikirjasto ja Finna) tai hae tekoälysuosituksia alla. Voit merkitä kirjat luetuiksi ja pitää kirjaa edistymisestäsi.
+      </Text>
+      <AnimatedScalePressable
+        onPress={handleGenerateRecommendations}
+        disabled={generating}
+        style={[styles.emptyShelfCtaPrimary, generating ? styles.emptyShelfCtaDisabled : null]}
+        accessibilityLabel={generating ? 'Haetaan suosituksia' : 'Hae suosituksia'}
+        accessibilityRole="button"
+      >
+        {generating ? (
+          <ActivityIndicator size="small" color={colors.white} style={{ marginRight: 8 }} />
+        ) : (
+          <MaterialCommunityIcons name="robot" size={22} color={colors.white} style={{ marginRight: 8 }} />
+        )}
+        <Text style={styles.emptyShelfCtaPrimaryText}>
+          {generating ? 'Haetaan...' : 'Hae suosituksia'}
+        </Text>
+      </AnimatedScalePressable>
+      <TouchableOpacity
+        onPress={() => navigation.navigate('Kirjasto')}
+        style={styles.emptyShelfCtaSecondary}
+        accessibilityLabel="Siirry kirjoihin"
+        accessibilityRole="button"
+      >
+        <MaterialCommunityIcons name="bookshelf" size={20} color={colors.primary} style={{ marginRight: 8 }} />
+        <Text style={styles.emptyShelfCtaSecondaryText}>Siirry kirjoihin</Text>
+      </TouchableOpacity>
+    </AnimatedFadeInView>
   );
 
   const renderFooter = () => (
@@ -121,19 +170,62 @@ const HomeScreen: React.FC = () => {
       <Text style={styles.sectionTitle}>Mitä lukea seuraavaksi?</Text>
       <Text style={styles.sectionSubtitle}>Anna tekoälyn etsiä uutta luettavaa historiasi perusteella.</Text>
 
-      <TextInput
-        style={styles.wishesInput}
-        placeholder="Esim. 'Haluaisin lyhyitä scifi-kirjoja' (valinnainen)"
-        placeholderTextColor="#999"
-        value={userWishes}
-        onChangeText={setUserWishes}
-        editable={!generating}
-        multiline
-      />
+      {recommendationError && (
+        <View style={styles.recommendationErrorBox}>
+          <MaterialCommunityIcons name="alert-circle-outline" size={20} color={colors.delete} />
+          <Text style={styles.recommendationErrorText}>{recommendationError}</Text>
+          <TouchableOpacity
+            onPress={() => { setRecommendationError(null); handleGenerateRecommendations(); }}
+            style={styles.retryButton}
+            accessibilityLabel="Yritä uudelleen"
+            accessibilityRole="button"
+          >
+            <Text style={styles.retryButtonText}>Yritä uudelleen</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
-      <TouchableOpacity onPress={handleGenerateRecommendations} disabled={generating} style={styles.generateButton}>
+      {wishesExpanded ? (
+        <>
+          <TextInput
+            style={styles.wishesInput}
+            placeholder="Esim. lyhyitä scifi-kirjoja"
+            placeholderTextColor={colors.placeholder}
+            value={userWishes}
+            onChangeText={(t) => { setUserWishes(t); if (recommendationError) setRecommendationError(null); }}
+            editable={!generating}
+            multiline
+          />
+          <TouchableOpacity
+            onPress={() => setWishesExpanded(false)}
+            style={styles.wishesToggle}
+            accessibilityLabel="Piilota toiveet"
+            accessibilityRole="button"
+          >
+            <Text style={styles.wishesToggleText}>Piilota toiveet</Text>
+          </TouchableOpacity>
+        </>
+      ) : (
+        <TouchableOpacity
+          onPress={() => setWishesExpanded(true)}
+          style={styles.wishesToggle}
+          accessibilityLabel="Lisää toiveet suosituksille"
+          accessibilityRole="button"
+        >
+          <Text style={styles.wishesToggleText}>Lisää toiveet suosituksille (valinnainen)</Text>
+        </TouchableOpacity>
+      )}
+
+      <TouchableOpacity
+        onPress={handleGenerateRecommendations}
+        disabled={generating}
+        style={styles.generateButton}
+        accessibilityLabel={generating ? 'Haetaan suosituksia' : 'Hae suosituksia'}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: generating, busy: generating }}
+      >
         {generating ? (
-          <ActivityIndicator size="small" color="#33691E" style={{ marginRight: 8 }} />
+          <ActivityIndicator size="small" color={loaderColor} style={{ marginRight: 8 }} />
         ) : null}
         <Text style={styles.generateButtonText}>{generating ? 'Haetaan...' : 'Hae suosituksia'}</Text>
         {!generating && <MaterialCommunityIcons name="robot" size={20} color={colors.primary} style={{ marginLeft: 8 }} />}
@@ -153,14 +245,13 @@ const HomeScreen: React.FC = () => {
     </View>
   );
 
-  const returnAlert = (msg: string) => alert(msg);
-
   return (
     <View style={styles.container}>
       {viewMode === 'list' ? (
         <BookList
           ListHeaderComponent={renderHeader()}
-          ListFooterComponent={renderFooter()}
+          ListFooterComponent={combinedBooks.length > 0 ? renderFooter() : null}
+          ListEmptyComponent={renderEmptyShelf()}
           books={combinedBooks}
           onTriggerDelete={handleOpenDeleteModal}
           onMarkAsRead={(book) => {
@@ -173,11 +264,12 @@ const HomeScreen: React.FC = () => {
             reorderBooks(localBooksOnly as any, 'myBooks')
           }}
           onStartReading={(book) => !book.id.startsWith('abs-') && startReading(book.id)}
-          onAskAI={(book) => openAIModal(book)}
+          onAskAI={(book) => navigation.navigate('AskAIBook', { book })}
         />
       ) : (
         <FlashList
           data={combinedBooks}
+          ListEmptyComponent={renderEmptyShelf()}
           renderItem={({ item }) => (
             <BookGridItem
               id={item.id}
@@ -196,7 +288,7 @@ const HomeScreen: React.FC = () => {
           numColumns={3}
           estimatedItemSize={200}
           ListHeaderComponent={renderHeader()}
-          ListFooterComponent={renderFooter()}
+          ListFooterComponent={combinedBooks.length > 0 ? renderFooter() : null}
           contentContainerStyle={{ paddingBottom: 20 }}
         />
       )}
@@ -240,7 +332,7 @@ const HomeScreen: React.FC = () => {
           onStartReading={(book) => !book.id.startsWith('abs-') && startReading(book.id)}
           onRateAndReview={handleRateAndReview}
           showStartReading={!selectedBookForOptions.startedReading}
-          onAskAI={(book) => { setIsOptionsModalVisible(false); openAIModal(book); }}
+          onAskAI={(book) => { setIsOptionsModalVisible(false); navigation.navigate('AskAIBook', { book }); }}
         />
       )}
     </View>
@@ -251,46 +343,74 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
   },
   headerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
+  },
+  viewModeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: touchTargetMin,
+    paddingHorizontal: 4,
+    gap: 6,
+  },
+  viewToggleLabel: {
+    fontSize: 14,
+    fontFamily: typography.fontFamilyBody,
+    color: colors.textSecondary,
   },
   title: {
-    fontSize: 24,
-    fontWeight: "bold",
+    fontSize: typography.displaySize,
+    fontWeight: typography.displayWeight,
+    fontFamily: typography.fontFamilyDisplay,
+    color: colors.textPrimary,
   },
   sectionTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
+    fontSize: typography.sectionSize,
+    fontWeight: typography.sectionWeight,
+    fontFamily: typography.fontFamilyDisplay,
     color: colors.textPrimary,
-    marginBottom: 4,
+    marginBottom: 8,
   },
   sectionSubtitle: {
     fontSize: 14,
+    fontFamily: typography.fontFamilyBody,
     color: colors.textSecondaryAlt,
     marginBottom: 16,
   },
   wishesInput: {
-    backgroundColor: '#FAFAFA',
+    backgroundColor: colors.surfaceVariant,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border,
     borderRadius: 12,
     padding: 12,
     fontSize: 14,
+    fontFamily: typography.fontFamilyBody,
     color: colors.textPrimary,
-    marginBottom: 16,
+    marginBottom: 8,
     minHeight: 60,
     textAlignVertical: 'top',
   },
+  wishesToggle: {
+    alignSelf: 'flex-start',
+    paddingVertical: 8,
+    marginBottom: 16,
+  },
+  wishesToggleText: {
+    fontSize: 14,
+    fontFamily: typography.fontFamilyBody,
+    color: colors.primary,
+    fontWeight: '500',
+  },
   footerContainer: {
-    marginTop: 24,
-    paddingTop: 16,
+    marginTop: 32,
+    paddingTop: 24,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: colors.border,
     paddingBottom: 40,
   },
   recommendationHeader: {
@@ -313,13 +433,110 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   generateButtonText: {
-    color: '#33691E',
-    fontWeight: 'bold',
+    color: colors.primary,
+    fontFamily: typography.fontFamilyDisplay,
     fontSize: 16,
   },
   recommendationsList: {
     backgroundColor: colors.white,
-  }
+  },
+  emptyShelfContainer: {
+    paddingVertical: 56,
+    paddingHorizontal: 28,
+    alignItems: 'center',
+  },
+  emptyShelfTitle: {
+    fontSize: typography.emptyHeroSize,
+    fontWeight: typography.emptyHeroWeight,
+    fontFamily: typography.fontFamilyDisplay,
+    color: colors.textPrimary,
+    marginTop: 20,
+    textAlign: 'center',
+  },
+  emptyShelfWhat: {
+    fontSize: 15,
+    fontFamily: typography.fontFamilyBody,
+    color: colors.textSecondary,
+    marginTop: 10,
+    textAlign: 'center',
+  },
+  emptyShelfSubtitle: {
+    fontSize: 14,
+    fontFamily: typography.fontFamilyBody,
+    color: colors.textSecondary,
+    marginTop: 6,
+    textAlign: 'center',
+    paddingHorizontal: 8,
+  },
+  emptyShelfCtaPrimary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    paddingVertical: 16,
+    paddingHorizontal: 28,
+    borderRadius: 16,
+    marginTop: 28,
+    alignSelf: 'stretch',
+    shadowColor: colors.shadowPrimary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+    shadowOpacity: 1,
+    elevation: 4,
+  },
+  emptyShelfCtaDisabled: {
+    opacity: 0.7,
+  },
+  emptyShelfCtaPrimaryText: {
+    fontSize: 16,
+    fontFamily: typography.fontFamilyDisplay,
+    color: colors.white,
+  },
+  emptyShelfCtaSecondary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    marginTop: 12,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    borderRadius: 12,
+    alignSelf: 'stretch',
+  },
+  emptyShelfCtaSecondaryText: {
+    fontSize: 15,
+    fontFamily: typography.fontFamilyDisplay,
+    color: colors.primary,
+  },
+  recommendationErrorBox: {
+    flexDirection: 'column',
+    backgroundColor: colors.errorBg,
+    borderWidth: 1,
+    borderColor: colors.errorBorder,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+  },
+  recommendationErrorText: {
+    fontSize: 14,
+    fontFamily: typography.fontFamilyBody,
+    color: colors.textPrimary,
+    marginTop: 6,
+  },
+  retryButton: {
+    alignSelf: 'flex-start',
+    marginTop: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    backgroundColor: colors.primary,
+  },
+  retryButtonText: {
+    fontSize: 14,
+    fontFamily: typography.fontFamilyDisplay,
+    color: colors.white,
+  },
 });
 
 export default HomeScreen;

@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Image, Dimensions, KeyboardAvoidingView, Platform, ScrollView, Alert, TextInput as NativeTextInput } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation } from '@react-navigation/native';
 import { TextInput, Button } from 'react-native-paper';
 import { useQuery } from '@tanstack/react-query';
 import { FlashList } from '@shopify/flash-list';
@@ -14,7 +16,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { doc, updateDoc, setDoc } from 'firebase/firestore';
 import { firestore } from '../firebase/Config';
 import { useAuth } from '../context/AuthContext';
-import { colors, loaderColor } from '../theme';
+import { colors, loaderColor, typography, touchTargetMin } from '../theme';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const COLUMN_COUNT = 3;
@@ -25,17 +27,19 @@ import { useFinnaSearchResults } from '../hooks/useBooks';
 import ReviewModal from '../components/ReviewModal';
 
 import BookOptionsModal from '../components/BookOptionsModal';
-import { useAIChat } from '../context/AIChatContext';
 import { FilterSortModal, SortOption, SortDirection, StatusFilter } from '../components/FilterSortModal';
 
+const HAS_SEEN_KIRJAT_HINT_KEY = 'hasSeenKirjatHint';
+
 export default function ABSLibraryScreen() {
+    const navigation = useNavigation<any>();
     const { url, token, loading: credsLoading } = useABSCredentials();
+    const [showKirjatHint, setShowKirjatHint] = useState<boolean | null>(null);
     const [selectedLibraryId, setSelectedLibraryId] = useState<string | null>(null);
     const [viewMode, setViewMode] = useViewMode('library_view_mode', 'grid');
     const [searchQuery, setSearchQuery] = useState('');
     const { myBooks, readBooks, addBook, markAsRead } = useBooksContext();
     const { user } = useAuth();
-    const { openAIModal } = useAIChat();
     const [inputUrl, setInputUrl] = useState('');
     const [inputUsername, setInputUsername] = useState('');
     const [inputPassword, setInputPassword] = useState('');
@@ -74,6 +78,17 @@ export default function ABSLibraryScreen() {
             setSelectedLibraryId(libraries[0].id);
         }
     }, [libraries]);
+
+    // First-time hint: "Kirjat = oma kirjasto + haku"
+    useEffect(() => {
+        AsyncStorage.getItem(HAS_SEEN_KIRJAT_HINT_KEY).then((val) => {
+            setShowKirjatHint(val !== '1');
+        });
+    }, []);
+    const dismissKirjatHint = useCallback(() => {
+        setShowKirjatHint(false);
+        AsyncStorage.setItem(HAS_SEEN_KIRJAT_HINT_KEY, '1');
+    }, []);
 
     // 2. Fetch Items for selected library
     const { data: items, isLoading: itemsLoading, refetch } = useQuery({
@@ -354,33 +369,43 @@ export default function ABSLibraryScreen() {
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <View style={[styles.headerTop, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
-                    <Text style={styles.headerTitle}>
-                        {searchSource === 'abs' ? 'Audiobookshelf' : 'Finna-haku'}
-                    </Text>
+                <View style={styles.headerRow}>
+                    <View style={styles.headerTitleBlock}>
+                        <Text style={styles.headerTitle}>
+                            {searchSource === 'abs' ? 'Audiobookshelf' : 'Finna-haku'}
+                        </Text>
+                        <Text style={styles.headerSubcopy}>Oma kirjasto ja Finna-haku</Text>
+                    </View>
                     <TouchableOpacity
                         onPress={() => setSearchSource(prev => prev === 'abs' ? 'finna' : 'abs')}
-                        style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            backgroundColor: colors.bgRec,
-                            paddingHorizontal: 12,
-                            paddingVertical: 6,
-                            borderRadius: 20,
-                            borderWidth: 1,
-                            borderColor: '#C5E1A5'
-                        }}
+                        style={styles.finnaButton}
+                        accessibilityLabel={searchSource === 'abs' ? 'Hae Finnasta' : 'Oma kirjasto'}
+                        accessibilityRole="button"
                     >
-                        <Text style={{ marginRight: 6, color: '#33691E', fontWeight: 'bold' }}>
+                        <Text style={styles.finnaButtonText}>
                             {searchSource === 'abs' ? 'Hae Finnasta' : 'Oma kirjasto'}
                         </Text>
                         <MaterialCommunityIcons
                             name={searchSource === 'abs' ? 'book-search' : 'bookshelf'}
                             size={20}
-                            color="#33691E"
+                            color={colors.white}
                         />
                     </TouchableOpacity>
                 </View>
+
+                {showKirjatHint === true && (
+                    <View style={styles.kirjatHint}>
+                        <Text style={styles.kirjatHintText}>Täältä lisäät kirjoja äänikirjastosta ja Finnan haulla.</Text>
+                        <TouchableOpacity
+                            onPress={dismissKirjatHint}
+                            style={styles.kirjatHintClose}
+                            accessibilityLabel="Sulje vihje"
+                            accessibilityRole="button"
+                        >
+                            <MaterialCommunityIcons name="close" size={20} color={colors.textSecondaryAlt} />
+                        </TouchableOpacity>
+                    </View>
+                )}
 
                 {searchSource === 'abs' && (
                     <View style={styles.tabsRow}>
@@ -399,7 +424,12 @@ export default function ABSLibraryScreen() {
                             ))}
                         </ScrollView>
 
-                        <TouchableOpacity onPress={() => setViewMode(prev => prev === 'grid' ? 'list' : 'grid')} style={styles.viewToggle}>
+                        <TouchableOpacity
+                            onPress={() => setViewMode(prev => prev === 'grid' ? 'list' : 'grid')}
+                            style={styles.viewToggle}
+                            accessibilityLabel={viewMode === 'grid' ? 'Vaihda listanäkymään' : 'Vaihda ruudukkoviewiin'}
+                            accessibilityRole="button"
+                        >
                             <MaterialCommunityIcons
                                 name={viewMode === 'grid' ? "view-list" : "view-grid"}
                                 size={28}
@@ -407,7 +437,12 @@ export default function ABSLibraryScreen() {
                             />
                         </TouchableOpacity>
 
-                        <TouchableOpacity onPress={() => setIsFilterModalVisible(true)} style={styles.viewToggle}>
+                        <TouchableOpacity
+                            onPress={() => setIsFilterModalVisible(true)}
+                            style={styles.viewToggle}
+                            accessibilityLabel="Suodata ja lajittele"
+                            accessibilityRole="button"
+                        >
                             <MaterialCommunityIcons
                                 name="sort-variant"
                                 size={28}
@@ -443,7 +478,7 @@ export default function ABSLibraryScreen() {
                             onAdd={addBook}
                             onMarkAsRead={handleMarkAsRead}
                             onRateAndReview={handleRateAndReview}
-                            onAskAI={(book) => openAIModal(book)}
+                            onAskAI={(book) => navigation.navigate('AskAIBook', { book })}
                             scrollEnabled={true}
                             ListHeaderComponent={<SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Hae kirjaa tai kirjailijaa..." />}
                         />
@@ -468,7 +503,7 @@ export default function ABSLibraryScreen() {
                         onAdd={addBook}
                         onMarkAsRead={handleMarkAsRead}
                         onRateAndReview={handleRateAndReview}
-                        onAskAI={(book) => openAIModal(book)}
+                        onAskAI={(book) => navigation.navigate('AskAIBook', { book })}
                         mode="search"
                         scrollEnabled={true}
                     />
@@ -525,7 +560,7 @@ export default function ABSLibraryScreen() {
                     setTimeout(() => handleRateAndReview(book), 500);
                 }}
                 onMarkAsRead={handleMarkAsRead}
-                onAskAI={(book) => { setIsOptionsModalVisible(false); openAIModal(book); }}
+                onAskAI={(book) => { setIsOptionsModalVisible(false); navigation.navigate('AskAIBook', { book }); }}
             />
 
         </View>
@@ -535,19 +570,18 @@ export default function ABSLibraryScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.white,
-        padding: 16, // Added padding to match HomeScreen
+        backgroundColor: colors.surface,
+        padding: 16,
     },
     center: {
         flex: 1,
         justifyContent: 'center',
-        alignItems: 'center', // This centers the ScrollView horizontally
+        alignItems: 'center',
         padding: 20,
-        backgroundColor: colors.white,
+        backgroundColor: colors.surface,
     },
-    // ...
     scrollView: {
-        width: '100%', // ScrollView must take full width of center container
+        width: '100%',
     },
     formContent: {
         alignItems: 'center',
@@ -556,25 +590,82 @@ const styles = StyleSheet.create({
     input: {
         width: '100%',
         marginBottom: 15,
-        backgroundColor: 'white',
+        backgroundColor: colors.surfaceVariant,
     },
     // ...
     message: {
         marginTop: 10,
         fontSize: 16,
+        fontFamily: typography.fontFamilyBody,
         color: colors.textSecondaryAlt,
         textAlign: 'center',
     },
     header: {
-        marginBottom: 16,
+        marginBottom: 20,
     },
     headerTop: {
-        marginBottom: 16,
+        marginBottom: 12,
+    },
+    headerRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    headerTitleBlock: {
+        flex: 1,
     },
     headerTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        marginBottom: 0,
+        fontSize: typography.displaySize,
+        fontWeight: typography.displayWeight,
+        fontFamily: typography.fontFamilyDisplay,
+        color: colors.textPrimary,
+    },
+    headerSubcopy: {
+        marginTop: 2,
+        fontSize: 14,
+        fontFamily: typography.fontFamilyBody,
+        color: colors.textSecondary,
+    },
+    finnaButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.primary,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        borderRadius: 20,
+        shadowColor: colors.shadowPrimary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 4,
+        shadowOpacity: 1,
+        elevation: 3,
+    },
+    finnaButtonText: {
+        marginRight: 6,
+        fontFamily: typography.fontFamilyDisplay,
+        color: colors.white,
+    },
+    kirjatHint: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: colors.surfaceVariant,
+        paddingVertical: 12,
+        paddingHorizontal: 14,
+        borderRadius: 8,
+        marginTop: 8,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    kirjatHintText: {
+        flex: 1,
+        fontSize: 14,
+        fontFamily: typography.fontFamilyBody,
+        color: colors.textPrimary,
+    },
+    kirjatHintClose: {
+        padding: 4,
+        marginLeft: 8,
     },
     tabsRow: {
         flexDirection: 'row',
@@ -587,24 +678,29 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     viewToggle: {
+        minWidth: touchTargetMin,
+        minHeight: touchTargetMin,
+        justifyContent: 'center',
+        alignItems: 'center',
         marginLeft: 10,
     },
     tab: {
         paddingVertical: 8,
         paddingHorizontal: 16,
         borderRadius: 20,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: colors.surfaceVariant,
     },
     activeTab: {
         backgroundColor: colors.primary,
     },
     tabText: {
+        fontFamily: typography.fontFamilyBody,
         color: colors.textSecondaryAlt,
         fontWeight: '500',
     },
     activeTabText: {
+        fontFamily: typography.fontFamilyDisplay,
         color: colors.white,
-        fontWeight: 'bold',
     },
     listContent: {
         padding: 10,
@@ -625,9 +721,9 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         overflow: 'hidden',
         marginBottom: 5,
-        backgroundColor: '#eee',
+        backgroundColor: colors.surfaceVariant,
         elevation: 3,
-        shadowColor: '#000',
+        shadowColor: colors.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
@@ -642,23 +738,27 @@ const styles = StyleSheet.create({
     },
     bookTitle: {
         fontSize: 14,
+        fontFamily: typography.fontFamilyBody,
         fontWeight: '600',
         color: colors.textPrimary,
         marginBottom: 2,
     },
     bookAuthor: {
         fontSize: 12,
-        color: '#888',
+        fontFamily: typography.fontFamilyBody,
+        color: colors.textSecondaryAlt,
     },
 
     title: {
-        fontSize: 24,
-        fontWeight: 'bold',
+        fontSize: typography.displaySize,
+        fontWeight: typography.displayWeight,
+        fontFamily: typography.fontFamilyDisplay,
         color: colors.textPrimary,
         marginBottom: 10,
     },
     subtitle: {
         fontSize: 16,
+        fontFamily: typography.fontFamilyBody,
         color: colors.textSecondaryAlt,
         marginBottom: 30,
         textAlign: 'center',
@@ -672,7 +772,7 @@ const styles = StyleSheet.create({
     },
     placeholderTitle: {
         fontSize: 12,
-        fontWeight: 'bold',
+        fontFamily: typography.fontFamilyDisplay,
         color: colors.textSecondary,
         textAlign: 'center',
         padding: 4

@@ -1,7 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors } from '../theme';
+import { colors, touchTargetMin, typography } from '../theme';
+import BottomSheet from './BottomSheet';
 
 export type SortOption = 'added' | 'title' | 'author' | 'year' | 'duration';
 export type SortDirection = 'asc' | 'desc';
@@ -41,6 +43,8 @@ export const FilterSortModal: React.FC<FilterSortModalProps> = ({
         onApply(sort, direction, status);
         onClose();
     };
+
+    const insets = useSafeAreaInsets();
 
     const getDirectionLabel = (option: SortOption, dir: SortDirection) => {
         switch (option) {
@@ -86,7 +90,7 @@ export const FilterSortModal: React.FC<FilterSortModalProps> = ({
                     <MaterialCommunityIcons
                         name={direction === 'asc' ? 'sort-ascending' : 'sort-descending'}
                         size={20}
-                        color={colors.primary}
+                        color={colors.white}
                     />
                 )}
             </TouchableOpacity>
@@ -102,85 +106,129 @@ export const FilterSortModal: React.FC<FilterSortModalProps> = ({
         </TouchableOpacity>
     );
 
+    const sortAndFilterBody = (
+        <>
+            <Text style={[styles.sectionTitle, styles.sectionTitleFirst]}>Järjestä</Text>
+            <View style={styles.listContainer}>
+                <SortItem label="Lisätty" value="added" />
+                <SortItem label="Nimi" value="title" />
+                <SortItem label="Kirjailija" value="author" />
+                <SortItem label="Julkaisuvuosi" value="year" />
+                <SortItem label="Kesto / Pituus" value="duration" />
+            </View>
+
+            <Text style={styles.sectionTitle}>Tila</Text>
+            <View style={styles.pillsContainer}>
+                <StatusItem label="Kaikki" value="all" />
+                <StatusItem label="Ei aloitettu" value="unread" />
+                <StatusItem label="Kesken" value="in-progress" />
+                <StatusItem label="Luettu" value="finished" />
+            </View>
+        </>
+    );
+
+    const filterContent = (
+        <View style={[styles.modalContent, styles.modalContentSheet]}>
+            <View style={styles.header}>
+                <Text style={styles.title}>Järjestä ja Suodata</Text>
+                <TouchableOpacity
+                    onPress={onClose}
+                    style={styles.closeButton}
+                    accessibilityLabel="Sulje"
+                    accessibilityRole="button"
+                >
+                    <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
+                </TouchableOpacity>
+            </View>
+
+            {sortAndFilterBody}
+
+            <View style={styles.applyButtonWrap}>
+                <TouchableOpacity
+                    style={styles.applyButton}
+                    onPress={handleApply}
+                    accessibilityLabel="Käytä valitut järjestys- ja suodatusasetukset"
+                    accessibilityRole="button"
+                >
+                    <Text style={styles.applyButtonText}>Käytä</Text>
+                </TouchableOpacity>
+            </View>
+        </View>
+    );
+
+    const sheetContent = (
+        <View style={styles.sheetContainer}>
+            <ScrollView
+                style={styles.sheetScroll}
+                contentContainerStyle={[styles.sheetScrollContent, { paddingBottom: Math.max(insets.bottom, 16) }]}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+            >
+                {filterContent}
+            </ScrollView>
+        </View>
+    );
+
     return (
-        <Modal
-            transparent
+        <BottomSheet
             visible={visible}
-            animationType="slide"
-            onRequestClose={onClose}
+            onClose={onClose}
+            accessibilityLabel="Järjestä ja suodata"
         >
-            <TouchableWithoutFeedback onPress={onClose}>
-                <View style={styles.overlay}>
-                    <TouchableWithoutFeedback>
-                        <View style={styles.modalContent}>
-                            <View style={styles.header}>
-                                <Text style={styles.title}>Järjestä ja Suodata</Text>
-                                <TouchableOpacity onPress={onClose}>
-                                    <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
-                                </TouchableOpacity>
-                            </View>
-
-                            <Text style={styles.sectionTitle}>Järjestä</Text>
-                            <View style={styles.listContainer}>
-                                <SortItem label="Lisätty" value="added" />
-                                <SortItem label="Nimi" value="title" />
-                                <SortItem label="Kirjailija" value="author" />
-                                <SortItem label="Julkaisuvuosi" value="year" />
-                                <SortItem label="Kesto / Pituus" value="duration" />
-                            </View>
-
-                            <Text style={styles.sectionTitle}>Tila</Text>
-                            <View style={styles.pillsContainer}>
-                                <StatusItem label="Kaikki" value="all" />
-                                <StatusItem label="Ei aloitettu" value="unread" />
-                                <StatusItem label="Kesken" value="in-progress" />
-                                <StatusItem label="Luettu" value="finished" />
-                            </View>
-
-                            <TouchableOpacity style={styles.applyButton} onPress={handleApply}>
-                                <Text style={styles.applyButtonText}>Käytä</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </TouchableWithoutFeedback>
-                </View>
-            </TouchableWithoutFeedback>
-        </Modal>
+            {sheetContent}
+        </BottomSheet>
     );
 };
 
 const styles = StyleSheet.create({
-    overlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'flex-end',
-    },
     modalContent: {
-        backgroundColor: 'white',
+        backgroundColor: colors.surface,
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
         padding: 20,
         maxHeight: '80%',
     },
+    modalContentSheet: {
+        flex: 1,
+        maxHeight: undefined,
+        paddingBottom: 0,
+    },
+    sheetScroll: {
+        flex: 1,
+    },
+    sheetScrollContent: {
+        paddingBottom: 16,
+    },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: 12,
     },
     title: {
         fontSize: 20,
-        fontWeight: 'bold',
+        fontFamily: typography.fontFamilyDisplay,
         color: colors.textPrimary,
+    },
+    closeButton: {
+        minWidth: touchTargetMin,
+        minHeight: touchTargetMin,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     sectionTitle: {
         fontSize: 16,
+        fontFamily: typography.fontFamilyBody,
         fontWeight: '600',
         color: colors.textSecondaryAlt,
-        marginTop: 10,
-        marginBottom: 10,
+        marginTop: 8,
+        marginBottom: 6,
+    },
+    sectionTitleFirst: {
+        marginTop: 0,
     },
     listContainer: {
-        marginBottom: 20,
+        marginBottom: 8,
     },
     optionItem: {
         flexDirection: 'row',
@@ -188,53 +236,59 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 12,
         borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
+        borderBottomColor: colors.borderLight,
     },
     selectedOption: {
-        backgroundColor: colors.bgRec,
-        paddingHorizontal: 10,
+        backgroundColor: colors.primary,
+        paddingHorizontal: 12,
         borderRadius: 8,
         borderBottomWidth: 0,
         marginVertical: 2,
     },
     optionText: {
         fontSize: 16,
+        fontFamily: typography.fontFamilyBody,
         color: colors.textPrimary,
     },
     selectedOptionText: {
-        color: colors.primary,
-        fontWeight: 'bold',
+        color: colors.white,
+        fontFamily: typography.fontFamilyDisplay,
     },
     directionText: {
         fontSize: 12,
-        color: colors.primary,
+        fontFamily: typography.fontFamilyBody,
+        color: colors.textLightOpacity,
         marginTop: 2,
     },
     pillsContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: 10,
-        marginBottom: 30,
+        gap: 8,
+        marginBottom: 16,
     },
     pill: {
-        paddingVertical: 8,
+        paddingVertical: 10,
         paddingHorizontal: 16,
         borderRadius: 20,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: colors.surfaceVariant,
         borderWidth: 1,
-        borderColor: '#eee',
+        borderColor: colors.borderLight,
     },
     activePill: {
         backgroundColor: colors.primary,
         borderColor: colors.primary,
     },
     pillText: {
-        color: colors.textSecondaryAlt,
+        fontFamily: typography.fontFamilyBody,
+        color: colors.textPrimary,
         fontWeight: '500',
     },
     activePillText: {
+        fontFamily: typography.fontFamilyDisplay,
         color: colors.white,
-        fontWeight: 'bold',
+    },
+    applyButtonWrap: {
+        paddingTop: 16,
     },
     applyButton: {
         backgroundColor: colors.primary,
@@ -243,8 +297,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     applyButtonText: {
-        color: 'white',
+        color: colors.white,
         fontSize: 16,
-        fontWeight: 'bold',
+        fontFamily: typography.fontFamilyDisplay,
     },
 });

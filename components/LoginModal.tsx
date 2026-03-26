@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Modal, Text } from 'react-native';
+import { View, StyleSheet, Modal, Text, KeyboardAvoidingView, Platform } from 'react-native';
 import { TextInput, Button } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
-import { colors } from '../theme';
+import { colors, typography } from '../theme';
 
 interface LoginModalProps {
     visible: boolean;
@@ -22,7 +22,6 @@ export default function LoginModal({ visible }: LoginModalProps) {
         try {
             await signIn(email, password);
         } catch (err: any) {
-            console.log('Login failed. Please try again.');
             if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
                 setError('Sähköpostia tai salasanaa ei löytynyt.');
             } else if (err.code === 'auth/wrong-password') {
@@ -33,7 +32,6 @@ export default function LoginModal({ visible }: LoginModalProps) {
                 setError('Liian monta yritystä. Yritä myöhemmin uudelleen.');
             } else {
                 setError('Kirjautuminen epäonnistui. Yritä uudelleen.');
-                console.log(err.code, err.message);
             }
         } finally {
             setLoading(false);
@@ -42,7 +40,10 @@ export default function LoginModal({ visible }: LoginModalProps) {
 
     return (
         <Modal visible={visible} animationType="slide" transparent={true}>
-            <View style={styles.container}>
+            <KeyboardAvoidingView
+                style={styles.container}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            >
                 <View style={styles.content}>
                     <View style={styles.header}>
                         <MaterialCommunityIcons name="book-open-page-variant" size={40} color={colors.primary} />
@@ -83,11 +84,13 @@ export default function LoginModal({ visible }: LoginModalProps) {
                         disabled={loading}
                         style={styles.button}
                         buttonColor={colors.primary}
+                        accessibilityLabel="Kirjaudu sisään"
+                        accessibilityRole="button"
                     >
                         {'Kirjaudu'}
                     </Button>
                 </View>
-            </View>
+            </KeyboardAvoidingView>
         </Modal>
     );
 }
@@ -96,11 +99,11 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         justifyContent: 'center',
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: colors.overlay,
         padding: 20,
     },
     content: {
-        backgroundColor: 'white',
+        backgroundColor: colors.surface,
         padding: 20,
         borderRadius: 10,
         elevation: 5,
@@ -111,17 +114,19 @@ const styles = StyleSheet.create({
     },
     titleContainer: {
         fontSize: 24,
+        fontFamily: typography.fontFamilyBody,
         marginTop: 10,
-        color: 'black',
+        color: colors.textPrimary,
     },
     titleBook: {
         fontStyle: 'italic',
     },
     titleShelf: {
-        fontWeight: 'bold',
+        fontFamily: typography.fontFamilyDisplay,
     },
     subtitle: {
         fontSize: 18,
+        fontFamily: typography.fontFamilyBody,
         fontWeight: '600',
         marginBottom: 15,
         textAlign: 'center',
@@ -129,7 +134,7 @@ const styles = StyleSheet.create({
     },
     input: {
         marginBottom: 10,
-        backgroundColor: 'white',
+        backgroundColor: colors.surface,
     },
     button: {
         marginTop: 10,

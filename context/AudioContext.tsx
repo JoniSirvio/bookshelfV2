@@ -128,8 +128,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             }
 
             const streamUrl = getAudioStreamUrl(absUrl, token, book.id, firstFile.ino);
-            console.log("[AudioContext] Loading Direct Stream (File 0):", streamUrl);
-
             setCurrentFileIndex(0);
             player.replace(streamUrl);
 
@@ -143,7 +141,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             if (book.userMedia?.currentTime) {
                 resumeTime = book.userMedia.currentTime;
             } else if ((bookInput as any).absProgress?.currentTime) {
-                console.log(`[AudioContext] Using absProgress fallback: ${(bookInput as any).absProgress.currentTime}`);
                 resumeTime = (bookInput as any).absProgress.currentTime;
             } else if (bookInput.userMedia?.currentTime) {
                 resumeTime = bookInput.userMedia.currentTime;
@@ -152,8 +149,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             if (resumeTime > 0) {
                 // Calculate which file and position this global time corresponds to
                 const { fileIndex, position } = getLocalPosition(resumeTime, audioFiles);
-
-                console.log(`[AudioContext] Resuming at Global Time: ${resumeTime}s -> File Index: ${fileIndex}, Position: ${position}s`);
 
                 // If the start file is different from the first file (0), we need to switch
                 if (fileIndex !== 0) {
@@ -195,7 +190,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 const nextIndex = currentFileIndex + 1;
                 const nextFile = audioFiles[nextIndex];
                 if (nextFile && absUrl && token) {
-                    console.log(`[AudioContext] Finished Track ${currentFileIndex}. Advancing to ${nextIndex}: ${nextFile.metadata.filename}`);
                     const nextUrl = getAudioStreamUrl(absUrl, token, currentBook.id, nextFile.ino);
 
                     setCurrentFileIndex(nextIndex);

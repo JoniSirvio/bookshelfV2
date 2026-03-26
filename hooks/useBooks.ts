@@ -9,10 +9,12 @@ import {
     FirestoreBook
 } from '../firebase/books';
 import { useAuth } from '../context/AuthContext';
+import { useSuccessToast } from '../context/SuccessToastContext';
 
 export const useBooks = () => {
     const { user } = useAuth();
     const queryClient = useQueryClient();
+    const { showSuccess } = useSuccessToast();
 
     const { data: allBooks = [] } = useQuery({
         queryKey: ['userBooks', user?.uid],
@@ -64,6 +66,9 @@ export const useBooks = () => {
                 queryClient.setQueryData(['userBooks', user?.uid], context.previousBooks);
             }
         },
+        onSuccess: (_data, { status }) => {
+            showSuccess(status === 'read' ? 'Merkitty luetuksi' : 'Lisätty hyllylle');
+        },
         onSettled: () => {
             queryClient.invalidateQueries({ queryKey: ['userBooks', user?.uid] });
         }
@@ -103,6 +108,9 @@ export const useBooks = () => {
         },
         onError: (err, vars, context) => {
             if (context?.previousBooks) queryClient.setQueryData(['userBooks', user?.uid], context.previousBooks);
+        },
+        onSuccess: (_data, { data }) => {
+            if (data?.status === 'read') showSuccess('Merkitty luetuksi');
         },
         onSettled: () => queryClient.invalidateQueries({ queryKey: ['userBooks', user?.uid] })
     });

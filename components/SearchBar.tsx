@@ -2,7 +2,7 @@ import React from "react";
 import { View, TextInput as NativeTextInput, StyleSheet, TouchableOpacity } from "react-native";
 import { Button } from "react-native-paper";
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors } from '../theme';
+import { colors, typography } from '../theme';
 
 interface SearchBarProps {
     value?: string;
@@ -38,17 +38,23 @@ export default function SearchBar({
                 />
                 <NativeTextInput
                     placeholder={placeholder || "Etsi kirjaa..."}
-                    placeholderTextColor="#999"
+                    placeholderTextColor={colors.placeholder}
                     value={effectiveValue}
                     onChangeText={effectiveOnChange}
                     style={styles.searchInput}
                     selectionColor={colors.primary}
-                    onSubmitEditing={onSearch} // Allow keyboard submit
+                    onSubmitEditing={onSearch}
                     returnKeyType="search"
+                    accessibilityLabel="Etsi kirjaa"
+                    accessibilityHint="Kirjoita kirjan nimi tai tekijä"
                 />
                 {effectiveValue.length > 0 && (
-                    <TouchableOpacity onPress={() => effectiveOnChange?.('')}>
-                        <MaterialCommunityIcons name="close-circle" size={20} color="#999" />
+                    <TouchableOpacity
+                        onPress={() => effectiveOnChange?.('')}
+                        accessibilityLabel="Tyhjennä haku"
+                        accessibilityRole="button"
+                    >
+                        <MaterialCommunityIcons name="close-circle" size={20} color={colors.placeholder} />
                     </TouchableOpacity>
                 )}
             </View>
@@ -62,6 +68,8 @@ export default function SearchBar({
                     textColor={colors.white}
                     style={styles.searchButton}
                     contentStyle={{ height: 45 }}
+                    accessibilityLabel="Hae"
+                    accessibilityRole="button"
                 >
                     Hae
                 </Button>
@@ -81,7 +89,7 @@ const styles = StyleSheet.create({
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#f5f5f5',
+        backgroundColor: colors.surfaceVariant,
         borderRadius: 10,
         paddingHorizontal: 10,
         height: 45,
@@ -94,6 +102,7 @@ const styles = StyleSheet.create({
         height: 45,
         backgroundColor: 'transparent',
         fontSize: 16,
+        fontFamily: typography.fontFamilyBody,
         color: colors.textPrimary,
     },
     searchButton: {

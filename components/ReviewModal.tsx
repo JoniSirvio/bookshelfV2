@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Modal, View, Text, TextInput, StyleSheet, TouchableOpacity, Platform, TouchableWithoutFeedback, Keyboard, Switch, ScrollView } from 'react-native';
+import { Modal, View, Text, TextInput, StyleSheet, TouchableOpacity, Platform, TouchableWithoutFeedback, Keyboard, Switch, ScrollView, KeyboardAvoidingView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SegmentedButtons } from 'react-native-paper';
-import { colors } from '../theme';
+import { colors, typography } from '../theme';
 
 interface ReviewModalProps {
   isVisible: boolean;
@@ -74,11 +74,17 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
     const stars = [];
     for (let i = 1; i <= 5; i++) {
       stars.push(
-        <TouchableOpacity key={i} onPress={() => setRating(i)} style={styles.starButton}>
+        <TouchableOpacity
+          key={i}
+          onPress={() => setRating(i)}
+          style={styles.starButton}
+          accessibilityLabel={`${i} tähteä`}
+          accessibilityRole="button"
+        >
           <MaterialCommunityIcons
             name={i <= rating ? 'star' : 'star-outline'}
             size={30}
-            color={i <= rating ? '#FFD700' : '#C0C0C0'}
+            color={i <= rating ? colors.stars : colors.starInactive}
           />
         </TouchableOpacity>
       );
@@ -92,10 +98,14 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
       transparent={true}
       visible={isVisible}
       onRequestClose={onClose}
+      accessibilityLabel={`Arvostele kirja: ${bookTitle}`}
     >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={styles.centeredView}>
-          <View style={styles.modalView}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.centeredView}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.modalView} accessibilityViewIsModal>
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
               <Text style={styles.modalTitle}>
                 Arvostele "{bookTitle}"
@@ -130,11 +140,13 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                 <View style={styles.switchContainer}>
                   <Text style={styles.switchLabel}>Valitse ajankohta</Text>
                   <Switch
-                    trackColor={{ false: "#767577", true: "#a5d6a7" }}
-                    thumbColor={useCustomDate ? colors.primary : "#f4f3f4"}
-                    ios_backgroundColor="#3e3e3e"
+                    trackColor={{ false: colors.border, true: colors.bgLight }}
+                    thumbColor={useCustomDate ? colors.primary : colors.surface}
+                    ios_backgroundColor={colors.border}
                     onValueChange={setUseCustomDate}
                     value={useCustomDate}
+                    accessibilityLabel="Valitse ajankohta käsin"
+                    accessibilityState={{ checked: useCustomDate }}
                   />
                 </View>
 
@@ -199,28 +211,29 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
 
               <View style={styles.buttonContainer}>
                 <TouchableOpacity
-                  style={[
-                    styles.button,
-                    styles.primaryButton
-                  ]}
+                  style={[styles.button, styles.primaryButton]}
                   onPress={handleSave}
+                  accessibilityLabel="Tallenna arvostelu"
+                  accessibilityRole="button"
                 >
                   <View style={styles.buttonContent}>
-                    <MaterialCommunityIcons name="content-save-outline" size={20} color="white" style={styles.buttonIcon} />
+                    <MaterialCommunityIcons name="content-save-outline" size={20} color={colors.white} style={styles.buttonIcon} />
                     <Text style={styles.primaryButtonText}>Tallenna arvostelu</Text>
                   </View>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.button, styles.cancelButton]}
                   onPress={onClose}
+                  accessibilityLabel="Peruuta"
+                  accessibilityRole="button"
                 >
                   <Text style={styles.cancelButtonText}>Peruuta</Text>
                 </TouchableOpacity>
               </View>
             </ScrollView>
           </View>
-        </View>
-      </TouchableWithoutFeedback>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
@@ -230,20 +243,20 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.6)', // Darker overlay
+    backgroundColor: colors.overlayDark,
   },
   modalView: {
     margin: 20,
-    backgroundColor: 'white',
+    backgroundColor: colors.surface,
     borderRadius: 15,
-    padding: 20, // Reduced padding
+    padding: 20,
     alignItems: 'center',
     ...Platform.select({
       web: {
-        boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.3)',
+        boxShadow: `0px 4px 6px ${colors.overlay}`,
       },
       default: {
-        shadowColor: '#000',
+        shadowColor: colors.shadow,
         shadowOffset: {
           width: 0,
           height: 4,
@@ -262,14 +275,15 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   modalTitle: {
-    fontSize: 20, // Slightly smaller title to save space
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontFamily: typography.fontFamilyDisplay,
     marginBottom: 15,
     textAlign: 'center',
     color: colors.textPrimary,
   },
   label: {
     fontSize: 16,
+    fontFamily: typography.fontFamilyBody,
     fontWeight: '600',
     marginTop: 10,
     marginBottom: 5,
@@ -285,23 +299,25 @@ const styles = StyleSheet.create({
   currentRatingText: {
     marginBottom: 10,
     fontSize: 15,
-    color: '#777',
+    fontFamily: typography.fontFamilyBody,
+    color: colors.textSecondary,
   },
   reviewInputWrapper: {
     height: 100,
     width: '100%',
     marginBottom: 15,
-    borderColor: '#ddd',
+    borderColor: colors.border,
     borderWidth: 1,
     borderRadius: 8,
     padding: 12,
   },
   reviewInput: {
-    flex: 1, // Fill the wrapper
+    flex: 1,
     textAlignVertical: 'top',
     fontSize: 16,
+    fontFamily: typography.fontFamilyBody,
     color: colors.textPrimary,
-    padding: 0, // Remove padding from input itself to avoid scroll issues
+    padding: 0,
   },
   buttonContainer: {
     width: '100%',
@@ -324,32 +340,32 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   disabledButton: {
-    backgroundColor: '#ccc',
+    backgroundColor: colors.surfaceVariant,
   },
   primaryButton: {
     backgroundColor: colors.primary,
   },
   primaryButtonText: {
-    color: 'white',
+    color: colors.white,
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: typography.fontFamilyDisplay,
   },
   secondaryButton: {
-    backgroundColor: '#2196F3',
+    backgroundColor: colors.primary,
   },
   secondaryButtonText: {
-    color: 'white',
+    color: colors.white,
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: typography.fontFamilyDisplay,
     textAlign: 'center',
   },
   cancelButton: {
-    backgroundColor: '#F44336',
+    backgroundColor: colors.cancel,
   },
   cancelButtonText: {
-    color: 'white',
+    color: colors.white,
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: typography.fontFamilyDisplay,
   },
   segmentedButtons: {
     marginBottom: 15, // Reduced margin
@@ -357,8 +373,8 @@ const styles = StyleSheet.create({
   dateOptionContainer: {
     width: '100%',
     marginBottom: 15,
-    padding: 12, // Increased padding
-    backgroundColor: '#FAFAFA',
+    padding: 12,
+    backgroundColor: colors.surfaceVariant,
     borderRadius: 10,
   },
   switchContainer: {
@@ -369,6 +385,7 @@ const styles = StyleSheet.create({
   },
   switchLabel: {
     fontSize: 16,
+    fontFamily: typography.fontFamilyBody,
     color: colors.textPrimary,
     fontWeight: '500',
   },
@@ -380,6 +397,7 @@ const styles = StyleSheet.create({
   checkboxLabel: {
     marginLeft: 8,
     fontSize: 16,
+    fontFamily: typography.fontFamilyBody,
     color: colors.textPrimary,
     fontWeight: '500',
   },
@@ -395,7 +413,7 @@ const styles = StyleSheet.create({
   },
   yearText: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: typography.fontFamilyDisplay,
     color: colors.textPrimary,
   },
   monthsGrid: {
@@ -408,7 +426,7 @@ const styles = StyleSheet.create({
     width: '30%',
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.surfaceVariant,
     alignItems: 'center',
     marginBottom: 5,
   },
@@ -417,18 +435,20 @@ const styles = StyleSheet.create({
   },
   disabledMonthChip: {
     opacity: 0.3,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: colors.border,
   },
   monthText: {
     fontSize: 14,
+    fontFamily: typography.fontFamilyBody,
     color: colors.textPrimary,
   },
   selectedMonthText: {
-    color: 'white',
-    fontWeight: 'bold',
+    fontFamily: typography.fontFamilyDisplay,
+    color: colors.white,
   },
   disabledMonthText: {
-    color: '#999',
+    fontFamily: typography.fontFamilyBody,
+    color: colors.textSecondary,
   },
 });
 
