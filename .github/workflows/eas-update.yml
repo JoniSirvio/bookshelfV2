@@ -7,7 +7,9 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # Align JS actions with Node 24 runner default (see GitHub Actions Node 20 deprecation)
     env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       EXPO_PUBLIC_FIREBASE_API_KEY: ${{ secrets.EXPO_PUBLIC_FIREBASE_API_KEY }}
       EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN }}
       EXPO_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.EXPO_PUBLIC_FIREBASE_PROJECT_ID }}
@@ -17,12 +19,12 @@ jobs:
       EXPO_PUBLIC_GEMINI_API_KEY: ${{ secrets.EXPO_PUBLIC_GEMINI_API_KEY }}
     steps:
       - name: Setup repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 18.x
+          node-version: 22
           cache: npm
 
       - name: Setup EAS
@@ -31,9 +33,11 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
           eas-version: latest
           packager: npm
+          # Avoid GitHub Actions cache restore/save failures (400/503) on EAS CLI cache
+          eas-cache: false
 
       - name: Install dependencies
         run: npm install
 
       - name: Publish update
-        run: eas update --auto
+        run: eas update --auto --non-interactive
