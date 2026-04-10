@@ -11,7 +11,6 @@ import ConfirmDeleteModal from './ConfirmDeleteModal';
 import { BookCoverPlaceholder } from './BookCoverPlaceholder';
 import { FormatBadge } from './FormatBadge';
 import { colors, loaderColor, typography, touchTargetMin } from '../theme';
-import BottomSheet from './BottomSheet';
 import { deleteAIChat } from '../firebase/aiChats';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -117,6 +116,8 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPresetSheetVisible, setIsPresetSheetVisible] = useState(false);
+  /** On follow-up turns, show the in-composer preset pill only after user picks from + menu. */
+  const [followUpPresetPill, setFollowUpPresetPill] = useState(false);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [isDeletingConversation, setIsDeletingConversation] = useState(false);
 
@@ -150,6 +151,7 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
         const history = Array.isArray(newHistory) ? newHistory : [];
         setConversation(history);
         setUserQuestion('');
+        setFollowUpPresetPill(false);
         if (user) {
           const { incrementAIUsage } = await import('../firebase/aiUsage');
           incrementAIUsage(user.uid, 'chat').catch(() => {});
@@ -167,6 +169,7 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
         if (isFirstTurn) setUserQuestion('');
         const authors = Array.isArray(book.authors) ? book.authors : (book.authors ? [String(book.authors)] : []);
         const modeConfig = MODES.find(m => m.key === mode);
+        const isPresetOnly = mode !== 'custom' && currentQuestion.length === 0;
         const hasAdditionalInput = currentQuestion.length > 0;
         const displayLabel = mode !== 'custom' && !hasAdditionalInput ? modeConfig?.label : undefined;
         const displayIcon = mode !== 'custom' && !hasAdditionalInput ? modeConfig?.icon : undefined;
@@ -177,7 +180,9 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
           {
             mode,
             readBooksTitles: mode === 'goodfit' ? readBooksTitles : undefined,
-            userMessage: isFirstTurn ? (mode === 'custom' ? currentQuestion : undefined) : currentQuestion,
+            userMessage: isFirstTurn
+              ? (mode === 'custom' ? currentQuestion : undefined)
+              : (isPresetOnly ? undefined : currentQuestion),
             displayLabel,
             displayIcon,
             displayText,
@@ -186,6 +191,7 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
         );
         setConversation(newHistory);
         setUserQuestion('');
+        setFollowUpPresetPill(false);
         if (user) {
           const { incrementAIUsage } = await import('../firebase/aiUsage');
           incrementAIUsage(user.uid, 'chat').catch(() => {});
@@ -232,12 +238,17 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
 
   const isFirstTurnLocal = conversation.length === 0;
   const showFullModes = !isGeneralChat && isFirstTurnLocal;
-  const showModesChip = !isGeneralChat && !isFirstTurnLocal;
+  const showPresetPlus = !isGeneralChat;
+  const activeModeConfig = MODES.find((m) => m.key === mode);
+  const showPresetPill =
+    showPresetPlus &&
+    mode !== 'custom' &&
+    (isFirstTurnLocal || followUpPresetPill);
   const inputPlaceholder = isGeneralChat
     ? 'Kysy suosituksia tai kirjakysymyksiä...'
     : (isFirstTurnLocal
       ? (mode === 'custom' ? 'Kirjoita kysymyksesi kirjasta...' : 'Voit kirjoittaa lisäkysymyksen (valinnainen)')
-      : 'Kysy lisää tai kirjoita uusi kysymys...');
+      : 'Kysy AI:lta');
 
   const renderHeader = () => (
     <View style={styles.header}>
@@ -309,41 +320,56 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
     )
   );
 
-  const renderPresetChip = () => {
-    if (!showModesChip) return null;
-    return (
-      <View style={styles.presetChipRow}>
-        <TouchableOpacity
-          style={styles.presetChip}
-          onPress={() => setIsPresetSheetVisible(true)}
-          accessibilityRole="button"
-          accessibilityLabel="Avaa valmiit kysymykset"
-        >
-          <MaterialCommunityIcons
-            name="robot-outline"
-            size={18}
-            color={colors.primary}
-            style={{ marginRight: 6 }}
-          />
-          <Text style={styles.presetChipLabel}>Valmiit kysymykset</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  };
-
   const handleSelectPresetMode = (selectedMode: BookChatMode) => {
     setIsPresetSheetVisible(false);
     setMode(selectedMode);
-    if (selectedMode === 'custom') {
-      return;
+    setUserQuestion('');
+    if (!isFirstTurnLocal) {
+      setFollowUpPresetPill(selectedMode !== 'custom');
     }
-    if (!loading) {
-      handleAsk();
-    }
+  };
+
+  const handleClearPresetPill = () => {
+    setMode('custom');
+    setFollowUpPresetPill(false);
   };
 
   const handleDismissKeyboard = () => {
     Keyboard.dismiss();
+  };
+
+  const renderPresetQuickMenu = () => {
+    if (!isPresetSheetVisible) return null;
+    return (
+      <View style={styles.presetMenuLayer} pointerEvents="box-none">
+        <TouchableOpacity
+          style={styles.presetMenuBackdrop}
+          activeOpacity={1}
+          onPress={() => setIsPresetSheetVisible(false)}
+          accessibilityRole="button"
+          accessibilityLabel="Sulje valmiiden kysymysten valikko"
+        />
+        <View style={styles.presetMenu}>
+          {MODES.map((m) => (
+            <TouchableOpacity
+              key={m.key}
+              style={styles.presetMenuItem}
+              onPress={() => handleSelectPresetMode(m.key)}
+              accessibilityRole="button"
+              accessibilityLabel={m.label}
+            >
+              <MaterialCommunityIcons
+                name={m.icon as any}
+                size={18}
+                color={colors.primary}
+                style={styles.presetMenuItemIcon}
+              />
+              <Text style={styles.presetMenuItemLabel}>{m.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+    );
   };
 
   const renderMessages = () => (
@@ -449,7 +475,7 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={80}
+      keyboardVerticalOffset={0}
     >
       <View style={styles.screenContainer}>
         <SafeAreaView edges={['top']} style={styles.topBarSafeArea}>
@@ -487,17 +513,68 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
         <View style={styles.contentContainer}>
           {renderHeader()}
         {renderModes()}
-        {renderPresetChip()}
         {renderMessages()}
         <View style={styles.inputRow}>
-          <TextInput
-            style={styles.input}
-            value={userQuestion}
-            onChangeText={setUserQuestion}
-            placeholder={inputPlaceholder}
-            placeholderTextColor={colors.placeholder}
-            multiline
-          />
+          {showPresetPlus && (
+            <TouchableOpacity
+              style={styles.plusButton}
+              onPress={() => setIsPresetSheetVisible(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Avaa valmiit kysymykset"
+            >
+              <MaterialCommunityIcons name="plus" size={20} color={colors.white} />
+            </TouchableOpacity>
+          )}
+          {isGeneralChat ? (
+            <TextInput
+              style={styles.input}
+              value={userQuestion}
+              onChangeText={setUserQuestion}
+              placeholder={inputPlaceholder}
+              placeholderTextColor={colors.placeholder}
+              multiline
+            />
+          ) : (
+            <View style={styles.inputComposerShell} accessibilityLabel="Viestikenttä">
+              <View style={styles.inputComposerRow}>
+                {showPresetPill && activeModeConfig && (
+                  <View
+                    style={styles.presetPill}
+                    accessible
+                    accessibilityLabel={`Valmis kysymys: ${activeModeConfig.label}`}
+                  >
+                    <MaterialCommunityIcons
+                      name={activeModeConfig.icon as any}
+                      size={17}
+                      color={colors.primary}
+                      style={styles.presetPillLeadingIcon}
+                    />
+                    <Text style={styles.presetPillLabel} numberOfLines={1}>
+                      {activeModeConfig.label}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={handleClearPresetPill}
+                      style={styles.presetPillClear}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      accessibilityRole="button"
+                      accessibilityLabel="Poista valmis kysymys"
+                    >
+                      <MaterialCommunityIcons name="close-circle" size={22} color={colors.primary} />
+                    </TouchableOpacity>
+                  </View>
+                )}
+                <TextInput
+                  style={[styles.inputInner, showPresetPill && styles.inputInnerBelowPill]}
+                  value={userQuestion}
+                  onChangeText={setUserQuestion}
+                  placeholder={inputPlaceholder}
+                  placeholderTextColor={colors.placeholder}
+                  multiline
+                  underlineColorAndroid="transparent"
+                />
+              </View>
+            </View>
+          )}
           <TouchableOpacity
             style={[styles.sendButton, !canSend && styles.sendButtonDisabled]}
             onPress={handleAsk}
@@ -508,42 +585,7 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
             <MaterialCommunityIcons name="send" size={20} color={colors.white} />
           </TouchableOpacity>
         </View>
-        <BottomSheet
-          visible={isPresetSheetVisible}
-          onClose={() => setIsPresetSheetVisible(false)}
-          title="Valmiit kysymykset"
-          accessibilityLabel="Valmiit kysymykset"
-        >
-          <View style={styles.presetSheetContent}>
-            {MODES.map((m) => (
-              <TouchableOpacity
-                key={m.key}
-                style={styles.presetRow}
-                onPress={() => handleSelectPresetMode(m.key)}
-                accessibilityRole="button"
-                accessibilityLabel={m.label}
-              >
-                <View style={styles.presetRowIcon}>
-                  <MaterialCommunityIcons
-                    name={m.icon as any}
-                    size={22}
-                    color={colors.primary}
-                  />
-                </View>
-                <View style={styles.presetRowText}>
-                  <Text style={styles.presetRowTitle}>{m.label}</Text>
-                  <Text style={styles.presetRowDescription}>
-                    {m.key === 'description'
-                      ? 'Lyhyt kuvaus kirjasta ilman spoilereita.'
-                      : m.key === 'goodfit'
-                        ? 'Arvioi, sopiiko tämä kirja lukutottumuksiisi.'
-                        : 'Avaa vapaan kysymyksen tila kirjasta.'}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </BottomSheet>
+        {renderPresetQuickMenu()}
         <ConfirmDeleteModal
           isVisible={isDeleteModalVisible}
           onClose={() => {
@@ -621,7 +663,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 24, // extra space below the prompt field
+    paddingBottom: 8,
   },
   header: {
     flexDirection: 'row',
@@ -705,27 +747,8 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   messagesContent: {
-    paddingBottom: 12,
+    paddingBottom: 8,
     gap: 8,
-  },
-  presetChipRow: {
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  presetChip: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 18,
-    backgroundColor: colors.surfaceVariant,
-    minHeight: touchTargetMin,
-  },
-  presetChipLabel: {
-    fontFamily: typography.fontFamilyBody,
-    fontSize: 13,
-    color: colors.textSecondary,
   },
   messageBubble: {
     padding: 10,
@@ -775,36 +798,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textSecondary,
   },
-  presetSheetContent: {
-    paddingTop: 4,
-    paddingBottom: 4,
-  },
-  presetRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  presetRowIcon: {
-    marginRight: 12,
-    marginTop: 2,
-  },
-  presetRowText: {
-    flex: 1,
-  },
-  presetRowTitle: {
-    fontFamily: typography.fontFamilyDisplay,
-    fontSize: 15,
-    color: colors.textPrimary,
-    marginBottom: 2,
-  },
-  presetRowDescription: {
-    fontFamily: typography.fontFamilyBody,
-    fontSize: 13,
-    color: colors.textSecondary,
-    lineHeight: 18,
-  },
   loadingRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -848,8 +841,16 @@ const styles = StyleSheet.create({
   inputRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    marginTop: 12,
+    marginTop: 8,
     gap: 8,
+  },
+  plusButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
   },
   input: {
     flex: 1,
@@ -864,6 +865,77 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     backgroundColor: colors.surface,
   },
+  inputComposerShell: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 40,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingHorizontal: 10,
+    paddingVertical: 0,
+    justifyContent: 'center',
+  },
+  inputComposerRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    alignContent: 'center',
+    gap: 8,
+  },
+  presetPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+    paddingLeft: 12,
+    paddingRight: 4,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    backgroundColor: colors.bgLight,
+    shadowColor: colors.shadowPrimary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+  presetPillLeadingIcon: {
+    marginRight: 6,
+  },
+  presetPillLabel: {
+    flexShrink: 1,
+    fontFamily: typography.fontFamilyDisplay,
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
+    letterSpacing: 0.2,
+  },
+  presetPillClear: {
+    marginLeft: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  inputInner: {
+    flex: 1,
+    flexGrow: 1,
+    minWidth: 120,
+    minHeight: 24,
+    maxHeight: 100,
+    paddingVertical: 0,
+    paddingHorizontal: 4,
+    fontFamily: typography.fontFamilyBody,
+    fontSize: 15,
+    color: colors.textPrimary,
+    backgroundColor: 'transparent',
+  },
+  inputInnerBelowPill: {
+    flexBasis: '100%',
+    width: '100%',
+    minWidth: '100%',
+  },
   sendButton: {
     width: 40,
     height: 40,
@@ -874,6 +946,43 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     backgroundColor: colors.disabled,
+  },
+  presetMenuLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 20,
+  },
+  presetMenuBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  presetMenu: {
+    position: 'absolute',
+    left: 16,
+    right: 96,
+    bottom: 56,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: colors.shadowPrimary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 6,
+    paddingVertical: 6,
+  },
+  presetMenuItem: {
+    minHeight: touchTargetMin,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  presetMenuItemIcon: {
+    marginRight: 10,
+  },
+  presetMenuItemLabel: {
+    fontFamily: typography.fontFamilyBody,
+    fontSize: 14,
+    color: colors.textPrimary,
   },
 });
 
