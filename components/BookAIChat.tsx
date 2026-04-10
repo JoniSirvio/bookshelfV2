@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView, TextInput, Keyboard, Image, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView, TextInput, Keyboard, Image, KeyboardAvoidingView, Platform, InteractionManager } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import Markdown from 'react-native-markdown-display';
@@ -101,6 +101,42 @@ const MODES: { key: BookChatMode; label: string; icon: string }[] = [
   { key: 'custom', label: 'Oma kysymys', icon: 'message-question-outline' },
 ];
 
+const LOADING_MESSAGES = [
+  'AI pohtii elämän merkitystä...',
+  'AI eksyi lukemaan Lönnrotin kokoelmia...',
+  'AI väittelee yhdyssanoista ja pilkutussäännöistä...',
+  'AI yrittää olla kuulostamatta liian robotilta...',
+  'AI jäähdyttää CPU:taan...',
+  'AI etsii kadonnutta kirjanmerkkiä...',
+  'AI lukee rivien välistä – siellä on ahdasta...',
+  'AI yrittää selvitä tästä cliffhangerista...',
+  'AI pyyhkii pölyjä klassikkohyllystä...',
+  'AI kysyy neuvoa Sherlock Holmesilta...',
+  'AI selaa sivuja niin kovaa, että CPU lämpiää...',
+  'AI yrittää olla spoilaamatta loppuratkaisua...',
+  'AI pohtii, oliko hovimestari sittenkin syyllinen...',
+  'AI juuttui juoniaukkoon, odota hetki...',
+  'AI lukee niin nopeasti, että saa digitaalisia paperihaavoja...',
+  'AI neuvottelee lohikäärmeen kanssa vastausvuorosta...',
+  'AI miettii, onko kirja aina parempi kuin algoritmi...',
+  'AI etsii inspiraatiota takakansiteksteistä...',
+  'AI tarkistaa, onko tämä fiktiota vai faktaa...',
+  'AI kääntää sivua hitaasti ja dramaattisesti...',
+  'AI lukee vielä yhden luvun ennen vastaamista...',
+  'AI taistelee tuulimyllyjä vastaan...',
+  'AI pohtii, ollako vai eikö olla...',
+  'AI matkustaa maailman ympäri 80 millisekunnissa...',
+];
+
+function shuffleLoadingMessages(messages: readonly string[]): string[] {
+  const next = [...messages];
+  for (let i = next.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [next[i], next[j]] = [next[j], next[i]];
+  }
+  return next;
+}
+
 interface BookAIChatProps {
   book: FinnaSearchResult;
   initialConversation?: ChatMessage[];
@@ -110,7 +146,7 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
   const navigation = useNavigation<any>();
   const { user } = useAuth();
   const { readBooks } = useBooksContext();
-  const [mode, setMode] = useState<BookChatMode>('description');
+  const [mode, setMode] = useState<BookChatMode>('custom');
   const [conversation, setConversation] = useState<ChatMessage[]>([]);
   const [userQuestion, setUserQuestion] = useState('');
   const [loading, setLoading] = useState(false);
@@ -120,6 +156,13 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
   const [followUpPresetPill, setFollowUpPresetPill] = useState(false);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [isDeletingConversation, setIsDeletingConversation] = useState(false);
+  const [loadingPhraseOrder, setLoadingPhraseOrder] = useState<string[]>([]);
+  const [loadingPhraseStep, setLoadingPhraseStep] = useState(0);
+  const scrollViewRef = useRef<ScrollView | null>(null);
+  const scrollYRef = useRef(0);
+  const contentHeightRef = useRef(0);
+  const layoutHeightRef = useRef(0);
+  const keyboardHeightRef = useRef(0);
 
   useEffect(() => {
     // Seed initial conversation only once (or when there is no local history yet)
@@ -128,6 +171,80 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialConversation, conversation.length]);
+
+  useEffect(() => {
+    if (!loading) {
+      setLoadingPhraseOrder([]);
+      setLoadingPhraseStep(0);
+      return;
+    }
+    const order = shuffleLoadingMessages(LOADING_MESSAGES);
+    setLoadingPhraseOrder(order);
+    setLoadingPhraseStep(0);
+    const interval = setInterval(() => {
+      setLoadingPhraseStep((prev) => Math.min(prev + 1, order.length - 1));
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [loading]);
+
+  /** After send: keep latest user bubble + loading row in view. */
+  useEffect(() => {
+    if (!loading) return;
+    const scrollToBottom = () => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    };
+    const raf = requestAnimationFrame(scrollToBottom);
+    const afterInteractions = InteractionManager.runAfterInteractions(scrollToBottom);
+    const t1 = setTimeout(scrollToBottom, 80);
+    const t2 = setTimeout(scrollToBottom, 250);
+    return () => {
+      cancelAnimationFrame(raf);
+      afterInteractions.cancel?.();
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [loading, conversation.length]);
+
+  useEffect(() => {
+    const adjustForKeyboardOpen = (nextKeyboardHeight: number) => {
+      const previousKeyboardHeight = keyboardHeightRef.current;
+      const delta = nextKeyboardHeight - previousKeyboardHeight;
+      keyboardHeightRef.current = nextKeyboardHeight;
+
+      if (delta <= 0) return;
+
+      const currentY = scrollYRef.current;
+      const targetY = currentY + delta;
+      // Project max scroll after keyboard reduces visible viewport height.
+      // This avoids false "can't scroll" at the bottom when keyboard opens.
+      const projectedLayoutHeight = Math.max(0, layoutHeightRef.current - delta);
+      const maxScrollableY = Math.max(0, contentHeightRef.current - projectedLayoutHeight);
+
+      // If preserving exact visual bottom is not possible, do no extra adjustment.
+      if (targetY > maxScrollableY) return;
+
+      requestAnimationFrame(() => {
+        scrollViewRef.current?.scrollTo({ y: targetY, animated: true });
+      });
+    };
+
+    const handleKeyboardHide = () => {
+      keyboardHeightRef.current = 0;
+    };
+
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (event) => {
+      adjustForKeyboardOpen(event.endCoordinates?.height ?? 0);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, handleKeyboardHide);
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const isGeneralChat = book?.id != null && book.id.startsWith('general');
   const canDeleteConversation = Boolean(user?.uid && book?.id && conversation.length > 0);
@@ -143,15 +260,24 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
     setLoading(true);
     setError(null);
     const currentQuestion = userQuestion.trim();
-    if (!isFirstTurn && !isGeneralChat) setUserQuestion('');
+    const baseConversation = conversation;
+    setUserQuestion('');
 
     try {
       if (isGeneralChat) {
-        const { response, newHistory } = await chatGeneralBookChat(currentQuestion, conversation, readBooksTitles);
+        const optimisticUserMessage: ChatMessage = {
+          role: 'user',
+          text: currentQuestion,
+          displayText: currentQuestion,
+        };
+        setConversation([...baseConversation, optimisticUserMessage]);
+
+        const { response, newHistory } = await chatGeneralBookChat(currentQuestion, baseConversation, readBooksTitles);
         const history = Array.isArray(newHistory) ? newHistory : [];
         setConversation(history);
-        setUserQuestion('');
         setFollowUpPresetPill(false);
+        // Clear spinner as soon as the reply is in state; persistence can finish after.
+        setLoading(false);
         if (user) {
           const { incrementAIUsage } = await import('../firebase/aiUsage');
           incrementAIUsage(user.uid, 'chat').catch(() => {});
@@ -166,7 +292,6 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
           }
         }
       } else {
-        if (isFirstTurn) setUserQuestion('');
         const authors = Array.isArray(book.authors) ? book.authors : (book.authors ? [String(book.authors)] : []);
         const modeConfig = MODES.find(m => m.key === mode);
         const isPresetOnly = mode !== 'custom' && currentQuestion.length === 0;
@@ -174,6 +299,14 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
         const displayLabel = mode !== 'custom' && !hasAdditionalInput ? modeConfig?.label : undefined;
         const displayIcon = mode !== 'custom' && !hasAdditionalInput ? modeConfig?.icon : undefined;
         const displayText = hasAdditionalInput ? currentQuestion : undefined;
+        const optimisticUserMessage: ChatMessage = {
+          role: 'user',
+          text: displayText || displayLabel || currentQuestion,
+          ...(displayLabel ? { displayLabel } : {}),
+          ...(displayIcon ? { displayIcon } : {}),
+          ...(displayText ? { displayText } : {}),
+        };
+        setConversation([...baseConversation, optimisticUserMessage]);
 
         const { response, newHistory } = await chatAboutBook(
           { title: book.title, authors },
@@ -187,11 +320,12 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
             displayIcon,
             displayText,
           },
-          conversation
+          baseConversation
         );
         setConversation(newHistory);
-        setUserQuestion('');
         setFollowUpPresetPill(false);
+        // Clear spinner as soon as the reply is in state; persistence can finish after.
+        setLoading(false);
         if (user) {
           const { incrementAIUsage } = await import('../firebase/aiUsage');
           incrementAIUsage(user.uid, 'chat').catch(() => {});
@@ -374,11 +508,27 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
 
   const renderMessages = () => (
     <ScrollView
+      ref={scrollViewRef}
       style={styles.messages}
       contentContainerStyle={styles.messagesContent}
       showsVerticalScrollIndicator={true}
       keyboardShouldPersistTaps="handled"
       onScrollBeginDrag={handleDismissKeyboard}
+      onScroll={(event) => {
+        scrollYRef.current = event.nativeEvent.contentOffset.y;
+      }}
+      onContentSizeChange={(_, height) => {
+        contentHeightRef.current = height;
+        if (loading) {
+          requestAnimationFrame(() => {
+            scrollViewRef.current?.scrollToEnd({ animated: true });
+          });
+        }
+      }}
+      onLayout={(event) => {
+        layoutHeightRef.current = event.nativeEvent.layout.height;
+      }}
+      scrollEventThrottle={16}
     >
       {conversation.length === 0 && (
         <View style={styles.emptyState}>
@@ -458,8 +608,13 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
       })}
       {loading && (
         <View style={styles.loadingRow}>
-          <ActivityIndicator size="small" color={loaderColor} />
-          <Text style={styles.loadingText}>Ajatellaan hetki...</Text>
+          <View style={styles.loadingRowIcons}>
+            <MaterialCommunityIcons name="robot-outline" size={16} color={colors.textSecondary} />
+            <ActivityIndicator size="small" color={loaderColor} />
+          </View>
+          <Text style={styles.loadingText}>
+            {loadingPhraseOrder[loadingPhraseStep] ?? LOADING_MESSAGES[0]}
+          </Text>
         </View>
       )}
       {error && (
@@ -800,13 +955,26 @@ const styles = StyleSheet.create({
   },
   loadingRow: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    width: '100%',
+    maxWidth: '100%',
+    alignSelf: 'stretch',
+  },
+  loadingRowIcons: {
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    paddingTop: 2,
   },
   loadingText: {
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
     fontFamily: typography.fontFamilyBody,
     fontSize: 13,
     color: colors.textSecondary,
+    lineHeight: 18,
   },
   errorBox: {
     flexDirection: 'row',
