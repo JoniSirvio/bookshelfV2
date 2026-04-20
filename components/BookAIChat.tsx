@@ -16,7 +16,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const READ_BOOKS_FALLBACK_TEXT = 'No read books found for this user yet.';
 const READ_BOOKS_PRESET_MODE = 'readBooksList';
-type ChatPresetMode = BookChatMode | typeof READ_BOOKS_PRESET_MODE;
 
 const formatFinishedDate = (dateValue?: string): string | null => {
   if (!dateValue) return null;
@@ -130,11 +129,14 @@ const markdownStylesUser = StyleSheet.create({
   },
 });
 
-const MODES: { key: ChatPresetMode; label: string; icon: string }[] = [
+const BOOK_CHAT_MODES: { key: BookChatMode; label: string; icon: string }[] = [
   { key: 'description', label: 'Kuvaus', icon: 'text-box-outline' },
   { key: 'goodfit', label: 'Sopiiko minulle?', icon: 'account-check-outline' },
-  { key: READ_BOOKS_PRESET_MODE, label: 'Read Books List', icon: 'bookshelf' },
   { key: 'custom', label: 'Oma kysymys', icon: 'message-question-outline' },
+];
+
+const GENERAL_CHAT_PRESETS: { key: typeof READ_BOOKS_PRESET_MODE; label: string; icon: string }[] = [
+  { key: READ_BOOKS_PRESET_MODE, label: 'Lukemani kirjat', icon: 'bookshelf' },
 ];
 
 const LOADING_MESSAGES = [
@@ -182,9 +184,10 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
   const navigation = useNavigation<any>();
   const { user } = useAuth();
   const { readBooks } = useBooksContext();
-  const [mode, setMode] = useState<ChatPresetMode>('custom');
+  const [mode, setMode] = useState<BookChatMode>('custom');
   const [conversation, setConversation] = useState<ChatMessage[]>([]);
   const [userQuestion, setUserQuestion] = useState('');
+  const [generalPreset, setGeneralPreset] = useState<typeof READ_BOOKS_PRESET_MODE | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPresetSheetVisible, setIsPresetSheetVisible] = useState(false);
@@ -288,7 +291,7 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
   const isFirstTurn = conversation.length === 0;
   const canSendFirst = isFirstTurn && (mode !== 'custom' || userQuestion.trim().length > 0);
   const canSendFollowUp = !isFirstTurn && (userQuestion.trim().length > 0 || mode !== 'custom');
-  const canSendGeneral = userQuestion.trim().length > 0;
+  const canSendGeneral = userQuestion.trim().length > 0 || generalPreset !== null;
   const canSend = isGeneralChat ? canSendGeneral : (canSendFirst || canSendFollowUp);
 
   const handleAsk = async () => {
@@ -297,18 +300,37 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
     setError(null);
     const currentQuestion = userQuestion.trim();
     const baseConversation = conversation;
+    const selectedGeneralPreset = generalPreset;
     setUserQuestion('');
+    if (isGeneralChat) {
+      setGeneralPreset(null);
+    }
 
     try {
       if (isGeneralChat) {
+        const hasGeneralPreset = selectedGeneralPreset === READ_BOOKS_PRESET_MODE;
+        const generalPresetConfig = hasGeneralPreset ? GENERAL_CHAT_PRESETS[0] : undefined;
+        const formattedReadBooks = hasGeneralPreset ? formatReadBooksListPreset(readBooks) : '';
+        const generalMessage = hasGeneralPreset
+          ? (currentQuestion.length > 0 ? `${formattedReadBooks}\n\n${currentQuestion}` : formattedReadBooks)
+          : currentQuestion;
+        const displayLabel = hasGeneralPreset ? generalPresetConfig?.label : undefined;
+        const displayIcon = hasGeneralPreset ? generalPresetConfig?.icon : undefined;
+        const displayText = currentQuestion.length > 0 ? currentQuestion : undefined;
         const optimisticUserMessage: ChatMessage = {
           role: 'user',
-          text: currentQuestion,
-          displayText: currentQuestion,
+          text: generalMessage,
+          ...(displayLabel ? { displayLabel } : {}),
+          ...(displayIcon ? { displayIcon } : {}),
+          ...(displayText ? { displayText } : {}),
         };
         setConversation([...baseConversation, optimisticUserMessage]);
 
-        const { response, newHistory } = await chatGeneralBookChat(currentQuestion, baseConversation, readBooksTitles);
+        const { response, newHistory } = await chatGeneralBookChat(generalMessage, baseConversation, readBooksTitles, {
+          displayLabel,
+          displayIcon,
+          displayText,
+        });
         const history = Array.isArray(newHistory) ? newHistory : [];
         setConversation(history);
         setFollowUpPresetPill(false);
@@ -329,12 +351,11 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
         }
       } else {
         const authors = Array.isArray(book.authors) ? book.authors : (book.authors ? [String(book.authors)] : []);
-        const modeConfig = MODES.find(m => m.key === mode);
-        const modeForAsk: BookChatMode = mode === READ_BOOKS_PRESET_MODE ? 'custom' : mode;
-        const isPresetOnly = modeForAsk !== 'custom' && currentQuestion.length === 0;
+        const modeConfig = BOOK_CHAT_MODES.find(m => m.key === mode);
+        const isPresetOnly = mode !== 'custom' && currentQuestion.length === 0;
         const hasAdditionalInput = currentQuestion.length > 0;
-        const displayLabel = modeForAsk !== 'custom' && !hasAdditionalInput ? modeConfig?.label : undefined;
-        const displayIcon = modeForAsk !== 'custom' && !hasAdditionalInput ? modeConfig?.icon : undefined;
+        const displayLabel = mode !== 'custom' && !hasAdditionalInput ? modeConfig?.label : undefined;
+        const displayIcon = mode !== 'custom' && !hasAdditionalInput ? modeConfig?.icon : undefined;
         const displayText = hasAdditionalInput ? currentQuestion : undefined;
         const optimisticUserMessage: ChatMessage = {
           role: 'user',
@@ -348,10 +369,10 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
         const { response, newHistory } = await chatAboutBook(
           { title: book.title, authors },
           {
-            mode: modeForAsk,
-            readBooksTitles: modeForAsk === 'goodfit' ? readBooksTitles : undefined,
+            mode,
+            readBooksTitles: mode === 'goodfit' ? readBooksTitles : undefined,
             userMessage: isFirstTurn
-              ? (modeForAsk === 'custom' ? currentQuestion : undefined)
+              ? (mode === 'custom' ? currentQuestion : undefined)
               : (isPresetOnly ? undefined : currentQuestion),
             displayLabel,
             displayIcon,
@@ -409,17 +430,15 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
 
   const isFirstTurnLocal = conversation.length === 0;
   const showFullModes = !isGeneralChat && isFirstTurnLocal;
-  const showPresetPlus = !isGeneralChat;
-  const activeModeConfig = MODES.find((m) => m.key === mode);
+  const showPresetPlus = true;
+  const activeModeConfig = BOOK_CHAT_MODES.find((m) => m.key === mode);
+  const activeGeneralPresetConfig = GENERAL_CHAT_PRESETS.find((m) => m.key === generalPreset);
+  const showGeneralPresetPill = isGeneralChat && generalPreset !== null;
   const showPresetPill =
     showPresetPlus &&
     mode !== 'custom' &&
     (isFirstTurnLocal || followUpPresetPill);
-  const inputPlaceholder = isGeneralChat
-    ? 'Kysy suosituksia tai kirjakysymyksiä...'
-    : (isFirstTurnLocal
-      ? (mode === 'custom' ? 'Kirjoita kysymyksesi kirjasta...' : 'Voit kirjoittaa lisäkysymyksen (valinnainen)')
-      : 'Kysy AI:lta');
+  const inputPlaceholder = 'Kysy AI:lta';
 
   const renderHeader = () => (
     <View style={styles.header}>
@@ -467,7 +486,7 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
   const renderModes = () => (
     showFullModes && (
       <View style={styles.modeTabs}>
-        {MODES.map((m) => {
+        {BOOK_CHAT_MODES.map((m) => {
           const isActive = mode === m.key;
           return (
             <TouchableOpacity
@@ -491,16 +510,8 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
     )
   );
 
-  const handleSelectPresetMode = (selectedMode: ChatPresetMode) => {
+  const handleSelectPresetMode = (selectedMode: BookChatMode) => {
     setIsPresetSheetVisible(false);
-    if (selectedMode === READ_BOOKS_PRESET_MODE) {
-      setMode(READ_BOOKS_PRESET_MODE);
-      setUserQuestion(formatReadBooksListPreset(readBooks));
-      if (!isFirstTurnLocal) {
-        setFollowUpPresetPill(true);
-      }
-      return;
-    }
     setMode(selectedMode);
     setUserQuestion('');
     if (!isFirstTurnLocal) {
@@ -508,9 +519,20 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
     }
   };
 
+  const handleSelectGeneralPreset = (selectedPreset: typeof READ_BOOKS_PRESET_MODE) => {
+    setIsPresetSheetVisible(false);
+    if (selectedPreset === READ_BOOKS_PRESET_MODE) {
+      setGeneralPreset(READ_BOOKS_PRESET_MODE);
+    }
+  };
+
   const handleClearPresetPill = () => {
     setMode('custom');
     setFollowUpPresetPill(false);
+  };
+
+  const handleClearGeneralPresetPill = () => {
+    setGeneralPreset(null);
   };
 
   const handleDismissKeyboard = () => {
@@ -529,11 +551,15 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
           accessibilityLabel="Sulje valmiiden kysymysten valikko"
         />
         <View style={styles.presetMenu}>
-          {MODES.map((m) => (
+          {(isGeneralChat ? GENERAL_CHAT_PRESETS : BOOK_CHAT_MODES).map((m) => (
             <TouchableOpacity
               key={m.key}
               style={styles.presetMenuItem}
-              onPress={() => handleSelectPresetMode(m.key)}
+              onPress={() => (
+                isGeneralChat
+                  ? handleSelectGeneralPreset(m.key)
+                  : handleSelectPresetMode(m.key)
+              )}
               accessibilityRole="button"
               accessibilityLabel={m.label}
             >
@@ -726,14 +752,45 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
             </TouchableOpacity>
           )}
           {isGeneralChat ? (
-            <TextInput
-              style={styles.input}
-              value={userQuestion}
-              onChangeText={setUserQuestion}
-              placeholder={inputPlaceholder}
-              placeholderTextColor={colors.placeholder}
-              multiline
-            />
+            <View style={styles.inputComposerShell} accessibilityLabel="Viestikenttä">
+              <View style={styles.inputComposerRow}>
+                {showGeneralPresetPill && activeGeneralPresetConfig && (
+                  <View
+                    style={styles.presetPill}
+                    accessible
+                    accessibilityLabel={`Valmis kysymys: ${activeGeneralPresetConfig.label}`}
+                  >
+                    <MaterialCommunityIcons
+                      name={activeGeneralPresetConfig.icon as any}
+                      size={17}
+                      color={colors.primary}
+                      style={styles.presetPillLeadingIcon}
+                    />
+                    <Text style={styles.presetPillLabel} numberOfLines={1}>
+                      {activeGeneralPresetConfig.label}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={handleClearGeneralPresetPill}
+                      style={styles.presetPillClear}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      accessibilityRole="button"
+                      accessibilityLabel="Poista valmis kysymys"
+                    >
+                      <MaterialCommunityIcons name="close-circle" size={22} color={colors.primary} />
+                    </TouchableOpacity>
+                  </View>
+                )}
+                <TextInput
+                  style={[styles.inputInner, showGeneralPresetPill && styles.inputInnerBelowPill]}
+                  value={userQuestion}
+                  onChangeText={setUserQuestion}
+                  placeholder={inputPlaceholder}
+                  placeholderTextColor={colors.placeholder}
+                  multiline
+                  underlineColorAndroid="transparent"
+                />
+              </View>
+            </View>
           ) : (
             <View style={styles.inputComposerShell} accessibilityLabel="Viestikenttä">
               <View style={styles.inputComposerRow}>
@@ -1064,21 +1121,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.primary,
-  },
-  input: {
-    flex: 1,
-    minHeight: 44,
-    maxHeight: 100,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontFamily: typography.fontFamilyBody,
-    fontSize: 15,
-    lineHeight: 20,
-    color: colors.textPrimary,
-    backgroundColor: colors.surface,
   },
   inputComposerShell: {
     flex: 1,

@@ -248,7 +248,12 @@ export const chatAboutBook = async (
 export const chatGeneralBookChat = async (
     userMessage: string,
     conversationHistory: ChatMessage[] = [],
-    readBooksTitles?: string[]
+    readBooksTitles?: string[],
+    displayOptions?: {
+        displayLabel?: string;
+        displayIcon?: string;
+        displayText?: string;
+    }
 ): Promise<{ response: string; newHistory: ChatMessage[] }> => {
     if (!API_KEY) {
         throw new Error("API-avain puuttuu. Aseta EXPO_PUBLIC_GEMINI_API_KEY.");
@@ -299,7 +304,11 @@ export const chatGeneralBookChat = async (
             const userMsg: ChatMessage = {
                 role: 'user',
                 text: promptToSend,
-                displayText: msg,
+                ...(displayOptions?.displayLabel != null && { displayLabel: displayOptions.displayLabel }),
+                ...(displayOptions?.displayIcon != null && { displayIcon: displayOptions.displayIcon }),
+                ...(displayOptions?.displayText != null
+                    ? { displayText: displayOptions.displayText }
+                    : { displayText: msg }),
             };
             const newHistory: ChatMessage[] = [
                 ...history,
