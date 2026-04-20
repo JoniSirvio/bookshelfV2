@@ -14,6 +14,41 @@ import { colors, loaderColor, typography, touchTargetMin } from '../theme';
 import { deleteAIChat } from '../firebase/aiChats';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+const READ_BOOKS_FALLBACK_TEXT = 'No read books found for this user yet.';
+const READ_BOOKS_PRESET_MODE = 'readBooksList';
+type ChatPresetMode = BookChatMode | typeof READ_BOOKS_PRESET_MODE;
+
+const formatFinishedDate = (dateValue?: string): string | null => {
+  if (!dateValue) return null;
+  const dateOnly = dateValue.split('T')[0]?.trim();
+  return dateOnly || null;
+};
+
+const formatReadBooksListPreset = (readBooks: FinnaSearchResult[]): string => {
+  if (readBooks.length === 0) return READ_BOOKS_FALLBACK_TEXT;
+
+  return readBooks.map((book) => {
+    const segments: string[] = [];
+    const title = book.title?.trim() || 'Untitled';
+    const authors = Array.isArray(book.authors)
+      ? book.authors.map(author => author.trim()).filter(Boolean).join(', ')
+      : '';
+
+    segments.push(authors ? `${title} — ${authors}` : title);
+
+    if (typeof book.rating === 'number') {
+      segments.push(`Rating: ${book.rating}`);
+    }
+
+    const finishedDate = formatFinishedDate(book.finishedReading);
+    if (finishedDate) {
+      segments.push(`Finished: ${finishedDate}`);
+    }
+
+    return segments.join(' | ');
+  }).join('\n');
+};
+
 const markdownStyles = StyleSheet.create({
   body: {
     fontFamily: typography.fontFamilyBody,
@@ -95,9 +130,10 @@ const markdownStylesUser = StyleSheet.create({
   },
 });
 
-const MODES: { key: BookChatMode; label: string; icon: string }[] = [
+const MODES: { key: ChatPresetMode; label: string; icon: string }[] = [
   { key: 'description', label: 'Kuvaus', icon: 'text-box-outline' },
   { key: 'goodfit', label: 'Sopiiko minulle?', icon: 'account-check-outline' },
+  { key: READ_BOOKS_PRESET_MODE, label: 'Read Books List', icon: 'bookshelf' },
   { key: 'custom', label: 'Oma kysymys', icon: 'message-question-outline' },
 ];
 
@@ -146,7 +182,7 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
   const navigation = useNavigation<any>();
   const { user } = useAuth();
   const { readBooks } = useBooksContext();
-  const [mode, setMode] = useState<BookChatMode>('custom');
+  const [mode, setMode] = useState<ChatPresetMode>('custom');
   const [conversation, setConversation] = useState<ChatMessage[]>([]);
   const [userQuestion, setUserQuestion] = useState('');
   const [loading, setLoading] = useState(false);
@@ -294,10 +330,11 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
       } else {
         const authors = Array.isArray(book.authors) ? book.authors : (book.authors ? [String(book.authors)] : []);
         const modeConfig = MODES.find(m => m.key === mode);
-        const isPresetOnly = mode !== 'custom' && currentQuestion.length === 0;
+        const modeForAsk: BookChatMode = mode === READ_BOOKS_PRESET_MODE ? 'custom' : mode;
+        const isPresetOnly = modeForAsk !== 'custom' && currentQuestion.length === 0;
         const hasAdditionalInput = currentQuestion.length > 0;
-        const displayLabel = mode !== 'custom' && !hasAdditionalInput ? modeConfig?.label : undefined;
-        const displayIcon = mode !== 'custom' && !hasAdditionalInput ? modeConfig?.icon : undefined;
+        const displayLabel = modeForAsk !== 'custom' && !hasAdditionalInput ? modeConfig?.label : undefined;
+        const displayIcon = modeForAsk !== 'custom' && !hasAdditionalInput ? modeConfig?.icon : undefined;
         const displayText = hasAdditionalInput ? currentQuestion : undefined;
         const optimisticUserMessage: ChatMessage = {
           role: 'user',
@@ -311,10 +348,10 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
         const { response, newHistory } = await chatAboutBook(
           { title: book.title, authors },
           {
-            mode,
-            readBooksTitles: mode === 'goodfit' ? readBooksTitles : undefined,
+            mode: modeForAsk,
+            readBooksTitles: modeForAsk === 'goodfit' ? readBooksTitles : undefined,
             userMessage: isFirstTurn
-              ? (mode === 'custom' ? currentQuestion : undefined)
+              ? (modeForAsk === 'custom' ? currentQuestion : undefined)
               : (isPresetOnly ? undefined : currentQuestion),
             displayLabel,
             displayIcon,
@@ -454,8 +491,16 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
     )
   );
 
-  const handleSelectPresetMode = (selectedMode: BookChatMode) => {
+  const handleSelectPresetMode = (selectedMode: ChatPresetMode) => {
     setIsPresetSheetVisible(false);
+    if (selectedMode === READ_BOOKS_PRESET_MODE) {
+      setMode(READ_BOOKS_PRESET_MODE);
+      setUserQuestion(formatReadBooksListPreset(readBooks));
+      if (!isFirstTurnLocal) {
+        setFollowUpPresetPill(true);
+      }
+      return;
+    }
     setMode(selectedMode);
     setUserQuestion('');
     if (!isFirstTurnLocal) {
@@ -818,7 +863,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 8,
+    paddingBottom: 20,
   },
   header: {
     flexDirection: 'row',
@@ -1022,27 +1067,29 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    minHeight: 40,
+    minHeight: 44,
     maxHeight: 100,
-    borderRadius: 8,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     fontFamily: typography.fontFamilyBody,
+    fontSize: 15,
+    lineHeight: 20,
     color: colors.textPrimary,
     backgroundColor: colors.surface,
   },
   inputComposerShell: {
     flex: 1,
     minWidth: 0,
-    minHeight: 40,
-    borderRadius: 14,
+    minHeight: 44,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
-    paddingHorizontal: 10,
-    paddingVertical: 0,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
     justifyContent: 'center',
   },
   inputComposerRow: {
@@ -1090,12 +1137,13 @@ const styles = StyleSheet.create({
     flex: 1,
     flexGrow: 1,
     minWidth: 120,
-    minHeight: 24,
+    minHeight: 32,
     maxHeight: 100,
-    paddingVertical: 0,
-    paddingHorizontal: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
     fontFamily: typography.fontFamilyBody,
     fontSize: 15,
+    lineHeight: 20,
     color: colors.textPrimary,
     backgroundColor: 'transparent',
   },
