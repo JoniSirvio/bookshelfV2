@@ -23,6 +23,47 @@ const formatFinishedDate = (dateValue?: string): string | null => {
   return dateOnly || null;
 };
 
+const formatDaysLabel = (days: number): string => {
+  if (!Number.isFinite(days) || days <= 0) return '';
+  const roundedDays = Math.max(1, Math.round(days));
+  return `${roundedDays} day${roundedDays === 1 ? '' : 's'}`;
+};
+
+const formatListeningDurationLabel = (seconds?: number): string => {
+  if (!seconds || seconds <= 0) return '';
+  const totalMinutes = Math.max(1, Math.round(seconds / 60));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours === 0) return `${minutes} min`;
+  if (minutes === 0) return `${hours} h`;
+  return `${hours} h ${minutes} min`;
+};
+
+const formatReadOrListenedLabel = (book: FinnaSearchResult): string => {
+  const raw = String(book.readOrListened || '').toLowerCase();
+  if (raw === 'listened') return 'listened';
+  if (raw === 'read') return 'read';
+  if (book.absProgress?.duration && book.absProgress.duration > 0) return 'listened';
+  return 'read';
+};
+
+const formatTimeSpentLabel = (book: FinnaSearchResult): string => {
+  const explicitDays = formatDaysLabel(book.daysRead ?? 0);
+  if (explicitDays) return explicitDays;
+
+  if (book.startedReading && book.finishedReading) {
+    const start = new Date(book.startedReading).getTime();
+    const end = new Date(book.finishedReading).getTime();
+    if (Number.isFinite(start) && Number.isFinite(end) && end >= start) {
+      const days = (end - start) / (1000 * 60 * 60 * 24);
+      const fromDates = formatDaysLabel(days);
+      if (fromDates) return fromDates;
+    }
+  }
+
+  return formatListeningDurationLabel(book.absProgress?.duration);
+};
+
 const formatReadBooksListPreset = (readBooks: FinnaSearchResult[]): string => {
   if (readBooks.length === 0) return READ_BOOKS_FALLBACK_TEXT;
 
@@ -37,6 +78,16 @@ const formatReadBooksListPreset = (readBooks: FinnaSearchResult[]): string => {
 
     if (typeof book.rating === 'number') {
       segments.push(`Rating: ${book.rating}`);
+    }
+
+    const readOrListened = formatReadOrListenedLabel(book);
+    if (readOrListened) {
+      segments.push(`Mode: ${readOrListened}`);
+    }
+
+    const timeSpent = formatTimeSpentLabel(book);
+    if (timeSpent) {
+      segments.push(`Time spent: ${timeSpent}`);
     }
 
     const finishedDate = formatFinishedDate(book.finishedReading);
