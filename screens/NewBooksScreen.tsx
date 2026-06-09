@@ -14,6 +14,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import SearchBar from '../components/SearchBar';
 import ReviewModal from '../components/ReviewModal';
 import { fetchNewBooksWithSideEffects } from '../utils/absNewBooksQuery';
+import { absLibrariesKey, absNewBooksKey, hasNewBooksKey } from '../utils/absQueryKeys';
 import { setLastSeenNewBooksTime } from '../utils/notificationsStore';
 import { BookGridItem } from '../components/BookGridItem';
 import { useViewMode } from '../hooks/useViewMode';
@@ -49,7 +50,7 @@ export default function NewBooksScreen() {
 
     // 1. Fetch Libraries
     const { data: libraries } = useQuery({
-        queryKey: ['absLibraries', url],
+        queryKey: absLibrariesKey(url),
         queryFn: () => fetchABSLibraries(url!, token!),
         enabled: !!url && !!token,
         staleTime: 1000 * 60 * 60,
@@ -73,7 +74,7 @@ export default function NewBooksScreen() {
     // 2. Fetch "new" items from ALL libraries via TanStack Query (cached + persisted locally)
     const libraryIdsKey = libraries?.map(l => l.id).sort().join(',') ?? '';
     const { data: newBooksData, isLoading: loadingItems } = useQuery({
-        queryKey: ['absNewBooks', url, libraryIdsKey],
+        queryKey: absNewBooksKey(url, libraryIdsKey),
         queryFn: () => fetchNewBooksWithSideEffects(url!, token!, libraries!),
         enabled: !!url && !!token && !!libraries?.length,
         staleTime: 1000 * 60 * 10, // 10 min cache; persisted via PersistQueryClientProvider
@@ -83,9 +84,9 @@ export default function NewBooksScreen() {
     useFocusEffect(
         useCallback(() => {
             setLastSeenNewBooksTime(Date.now()).then(() => {
-                queryClient.invalidateQueries({ queryKey: ['hasNewBooks'] });
+                queryClient.invalidateQueries({ queryKey: hasNewBooksKey(url) });
                 // Refetch so cache is updated immediately; bell may be unmounted (different stack) so invalidate alone doesn't refetch
-                queryClient.refetchQueries({ queryKey: ['hasNewBooks'] });
+                queryClient.refetchQueries({ queryKey: hasNewBooksKey(url) });
             });
         }, [queryClient])
     );

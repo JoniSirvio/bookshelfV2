@@ -8,14 +8,22 @@ import ABSLibraryScreen from '../screens/ABSLibraryScreen';
 
 const Tab = createBottomTabNavigator();
 
-import { TouchableOpacity, View, StyleSheet, Modal, TouchableWithoutFeedback } from 'react-native';
-import { useState, useEffect } from 'react';
+import { TouchableOpacity, View, StyleSheet, Modal, TouchableWithoutFeedback, InteractionManager } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getLastSeenNewBooksTime } from '../utils/notificationsStore';
 import { useABSCredentials } from '../hooks/useABSCredentials';
-import { fetchABSLibraries, fetchABSLibraryItems } from '../api/abs';
+import { fetchABSLibraries, fetchABSLibraryItemsAddedSince } from '../api/abs';
 import { fetchNewBooksWithSideEffects } from '../utils/absNewBooksQuery';
+import { prefetchABSLibraries } from '../utils/absLibraryPrefetch';
+import {
+  ABS_LAST_LIBRARY_ID_KEY,
+  absLibrariesKey,
+  absNewBooksKey,
+  hasNewBooksKey,
+} from '../utils/absQueryKeys';
 import { MiniPlayer } from './MiniPlayer';
 import { colors, headerStyle, touchTargetMin, typography } from '../theme';
 
@@ -41,7 +49,7 @@ export const NotificationBell = () => {
 
   // Fetch new books count
   const { data: newBooksData } = useQuery({
-    queryKey: ['hasNewBooks', url],
+    queryKey: hasNewBooksKey(url),
     queryFn: async () => {
       if (!url || !token) return { hasNew: false, count: 0 };
       try {
@@ -50,12 +58,8 @@ export const NotificationBell = () => {
         let count = 0;
 
         for (const lib of libs) {
-          const items = await fetchABSLibraryItems(url, token, lib.id);
-          for (const item of items) {
-            if (item.addedAt && item.addedAt > lastSeen) {
-              count++;
-            }
-          }
+          const items = await fetchABSLibraryItemsAddedSince(url, token, lib.id, lastSeen);
+          count += items.length;
         }
         return { hasNew: count > 0, count };
       } catch (e) {
@@ -192,7 +196,7 @@ function NewBooksPrefetcher() {
   const { url, token } = useABSCredentials();
   const queryClient = useQueryClient();
   const { data: libraries } = useQuery({
-    queryKey: ['absLibraries', url],
+    queryKey: absLibrariesKey(url),
     queryFn: () => fetchABSLibraries(url!, token!),
     enabled: !!url && !!token,
     staleTime: 1000 * 60 * 60,
@@ -202,7 +206,7 @@ function NewBooksPrefetcher() {
   useEffect(() => {
     if (!url || !token || !libraries?.length) return;
     queryClient.prefetchQuery({
-      queryKey: ['absNewBooks', url, libraryIdsKey],
+      queryKey: absNewBooksKey(url, libraryIdsKey),
       queryFn: () => fetchNewBooksWithSideEffects(url, token, libraries, { updateLastSeen: false }),
       staleTime: 1000 * 60 * 10,
     });
@@ -211,10 +215,67 @@ function NewBooksPrefetcher() {
   return null;
 }
 
+const LIBRARY_PREFETCH_DELAY_MS = 2000;
+
+/** Prefetches full ABS libraries in the background after light startup traffic settles. */
+function ABSLibraryPrefetcher() {
+  const { url, token } = useABSCredentials();
+  const queryClient = useQueryClient();
+  const { data: libraries } = useQuery({
+    queryKey: absLibrariesKey(url),
+    queryFn: () => fetchABSLibraries(url!, token!),
+    enabled: !!url && !!token,
+    staleTime: 1000 * 60 * 60,
+  });
+
+  useEffect(() => {
+    if (!url || !token || !libraries?.length) return;
+
+    let cancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+    const interactionTask = InteractionManager.runAfterInteractions(() => {
+      timeoutId = setTimeout(async () => {
+        if (cancelled) return;
+        const preferredLibraryId = await AsyncStorage.getItem(ABS_LAST_LIBRARY_ID_KEY);
+        await prefetchABSLibraries(queryClient, url, token, libraries, { preferredLibraryId });
+      }, LIBRARY_PREFETCH_DELAY_MS);
+    });
+
+    return () => {
+      cancelled = true;
+      interactionTask.cancel();
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [url, token, libraries, queryClient]);
+
+  return null;
+}
+
 export default function MyTabs() {
+  const { url, token } = useABSCredentials();
+  const queryClient = useQueryClient();
+  const { data: libraries } = useQuery({
+    queryKey: absLibrariesKey(url),
+    queryFn: () => fetchABSLibraries(url!, token!),
+    enabled: !!url && !!token,
+    staleTime: 1000 * 60 * 60,
+  });
+
+  const handleKirjatTabPress = useCallback(async () => {
+    if (!url || !token || !libraries?.length) return;
+    const preferredLibraryId = await AsyncStorage.getItem(ABS_LAST_LIBRARY_ID_KEY);
+    const targetId = preferredLibraryId ?? libraries[0].id;
+    void prefetchABSLibraries(queryClient, url, token, libraries, {
+      preferredLibraryId: targetId,
+      libraryIds: [targetId],
+    });
+  }, [url, token, libraries, queryClient]);
+
   return (
     <>
       <NewBooksPrefetcher />
+      <ABSLibraryPrefetcher />
       <Tab.Navigator
         screenOptions={{
           headerShown: true,
@@ -247,6 +308,11 @@ export default function MyTabs() {
         <Tab.Screen
           name="Kirjasto"
           component={ABSLibraryScreen}
+          listeners={{
+            tabPress: () => {
+              void handleKirjatTabPress();
+            },
+          }}
           options={{
             tabBarLabel: 'Kirjat',
             tabBarAccessibilityLabel: 'Kirjat, äänikirjasto',
