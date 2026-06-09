@@ -28,6 +28,8 @@ import ReviewModal from '../components/ReviewModal';
 
 import BookOptionsModal from '../components/BookOptionsModal';
 import { FilterSortModal, SortOption, SortDirection, StatusFilter } from '../components/FilterSortModal';
+import { ABS_LAST_LIBRARY_ID_KEY, absItemsKey, absLibrariesKey } from '../utils/absQueryKeys';
+import { ABS_ITEMS_STALE_TIME } from '../utils/absLibraryPrefetch';
 
 const HAS_SEEN_KIRJAT_HINT_KEY = 'hasSeenKirjatHint';
 
@@ -66,18 +68,29 @@ export default function ABSLibraryScreen() {
 
     // 1. Fetch Libraries
     const { data: libraries, isLoading: librariesLoading } = useQuery({
-        queryKey: ['absLibraries', url],
+        queryKey: absLibrariesKey(url),
         queryFn: () => fetchABSLibraries(url!, token!),
         enabled: !!url && !!token,
         staleTime: 1000 * 60 * 60, // Libraries don't change often
     });
 
-    // Auto-select first library
+    const handleLibrarySelect = useCallback((libraryId: string) => {
+        setSelectedLibraryId(libraryId);
+        AsyncStorage.setItem(ABS_LAST_LIBRARY_ID_KEY, libraryId);
+    }, []);
+
+    // Auto-select last-used library, or first library on first visit
     useEffect(() => {
-        if (libraries && libraries.length > 0 && !selectedLibraryId) {
-            setSelectedLibraryId(libraries[0].id);
-        }
-    }, [libraries]);
+        if (!libraries?.length || selectedLibraryId) return;
+
+        AsyncStorage.getItem(ABS_LAST_LIBRARY_ID_KEY).then((saved) => {
+            if (saved && libraries.some((lib) => lib.id === saved)) {
+                setSelectedLibraryId(saved);
+            } else {
+                setSelectedLibraryId(libraries[0].id);
+            }
+        });
+    }, [libraries, selectedLibraryId]);
 
     // First-time hint: "Kirjat = oma kirjasto + haku"
     useEffect(() => {
@@ -90,12 +103,15 @@ export default function ABSLibraryScreen() {
         AsyncStorage.setItem(HAS_SEEN_KIRJAT_HINT_KEY, '1');
     }, []);
 
-    // 2. Fetch Items for selected library
-    const { data: items, isLoading: itemsLoading, refetch } = useQuery({
-        queryKey: ['absItems', selectedLibraryId, 'unlimited'],
-        queryFn: () => fetchABSLibraryItems(url!, token!, selectedLibraryId!),
+    // 2. Fetch Items for selected library (no keepPreviousData — avoids showing audiobooks on eBooks tab while switching)
+    const { data: items, isLoading: itemsLoading, isFetching, refetch } = useQuery({
+        queryKey: absItemsKey(url, selectedLibraryId),
+        queryFn: ({ queryKey }) => {
+            const libraryId = queryKey[2] as string;
+            return fetchABSLibraryItems(url!, token!, libraryId);
+        },
         enabled: !!url && !!token && !!selectedLibraryId,
-        staleTime: 1000 * 60 * 10, // Keep data fresh for 10 minutes
+        staleTime: ABS_ITEMS_STALE_TIME,
     });
 
     const handleRefresh = async () => {
@@ -414,7 +430,7 @@ export default function ABSLibraryScreen() {
                                 <TouchableOpacity
                                     key={lib.id}
                                     style={[styles.tab, selectedLibraryId === lib.id && styles.activeTab]}
-                                    onPress={() => setSelectedLibraryId(lib.id)}
+                                    onPress={() => handleLibrarySelect(lib.id)}
                                 >
                                     <Text style={[styles.tabText, selectedLibraryId === lib.id && styles.activeTabText]}>
                                         {(lib.mediaType === 'audiobook' || lib.name.toLowerCase().includes('audio')) ? 'Äänikirjat' : (lib.mediaType === 'book' ? 'E-kirjat' : lib.name)}
@@ -459,18 +475,20 @@ export default function ABSLibraryScreen() {
                 ) : (
                     viewMode === 'grid' ? (
                         <FlashList
+                            key={selectedLibraryId ?? 'library'}
                             data={bookListItems}
                             renderItem={renderGridItem}
                             estimatedItemSize={200}
                             numColumns={COLUMN_COUNT}
                             contentContainerStyle={styles.listContent}
                             onRefresh={handleRefresh}
-                            refreshing={itemsLoading}
+                            refreshing={isFetching && !!items}
                             ListHeaderComponent={<SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Hae kirjaa tai kirjailijaa..." />}
                             keyboardShouldPersistTaps="handled"
                         />
                     ) : (
                         <BookList
+                            key={selectedLibraryId ?? 'library'}
                             books={bookListItems as any}
                             mode="search"
                             toReadIds={toReadIds}

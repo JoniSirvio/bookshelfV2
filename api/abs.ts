@@ -1,4 +1,8 @@
 import axios from 'axios';
+import { withAbsRetry } from '../utils/absRequest';
+
+const LIBRARY_PAGE_SIZE = 200;
+const NEW_BOOKS_PAGE_SIZE = 100;
 
 export interface ABSLibrary {
     id: string;
@@ -65,29 +69,94 @@ export const fetchABSLibraries = async (baseUrl: string, token: string): Promise
     if (!baseUrl || !token) throw new Error("Missing credentials");
     // Ensure baseUrl doesn't have trailing slash
     const cleanUrl = baseUrl.replace(/\/$/, "");
-    const response = await axios.get(`${cleanUrl}/api/libraries`, {
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-    });
+    const response = await withAbsRetry(() =>
+        axios.get(`${cleanUrl}/api/libraries`, {
+            headers: { Authorization: `Bearer ${token}` },
+        })
+    );
     return response.data.libraries;
 };
 
-export const fetchABSLibraryItems = async (baseUrl: string, token: string, libraryId: string): Promise<ABSItem[]> => {
-    if (!baseUrl || !token) throw new Error("Missing credentials");
+async function fetchABSLibraryItemsPage(
+    baseUrl: string,
+    token: string,
+    libraryId: string,
+    page: number,
+    pageSize: number
+): Promise<ABSItem[]> {
     const cleanUrl = baseUrl.replace(/\/$/, "");
     const cleanLibId = libraryId.replace(/^abs-/, "");
-    // Fetch Items from library
-    const response = await axios.get(`${cleanUrl}/api/libraries/${cleanLibId}/items`, {
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-        params: {
-            limit: 100000, // Fetch effectively all items (user requested to remove 1000 limit)
-            sort: 'addedAt:desc'
+    const response = await withAbsRetry(() =>
+        axios.get(`${cleanUrl}/api/libraries/${cleanLibId}/items`, {
+            headers: { Authorization: `Bearer ${token}` },
+            params: {
+                limit: pageSize,
+                page,
+                sort: 'addedAt:desc',
+                minified: 1,
+            },
+        })
+    );
+    return response.data.results ?? [];
+}
+
+export const fetchABSLibraryItems = async (baseUrl: string, token: string, libraryId: string): Promise<ABSItem[]> => {
+    if (!baseUrl || !token) throw new Error("Missing credentials");
+
+    const all: ABSItem[] = [];
+    let page = 0;
+
+    while (true) {
+        const results = await fetchABSLibraryItemsPage(baseUrl, token, libraryId, page, LIBRARY_PAGE_SIZE);
+        all.push(...results);
+        if (results.length < LIBRARY_PAGE_SIZE) break;
+        page++;
+    }
+
+    return all;
+};
+
+/** Fetches only items added after `sinceMs`, stopping early when older items are reached. */
+export const fetchABSLibraryItemsAddedSince = async (
+    baseUrl: string,
+    token: string,
+    libraryId: string,
+    sinceMs: number
+): Promise<ABSItem[]> => {
+    if (!baseUrl || !token) throw new Error("Missing credentials");
+
+    const all: ABSItem[] = [];
+    let page = 0;
+
+    while (true) {
+        const results = await fetchABSLibraryItemsPage(baseUrl, token, libraryId, page, NEW_BOOKS_PAGE_SIZE);
+        if (!results.length) break;
+
+        for (const item of results) {
+            if ((item.addedAt || 0) <= sinceMs) return all;
+            all.push(item);
         }
-    });
-    return response.data.results;
+
+        if (results.length < NEW_BOOKS_PAGE_SIZE) break;
+        page++;
+    }
+
+    return all;
+};
+
+export const fetchABSItemsInProgress = async (
+    baseUrl: string,
+    token: string,
+    limit = 100
+): Promise<ABSItem[]> => {
+    const cleanUrl = baseUrl.replace(/\/$/, "");
+    const response = await withAbsRetry(() =>
+        axios.get(`${cleanUrl}/api/me/items-in-progress`, {
+            headers: { Authorization: `Bearer ${token}` },
+            params: { limit },
+        })
+    );
+    return response.data.libraryItems ?? [];
 };
 
 export const getABSCoverUrl = (baseUrl: string, token: string, itemId: string): string => {
@@ -127,9 +196,11 @@ export const loginToABS = async (baseUrl: string, username: string, password: st
 export const fetchABSMe = async (baseUrl: string, token: string): Promise<any> => {
     const cleanUrl = baseUrl.replace(/\/$/, "");
     try {
-        const response = await axios.get(`${cleanUrl}/api/me`, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await withAbsRetry(() =>
+            axios.get(`${cleanUrl}/api/me`, {
+                headers: { Authorization: `Bearer ${token}` },
+            })
+        );
 
         if (response.data.user) {
             return response.data.user;
@@ -149,9 +220,11 @@ export const fetchABSMe = async (baseUrl: string, token: string): Promise<any> =
 export const fetchABSItem = async (baseUrl: string, token: string, itemId: string): Promise<ABSItem> => {
     const cleanUrl = baseUrl.replace(/\/$/, "");
     const cleanId = itemId.replace(/^abs-/, "");
-    const response = await axios.get(`${cleanUrl}/api/items/${cleanId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-    });
+    const response = await withAbsRetry(() =>
+        axios.get(`${cleanUrl}/api/items/${cleanId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+        })
+    );
     return response.data;
 };
 

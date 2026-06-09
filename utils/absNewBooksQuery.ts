@@ -1,6 +1,7 @@
-import { fetchABSLibraryItems, ABSItem, ABSLibrary } from '../api/abs';
+import { fetchABSLibraryItemsAddedSince, ABSItem, ABSLibrary } from '../api/abs';
 import { getLastSeenNewBooksTime, setLastSeenNewBooksTime } from './notificationsStore';
 import { queryClient } from './queryClient';
+import { hasNewBooksKey } from './absQueryKeys';
 
 export interface FetchNewBooksOptions {
     /** When true (default), updates last-seen time and invalidates hasNewBooks. Set false for prefetch so the bell badge is not cleared on app open. */
@@ -23,17 +24,17 @@ export async function fetchNewBooksWithSideEffects(
     let all: ABSItem[] = [];
     for (const lib of libraries) {
         try {
-            const items = await fetchABSLibraryItems(url, token, lib.id);
+            const items = await fetchABSLibraryItemsAddedSince(url, token, lib.id, previousLastSeen);
             all = [...all, ...items.map(i => ({ ...i, libraryId: lib.id }))];
         } catch (libErr) {
             console.error(`Failed to fetch items for lib ${lib.name}`, libErr);
         }
     }
-    const newOnly = all.filter(item => (item.addedAt || 0) > previousLastSeen);
+    const newOnly = all;
     newOnly.sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0));
     if (updateLastSeen) {
         await setLastSeenNewBooksTime(Date.now());
-        queryClient.invalidateQueries({ queryKey: ['hasNewBooks'] });
+        queryClient.invalidateQueries({ queryKey: hasNewBooksKey(url) });
     }
     return newOnly;
 }

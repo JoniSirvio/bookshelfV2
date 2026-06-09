@@ -21,8 +21,7 @@ import {
 import * as SplashScreen from 'expo-splash-screen';
 import { useCallback, useEffect } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
-import { queryClient, clientPersister } from './utils/queryClient';
+import { QueryPersistProvider } from './components/QueryPersistProvider';
 import { headerStyle, headerTintColor, loaderColor, typography } from './theme';
 import { TouchableOpacity } from 'react-native';
 
@@ -130,13 +129,13 @@ export default function App() {
           icon: (props) => <MaterialCommunityIcons {...props} />,
         }}
       >
-        <PersistQueryClientProvider client={queryClient} persistOptions={{ persister: clientPersister }}>
-          <SuccessToastProvider>
-            <AuthProvider>
+        <AuthProvider>
+          <QueryPersistProvider>
+            <SuccessToastProvider>
               <AppContent />
-            </AuthProvider>
-          </SuccessToastProvider>
-        </PersistQueryClientProvider>
+            </SuccessToastProvider>
+          </QueryPersistProvider>
+        </AuthProvider>
       </PaperProvider>
     </GestureHandlerRootView>
   );
