@@ -23,6 +23,9 @@ import { FlashList } from '@shopify/flash-list';
 import BookOptionsModal from '../components/BookOptionsModal';
 import { useNavigation } from '@react-navigation/native';
 import { FilterSortModal, SortOption, SortDirection, StatusFilter } from '../components/FilterSortModal';
+import { useUserTags } from '../hooks/useUserTags';
+import { TagEditorSheet } from '../components/TagEditorSheet';
+import { TagManagementSheet } from '../components/TagManagementSheet';
 import { colors, loaderColor, typography, touchTargetMin } from '../theme';
 
 export default function NewBooksScreen() {
@@ -47,6 +50,21 @@ export default function NewBooksScreen() {
     const [sortOption, setSortOption] = useState<SortOption>('added'); // Default to 'added' for New Books
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+
+    // Tag State
+    const { tags, getTagsForBook, bookMatchesTagFilter } = useUserTags();
+    const [tagFilterIds, setTagFilterIds] = useState<string[]>([]);
+    const [isTagManagementVisible, setIsTagManagementVisible] = useState(false);
+    const [tagSheetVisible, setTagSheetVisible] = useState(false);
+    const [selectedBookForTags, setSelectedBookForTags] = useState<any | null>(null);
+
+    const handleEditTags = (book: any) => {
+        setIsOptionsModalVisible(false);
+        setTimeout(() => {
+            setSelectedBookForTags(book);
+            setTagSheetVisible(true);
+        }, 500);
+    };
 
     // 1. Fetch Libraries
     const { data: libraries } = useQuery({
@@ -141,6 +159,7 @@ export default function NewBooksScreen() {
                 publicationYear={item.publicationYear}
                 format={item.format}
                 absProgress={item.absProgress}
+                tags={getTagsForBook(item.id).map(t => t.name)}
                 onPress={() => handleBookPress(item)}
             />
         </View>
@@ -174,6 +193,9 @@ export default function NewBooksScreen() {
                 if (statusFilter === 'in-progress' && (!progress || isFinished)) return false;
                 if (statusFilter === 'finished' && !isFinished) return false;
             }
+
+            // 4. Tag Filter (OR: any selected tag matches)
+            if (!bookMatchesTagFilter(item.id, tagFilterIds)) return false;
 
             return true;
         });
@@ -213,7 +235,7 @@ export default function NewBooksScreen() {
         });
 
         return result;
-    }, [allItems, selectedType, searchQuery, statusFilter, sortOption, sortDirection, libraryMediaTypeMap]);
+    }, [allItems, selectedType, searchQuery, statusFilter, sortOption, sortDirection, libraryMediaTypeMap, tagFilterIds, bookMatchesTagFilter]);
 
     const filteredItems = processedItems;
 
@@ -378,10 +400,14 @@ export default function NewBooksScreen() {
                 currentSort={sortOption}
                 currentDirection={sortDirection}
                 currentStatus={statusFilter}
-                onApply={(sort, dir, status) => {
+                availableTags={tags}
+                currentTagIds={tagFilterIds}
+                onManageTags={() => setTimeout(() => setIsTagManagementVisible(true), 500)}
+                onApply={(sort, dir, status, tagIds) => {
                     setSortOption(sort);
                     setSortDirection(dir);
                     setStatusFilter(status);
+                    setTagFilterIds(tagIds);
                 }}
             />
 
@@ -400,6 +426,18 @@ export default function NewBooksScreen() {
                 }}
                 onMarkAsRead={handleMarkAsRead}
                 onAskAI={(book) => { setIsOptionsModalVisible(false); navigation.navigate('AskAIBook', { book }); }}
+                onEditTags={handleEditTags}
+            />
+
+            <TagManagementSheet
+                visible={isTagManagementVisible}
+                onClose={() => setIsTagManagementVisible(false)}
+            />
+
+            <TagEditorSheet
+                visible={tagSheetVisible}
+                onClose={() => setTagSheetVisible(false)}
+                book={selectedBookForTags}
             />
 
         </View>

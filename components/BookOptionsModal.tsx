@@ -26,6 +26,7 @@ interface BookOptionsModalProps {
     readIds?: string[];
     onRateAndReview?: (book: FinnaSearchResult) => void;
     onAskAI?: (book: FinnaSearchResult) => void;
+    onEditTags?: (book: FinnaSearchResult) => void;
 }
 
 const BookOptionsModal: React.FC<BookOptionsModalProps> = ({
@@ -42,6 +43,7 @@ const BookOptionsModal: React.FC<BookOptionsModalProps> = ({
     readIds,
     onRateAndReview,
     onAskAI,
+    onEditTags,
 }) => {
     if (!book) return null;
 
@@ -116,16 +118,29 @@ const BookOptionsModal: React.FC<BookOptionsModalProps> = ({
                         </TouchableOpacity>
                     )}
 
+                    {/* Personal tags (all modes) */}
+                    {onEditTags && (
+                        <TouchableOpacity
+                            style={styles.option}
+                            onPress={() => {
+                                onEditTags(book);
+                            }}
+                        >
+                            <MaterialCommunityIcons name="tag-multiple-outline" size={24} color={colors.primary} />
+                            <Text style={styles.optionText}>Tunnisteet</Text>
+                        </TouchableOpacity>
+                    )}
+
                     {/* Start Reading / Listening */}
                     {format === 'audiobook' ? (
                         <TouchableOpacity style={styles.option} onPress={handleListen}>
-                            <MaterialCommunityIcons name="headphones" size={24} color={colors.textPrimary} />
+                            <MaterialCommunityIcons name="headphones" size={24} color={colors.primary} />
                             <Text style={styles.optionText}>Aloita kuuntelu</Text>
                         </TouchableOpacity>
                     ) : (
                         showStartReading && onStartReading && (
                             <TouchableOpacity style={styles.option} onPress={() => { onStartReading(book); onClose(); }}>
-                                <MaterialCommunityIcons name="book-open-page-variant" size={24} color={colors.textPrimary} />
+                                <MaterialCommunityIcons name="book-open-page-variant" size={24} color={colors.primary} />
                                 <Text style={styles.optionText}>Aloita lukeminen</Text>
                             </TouchableOpacity>
                         )

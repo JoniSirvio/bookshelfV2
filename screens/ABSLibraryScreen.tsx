@@ -1,12 +1,15 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Image, Dimensions, KeyboardAvoidingView, Platform, ScrollView, Alert, TextInput as NativeTextInput } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { TextInput, Button } from 'react-native-paper';
 import { useQuery } from '@tanstack/react-query';
+import { useDeferredABSLibraryItems } from '../hooks/useDeferredABSLibraryItems';
+import { ABSLibraryUpdateBanner } from '../components/ABSLibraryUpdateBanner';
+import { getCachedLastLibraryId, loadLastLibraryId, setLastLibraryId } from '../utils/absLastLibraryId';
 import { FlashList } from '@shopify/flash-list';
 import { useABSCredentials } from '../hooks/useABSCredentials';
-import { fetchABSLibraries, fetchABSLibraryItems, getABSCoverUrl, loginToABS, ABSItem, ABSLibrary } from '../api/abs';
+import { fetchABSLibraries, getABSCoverUrl, loginToABS, ABSItem, ABSLibrary } from '../api/abs';
 import { BookList } from '../components/BookList'; // Import BookList
 import { BookGridItem } from '../components/BookGridItem';
 import { useViewMode } from '../hooks/useViewMode';
@@ -28,8 +31,10 @@ import ReviewModal from '../components/ReviewModal';
 
 import BookOptionsModal from '../components/BookOptionsModal';
 import { FilterSortModal, SortOption, SortDirection, StatusFilter } from '../components/FilterSortModal';
-import { ABS_LAST_LIBRARY_ID_KEY, absItemsKey, absLibrariesKey } from '../utils/absQueryKeys';
-import { ABS_ITEMS_STALE_TIME } from '../utils/absLibraryPrefetch';
+import { useUserTags } from '../hooks/useUserTags';
+import { TagEditorSheet } from '../components/TagEditorSheet';
+import { TagManagementSheet } from '../components/TagManagementSheet';
+import { absLibrariesKey } from '../utils/absQueryKeys';
 
 const HAS_SEEN_KIRJAT_HINT_KEY = 'hasSeenKirjatHint';
 
@@ -37,7 +42,7 @@ export default function ABSLibraryScreen() {
     const navigation = useNavigation<any>();
     const { url, token, loading: credsLoading } = useABSCredentials();
     const [showKirjatHint, setShowKirjatHint] = useState<boolean | null>(null);
-    const [selectedLibraryId, setSelectedLibraryId] = useState<string | null>(null);
+    const [selectedLibraryId, setSelectedLibraryId] = useState<string | null>(() => getCachedLastLibraryId());
     const [viewMode, setViewMode] = useViewMode('library_view_mode', 'grid');
     const [searchQuery, setSearchQuery] = useState('');
     const { myBooks, readBooks, addBook, markAsRead } = useBooksContext();
@@ -57,6 +62,21 @@ export default function ABSLibraryScreen() {
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
+    // Tag State
+    const { tags, getTagsForBook, bookMatchesTagFilter } = useUserTags();
+    const [tagFilterIds, setTagFilterIds] = useState<string[]>([]);
+    const [isTagManagementVisible, setIsTagManagementVisible] = useState(false);
+    const [tagSheetVisible, setTagSheetVisible] = useState(false);
+    const [selectedBookForTags, setSelectedBookForTags] = useState<any | null>(null);
+
+    const handleEditTags = (book: any) => {
+        setIsOptionsModalVisible(false);
+        setTimeout(() => {
+            setSelectedBookForTags(book);
+            setTagSheetVisible(true);
+        }, 500);
+    };
+
     // Finna State
     const [searchSource, setSearchSource] = useState<'abs' | 'finna'>('abs');
     const { results: finnaResults, loading: finnaLoading, searchBooks: searchFinna } = useFinnaSearchResults();
@@ -67,7 +87,7 @@ export default function ABSLibraryScreen() {
     const [selectedBookForReview, setSelectedBookForReview] = useState<any | null>(null);
 
     // 1. Fetch Libraries
-    const { data: libraries, isLoading: librariesLoading } = useQuery({
+    const { data: libraries } = useQuery({
         queryKey: absLibrariesKey(url),
         queryFn: () => fetchABSLibraries(url!, token!),
         enabled: !!url && !!token,
@@ -76,16 +96,16 @@ export default function ABSLibraryScreen() {
 
     const handleLibrarySelect = useCallback((libraryId: string) => {
         setSelectedLibraryId(libraryId);
-        AsyncStorage.setItem(ABS_LAST_LIBRARY_ID_KEY, libraryId);
+        setLastLibraryId(libraryId);
     }, []);
 
-    // Auto-select last-used library, or first library on first visit
     useEffect(() => {
-        if (!libraries?.length || selectedLibraryId) return;
+        if (!libraries?.length) return;
+        if (selectedLibraryId && libraries.some((lib) => lib.id === selectedLibraryId)) return;
 
-        AsyncStorage.getItem(ABS_LAST_LIBRARY_ID_KEY).then((saved) => {
-            if (saved && libraries.some((lib) => lib.id === saved)) {
-                setSelectedLibraryId(saved);
+        void loadLastLibraryId().then((cached) => {
+            if (cached && libraries.some((lib) => lib.id === cached)) {
+                setSelectedLibraryId(cached);
             } else {
                 setSelectedLibraryId(libraries[0].id);
             }
@@ -103,20 +123,24 @@ export default function ABSLibraryScreen() {
         AsyncStorage.setItem(HAS_SEEN_KIRJAT_HINT_KEY, '1');
     }, []);
 
-    // 2. Fetch Items for selected library (no keepPreviousData — avoids showing audiobooks on eBooks tab while switching)
-    const { data: items, isLoading: itemsLoading, isFetching, refetch } = useQuery({
-        queryKey: absItemsKey(url, selectedLibraryId),
-        queryFn: ({ queryKey }) => {
-            const libraryId = queryKey[2] as string;
-            return fetchABSLibraryItems(url!, token!, libraryId);
-        },
-        enabled: !!url && !!token && !!selectedLibraryId,
-        staleTime: ABS_ITEMS_STALE_TIME,
-    });
+    const {
+        displayedItems: items,
+        isInitialLoading: itemsInitialLoading,
+        isFetching,
+        hasPendingUpdate,
+        applyPendingUpdate,
+        refresh,
+    } = useDeferredABSLibraryItems({ url, token, selectedLibraryId });
 
-    const handleRefresh = async () => {
-        await refetch();
-    };
+    const listHeader = useMemo(
+        () => (
+            <>
+                <ABSLibraryUpdateBanner visible={hasPendingUpdate} onApply={applyPendingUpdate} />
+                <SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Hae kirjaa tai kirjailijaa..." />
+            </>
+        ),
+        [hasPendingUpdate, applyPendingUpdate, searchQuery]
+    );
 
     const handleBookPress = (book: any) => {
         setSelectedBookForOptions(book);
@@ -134,6 +158,7 @@ export default function ABSLibraryScreen() {
                     publicationYear={item.publicationYear}
                     format={item.format}
                     absProgress={item.absProgress}
+                    tags={getTagsForBook(item.id).map(t => t.name)}
                     onPress={() => handleBookPress(item)}
                 />
             </View>
@@ -219,6 +244,9 @@ export default function ABSLibraryScreen() {
                 if (statusFilter === 'finished' && !isFinished) return false;
             }
 
+            // Tag Filter (OR: any selected tag matches)
+            if (!bookMatchesTagFilter(item.id, tagFilterIds)) return false;
+
             return true;
         });
 
@@ -258,7 +286,7 @@ export default function ABSLibraryScreen() {
         });
 
         return result;
-    }, [items, searchQuery, statusFilter, sortOption, sortDirection]);
+    }, [items, searchQuery, statusFilter, sortOption, sortDirection, tagFilterIds, bookMatchesTagFilter]);
 
     const filteredItems = processedItems;
 
@@ -470,7 +498,7 @@ export default function ABSLibraryScreen() {
             </View>
 
             {searchSource === 'abs' ? (
-                itemsLoading && !items ? (
+                itemsInitialLoading ? (
                     <View style={styles.center}><ActivityIndicator size="large" color={loaderColor} /></View>
                 ) : (
                     viewMode === 'grid' ? (
@@ -481,9 +509,9 @@ export default function ABSLibraryScreen() {
                             estimatedItemSize={200}
                             numColumns={COLUMN_COUNT}
                             contentContainerStyle={styles.listContent}
-                            onRefresh={handleRefresh}
+                            onRefresh={refresh}
                             refreshing={isFetching && !!items}
-                            ListHeaderComponent={<SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Hae kirjaa tai kirjailijaa..." />}
+                            ListHeaderComponent={listHeader}
                             keyboardShouldPersistTaps="handled"
                         />
                     ) : (
@@ -498,7 +526,7 @@ export default function ABSLibraryScreen() {
                             onRateAndReview={handleRateAndReview}
                             onAskAI={(book) => navigation.navigate('AskAIBook', { book })}
                             scrollEnabled={true}
-                            ListHeaderComponent={<SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Hae kirjaa tai kirjailijaa..." />}
+                            ListHeaderComponent={listHeader}
                         />
                     )
                 )
@@ -557,10 +585,14 @@ export default function ABSLibraryScreen() {
                 currentSort={sortOption}
                 currentDirection={sortDirection}
                 currentStatus={statusFilter}
-                onApply={(sort, dir, status) => {
+                availableTags={tags}
+                currentTagIds={tagFilterIds}
+                onManageTags={() => setTimeout(() => setIsTagManagementVisible(true), 500)}
+                onApply={(sort, dir, status, tagIds) => {
                     setSortOption(sort);
                     setSortDirection(dir);
                     setStatusFilter(status);
+                    setTagFilterIds(tagIds);
                 }}
             />
 
@@ -579,6 +611,18 @@ export default function ABSLibraryScreen() {
                 }}
                 onMarkAsRead={handleMarkAsRead}
                 onAskAI={(book) => { setIsOptionsModalVisible(false); navigation.navigate('AskAIBook', { book }); }}
+                onEditTags={handleEditTags}
+            />
+
+            <TagManagementSheet
+                visible={isTagManagementVisible}
+                onClose={() => setIsTagManagementVisible(false)}
+            />
+
+            <TagEditorSheet
+                visible={tagSheetVisible}
+                onClose={() => setTagSheetVisible(false)}
+                book={selectedBookForTags}
             />
 
         </View>

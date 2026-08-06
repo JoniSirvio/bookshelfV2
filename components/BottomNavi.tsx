@@ -10,7 +10,6 @@ const Tab = createBottomTabNavigator();
 
 import { TouchableOpacity, View, StyleSheet, Modal, TouchableWithoutFeedback, InteractionManager } from 'react-native';
 import { useState, useEffect, useCallback } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getLastSeenNewBooksTime } from '../utils/notificationsStore';
@@ -19,11 +18,11 @@ import { fetchABSLibraries, fetchABSLibraryItemsAddedSince } from '../api/abs';
 import { fetchNewBooksWithSideEffects } from '../utils/absNewBooksQuery';
 import { prefetchABSLibraries } from '../utils/absLibraryPrefetch';
 import {
-  ABS_LAST_LIBRARY_ID_KEY,
   absLibrariesKey,
   absNewBooksKey,
   hasNewBooksKey,
 } from '../utils/absQueryKeys';
+import { getCachedLastLibraryId, loadLastLibraryId } from '../utils/absLastLibraryId';
 import { MiniPlayer } from './MiniPlayer';
 import { colors, headerStyle, touchTargetMin, typography } from '../theme';
 
@@ -215,9 +214,9 @@ function NewBooksPrefetcher() {
   return null;
 }
 
-const LIBRARY_PREFETCH_DELAY_MS = 2000;
+const LIBRARY_PREFETCH_DELAY_MS = 0;
 
-/** Prefetches full ABS libraries in the background after light startup traffic settles. */
+/** Prefetches the preferred ABS library soon after credentials are available. */
 function ABSLibraryPrefetcher() {
   const { url, token } = useABSCredentials();
   const queryClient = useQueryClient();
@@ -229,6 +228,10 @@ function ABSLibraryPrefetcher() {
   });
 
   useEffect(() => {
+    void loadLastLibraryId();
+  }, []);
+
+  useEffect(() => {
     if (!url || !token || !libraries?.length) return;
 
     let cancelled = false;
@@ -237,7 +240,7 @@ function ABSLibraryPrefetcher() {
     const interactionTask = InteractionManager.runAfterInteractions(() => {
       timeoutId = setTimeout(async () => {
         if (cancelled) return;
-        const preferredLibraryId = await AsyncStorage.getItem(ABS_LAST_LIBRARY_ID_KEY);
+        const preferredLibraryId = getCachedLastLibraryId();
         await prefetchABSLibraries(queryClient, url, token, libraries, { preferredLibraryId });
       }, LIBRARY_PREFETCH_DELAY_MS);
     });
@@ -264,11 +267,10 @@ export default function MyTabs() {
 
   const handleKirjatTabPress = useCallback(async () => {
     if (!url || !token || !libraries?.length) return;
-    const preferredLibraryId = await AsyncStorage.getItem(ABS_LAST_LIBRARY_ID_KEY);
-    const targetId = preferredLibraryId ?? libraries[0].id;
+    const preferredLibraryId = getCachedLastLibraryId() ?? libraries[0].id;
     void prefetchABSLibraries(queryClient, url, token, libraries, {
-      preferredLibraryId: targetId,
-      libraryIds: [targetId],
+      preferredLibraryId,
+      libraryIds: [preferredLibraryId],
     });
   }, [url, token, libraries, queryClient]);
 

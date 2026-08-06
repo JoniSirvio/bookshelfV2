@@ -15,12 +15,18 @@ import { AnimatedFadeInView } from "../components/AnimatedFadeInView";
 import { AnimatedScalePressable } from "../components/AnimatedScalePressable";
 
 import { useABSInProgress } from "../hooks/useABSInProgress";
+import { useUserTags } from "../hooks/useUserTags";
+import { FilterSortModal } from "../components/FilterSortModal";
+import { TagFilterBar } from "../components/TagFilterBar";
+import { TagEditorSheet } from "../components/TagEditorSheet";
+import { TagManagementSheet } from "../components/TagManagementSheet";
 import { colors, loaderColor, touchTargetMin, typography } from "../theme";
 
 const HomeScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { myBooks, readBooks, removeBook, markAsRead, startReading, reorderBooks, recommendations, generateRecommendations, removeRecommendation, addBook } = useBooksContext();
   const { inProgressBooks, loading: absLoading } = useABSInProgress(readBooks);
+  const { tags, getTagsForBook, bookMatchesTagFilter } = useUserTags();
 
   const [generating, setGenerating] = useState(false);
   const [recommendationError, setRecommendationError] = useState<string | null>(null);
@@ -32,12 +38,33 @@ const HomeScreen: React.FC = () => {
   const [selectedBookForOptions, setSelectedBookForOptions] = useState<FinnaSearchResult | null>(null);
   const [isOptionsModalVisible, setIsOptionsModalVisible] = useState(false);
 
+  // Tag filtering and editing
+  const [tagFilterIds, setTagFilterIds] = useState<string[]>([]);
+  const [isTagFilterVisible, setIsTagFilterVisible] = useState(false);
+  const [isTagManagementVisible, setIsTagManagementVisible] = useState(false);
+  const [tagSheetVisible, setTagSheetVisible] = useState(false);
+  const [selectedBookForTags, setSelectedBookForTags] = useState<FinnaSearchResult | null>(null);
+
+  const handleEditTags = (book: FinnaSearchResult) => {
+    setIsOptionsModalVisible(false);
+    setTimeout(() => {
+      setSelectedBookForTags(book);
+      setTagSheetVisible(true);
+    }, 500);
+  };
+
   // Combine ABS books with My Books
   // We put ABS books at the top for visibility
-  const combinedBooks = [
+  const allShelfBooks = [
     ...inProgressBooks,
     ...myBooks
   ];
+
+  const combinedBooks = tagFilterIds.length === 0
+    ? allShelfBooks
+    : allShelfBooks.filter(b => bookMatchesTagFilter(b.id, tagFilterIds));
+
+  const activeFilterTags = tags.filter(t => tagFilterIds.includes(t.id));
 
   // State for Review Modal
   const [isReviewModalVisible, setIsReviewModalVisible] = useState(false);
@@ -113,21 +140,55 @@ const HomeScreen: React.FC = () => {
   };
 
   const renderHeader = () => (
-    <View style={styles.headerContainer}>
-      <Text style={styles.title}>Luettavien hylly</Text>
-      <TouchableOpacity
-        onPress={() => setViewMode(prev => prev === 'list' ? 'grid' : 'list')}
-        style={styles.viewModeButton}
-        accessibilityLabel={viewMode === 'list' ? 'Vaihda ruudukkonäkymään' : 'Vaihda listanäkymään'}
-        accessibilityRole="button"
-      >
-        <MaterialCommunityIcons name={viewMode === 'list' ? 'view-grid' : 'view-list'} size={28} color={colors.textPrimary} />
-        <Text style={styles.viewToggleLabel}>{viewMode === 'list' ? 'Ruudukko' : 'Lista'}</Text>
-      </TouchableOpacity>
-    </View>
+    <>
+      <View style={styles.headerContainer}>
+        <Text style={styles.title}>Luettavien hylly</Text>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            onPress={() => setIsTagFilterVisible(true)}
+            style={styles.filterButton}
+            accessibilityLabel="Suodata tunnisteilla"
+            accessibilityRole="button"
+          >
+            <MaterialCommunityIcons
+              name={tagFilterIds.length > 0 ? 'filter' : 'filter-outline'}
+              size={26}
+              color={tagFilterIds.length > 0 ? colors.primary : colors.textPrimary}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setViewMode(prev => prev === 'list' ? 'grid' : 'list')}
+            style={styles.viewModeButton}
+            accessibilityLabel={viewMode === 'list' ? 'Vaihda ruudukkonäkymään' : 'Vaihda listanäkymään'}
+            accessibilityRole="button"
+          >
+            <MaterialCommunityIcons name={viewMode === 'list' ? 'view-grid' : 'view-list'} size={28} color={colors.textPrimary} />
+            <Text style={styles.viewToggleLabel}>{viewMode === 'list' ? 'Ruudukko' : 'Lista'}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+      <TagFilterBar
+        tags={activeFilterTags}
+        matchCount={combinedBooks.length}
+        onRemove={(tagId) => setTagFilterIds(prev => prev.filter(id => id !== tagId))}
+        onClear={() => setTagFilterIds([])}
+      />
+    </>
   );
 
-  const renderEmptyShelf = () => (
+  const renderEmptyShelf = () => {
+    if (tagFilterIds.length > 0 && allShelfBooks.length > 0) {
+      return (
+        <AnimatedFadeInView style={styles.emptyShelfContainer}>
+          <MaterialCommunityIcons name="tag-off-outline" size={56} color={colors.textSecondary} />
+          <Text style={styles.emptyShelfTitle}>Ei kirjoja näillä tunnisteilla</Text>
+          <Text style={styles.emptyShelfSubtitle}>
+            Poista tunnistesuodatin tai valitse toinen tunniste.
+          </Text>
+        </AnimatedFadeInView>
+      );
+    }
+    return (
     <AnimatedFadeInView style={styles.emptyShelfContainer}>
       <MaterialCommunityIcons name="bookshelf" size={80} color={colors.textSecondary} />
       <Text style={styles.emptyShelfTitle}>Hylly on tyhjä</Text>
@@ -163,7 +224,8 @@ const HomeScreen: React.FC = () => {
         <Text style={styles.emptyShelfCtaSecondaryText}>Siirry kirjoihin</Text>
       </TouchableOpacity>
     </AnimatedFadeInView>
-  );
+    );
+  };
 
   const renderFooter = () => (
     <View style={styles.footerContainer}>
@@ -279,6 +341,7 @@ const HomeScreen: React.FC = () => {
               publicationYear={item.publicationYear}
               format={item.id.startsWith('abs-') ? 'audiobook' : 'book'}
               absProgress={item.absProgress}
+              tags={getTagsForBook(item.id).map(t => t.name)}
               onPress={() => {
                 setSelectedBookForOptions(item);
                 setIsOptionsModalVisible(true);
@@ -333,8 +396,33 @@ const HomeScreen: React.FC = () => {
           onRateAndReview={handleRateAndReview}
           showStartReading={!selectedBookForOptions.startedReading}
           onAskAI={(book) => { setIsOptionsModalVisible(false); navigation.navigate('AskAIBook', { book }); }}
+          onEditTags={handleEditTags}
         />
       )}
+
+      <FilterSortModal
+        visible={isTagFilterVisible}
+        onClose={() => setIsTagFilterVisible(false)}
+        currentSort="added"
+        currentDirection="desc"
+        currentStatus="all"
+        showSortAndStatus={false}
+        availableTags={tags}
+        currentTagIds={tagFilterIds}
+        onManageTags={() => setTimeout(() => setIsTagManagementVisible(true), 500)}
+        onApply={(_sort, _dir, _status, tagIds) => setTagFilterIds(tagIds)}
+      />
+
+      <TagManagementSheet
+        visible={isTagManagementVisible}
+        onClose={() => setIsTagManagementVisible(false)}
+      />
+
+      <TagEditorSheet
+        visible={tagSheetVisible}
+        onClose={() => setTagSheetVisible(false)}
+        book={selectedBookForTags}
+      />
     </View>
   );
 };
@@ -350,6 +438,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  filterButton: {
+    minWidth: touchTargetMin,
+    minHeight: touchTargetMin,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   viewModeButton: {
     flexDirection: 'row',

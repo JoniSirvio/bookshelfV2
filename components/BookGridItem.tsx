@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions } from 'rea
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { BookCoverPlaceholder } from './BookCoverPlaceholder';
 import { FormatBadge } from './FormatBadge';
+import { TagChips } from './TagChips';
 import { colors, typography } from '../theme';
 
 const COLUMN_COUNT = 3;
@@ -24,9 +25,10 @@ interface BookGridItemProps {
         currentTime: number;
         isFinished?: boolean;
     };
+    tags?: string[];
 }
 
-export const BookGridItem: React.FC<BookGridItemProps> = ({ id, title, authors, coverUrl, onPress, publicationYear, format = 'book', absProgress }) => {
+export const BookGridItem: React.FC<BookGridItemProps> = ({ id, title, authors, coverUrl, onPress, publicationYear, format = 'book', absProgress, tags }) => {
     // Format year to just YYYY if it contains dashes
     let formattedYear = publicationYear ? publicationYear.split('-')[0] : undefined;
 
@@ -112,6 +114,7 @@ export const BookGridItem: React.FC<BookGridItemProps> = ({ id, title, authors, 
             {cleanYear && (
                 <Text style={styles.bookYear}>{cleanYear}</Text>
             )}
+            {tags && tags.length > 0 && <TagChips tags={tags} maxVisible={2} compact />}
         </TouchableOpacity>
     );
 };
