@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useUserTags } from '../hooks/useUserTags';
@@ -73,90 +73,88 @@ export const TagManagementSheet: React.FC<TagManagementSheetProps> = ({ visible,
             onClose={onClose}
             accessibilityLabel="Hallinnoi tunnisteita"
         >
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-                <View style={styles.header}>
-                    <Text style={styles.title}>Hallinnoi tunnisteita</Text>
-                    <TouchableOpacity
-                        onPress={onClose}
-                        style={styles.closeButton}
-                        accessibilityLabel="Sulje"
-                        accessibilityRole="button"
-                    >
-                        <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
-                    </TouchableOpacity>
-                </View>
-
-                <ScrollView
-                    style={styles.scroll}
-                    contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) }}
-                    keyboardShouldPersistTaps="handled"
-                    showsVerticalScrollIndicator={false}
+            <View style={styles.header}>
+                <Text style={styles.title}>Hallinnoi tunnisteita</Text>
+                <TouchableOpacity
+                    onPress={onClose}
+                    style={styles.closeButton}
+                    accessibilityLabel="Sulje"
+                    accessibilityRole="button"
                 >
-                    {tags.length === 0 ? (
-                        <Text style={styles.emptyText}>
-                            Ei tunnisteita vielä. Lisää kirjalle tunniste sen valikosta.
-                        </Text>
-                    ) : (
-                        tags.map(tag => (
-                            <View key={tag.id} style={styles.tagRow}>
-                                {editingTagId === tag.id ? (
-                                    <>
-                                        <TextInput
-                                            style={styles.editInput}
-                                            value={editingName}
-                                            onChangeText={setEditingName}
-                                            onSubmitEditing={commitRename}
-                                            returnKeyType="done"
-                                            autoFocus
-                                        />
-                                        <TouchableOpacity
-                                            onPress={commitRename}
-                                            style={styles.iconButton}
-                                            accessibilityLabel={`Tallenna tunnisteen ${tag.name} uusi nimi`}
-                                            accessibilityRole="button"
-                                        >
-                                            <MaterialCommunityIcons name="check" size={22} color={colors.primary} />
-                                        </TouchableOpacity>
-                                        <TouchableOpacity
-                                            onPress={() => setEditingTagId(null)}
-                                            style={styles.iconButton}
-                                            accessibilityLabel="Peruuta nimen muokkaus"
-                                            accessibilityRole="button"
-                                        >
-                                            <MaterialCommunityIcons name="close" size={22} color={colors.textSecondaryAlt} />
-                                        </TouchableOpacity>
-                                    </>
-                                ) : (
-                                    <>
-                                        <View style={styles.tagInfo}>
-                                            <Text style={styles.tagName} numberOfLines={1}>{tag.name}</Text>
-                                            <Text style={styles.tagCount}>
-                                                {usageCountByTagId[tag.id] || 0} kirjaa
-                                            </Text>
-                                        </View>
-                                        <TouchableOpacity
-                                            onPress={() => startEditing(tag.id, tag.name)}
-                                            style={styles.iconButton}
-                                            accessibilityLabel={`Muokkaa tunnistetta ${tag.name}`}
-                                            accessibilityRole="button"
-                                        >
-                                            <MaterialCommunityIcons name="pencil-outline" size={22} color={colors.textSecondaryAlt} />
-                                        </TouchableOpacity>
-                                        <TouchableOpacity
-                                            onPress={() => confirmDelete(tag.id, tag.name)}
-                                            style={styles.iconButton}
-                                            accessibilityLabel={`Poista tunniste ${tag.name}`}
-                                            accessibilityRole="button"
-                                        >
-                                            <MaterialCommunityIcons name="trash-can-outline" size={22} color={colors.delete} />
-                                        </TouchableOpacity>
-                                    </>
-                                )}
-                            </View>
-                        ))
-                    )}
-                </ScrollView>
-            </KeyboardAvoidingView>
+                    <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
+                </TouchableOpacity>
+            </View>
+
+            <ScrollView
+                style={styles.scroll}
+                contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) }}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+            >
+                {tags.length === 0 ? (
+                    <Text style={styles.emptyText}>
+                        Ei tunnisteita vielä. Lisää kirjalle tunniste sen valikosta.
+                    </Text>
+                ) : (
+                    tags.map(tag => (
+                        <View key={tag.id} style={styles.tagRow}>
+                            {editingTagId === tag.id ? (
+                                <>
+                                    <TextInput
+                                        style={styles.editInput}
+                                        value={editingName}
+                                        onChangeText={setEditingName}
+                                        onSubmitEditing={commitRename}
+                                        returnKeyType="done"
+                                        autoFocus
+                                    />
+                                    <TouchableOpacity
+                                        onPress={commitRename}
+                                        style={styles.iconButton}
+                                        accessibilityLabel={`Tallenna tunnisteen ${tag.name} uusi nimi`}
+                                        accessibilityRole="button"
+                                    >
+                                        <MaterialCommunityIcons name="check" size={22} color={colors.primary} />
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        onPress={() => setEditingTagId(null)}
+                                        style={styles.iconButton}
+                                        accessibilityLabel="Peruuta nimen muokkaus"
+                                        accessibilityRole="button"
+                                    >
+                                        <MaterialCommunityIcons name="close" size={22} color={colors.textSecondaryAlt} />
+                                    </TouchableOpacity>
+                                </>
+                            ) : (
+                                <>
+                                    <View style={styles.tagInfo}>
+                                        <Text style={styles.tagName} numberOfLines={1}>{tag.name}</Text>
+                                        <Text style={styles.tagCount}>
+                                            {usageCountByTagId[tag.id] || 0} kirjaa
+                                        </Text>
+                                    </View>
+                                    <TouchableOpacity
+                                        onPress={() => startEditing(tag.id, tag.name)}
+                                        style={styles.iconButton}
+                                        accessibilityLabel={`Muokkaa tunnistetta ${tag.name}`}
+                                        accessibilityRole="button"
+                                    >
+                                        <MaterialCommunityIcons name="pencil-outline" size={22} color={colors.textSecondaryAlt} />
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        onPress={() => confirmDelete(tag.id, tag.name)}
+                                        style={styles.iconButton}
+                                        accessibilityLabel={`Poista tunniste ${tag.name}`}
+                                        accessibilityRole="button"
+                                    >
+                                        <MaterialCommunityIcons name="trash-can-outline" size={22} color={colors.delete} />
+                                    </TouchableOpacity>
+                                </>
+                            )}
+                        </View>
+                    ))
+                )}
+            </ScrollView>
         </BottomSheet>
     );
 };
