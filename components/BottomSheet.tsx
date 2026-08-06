@@ -1,4 +1,4 @@
-import React, { ReactNode, useEffect } from 'react';
+import React, { ReactNode, useEffect, useState } from 'react';
 import {
   Modal,
   View,
@@ -7,6 +7,7 @@ import {
   Animated,
   Platform,
   AccessibilityRole,
+  Keyboard,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, typography } from '../theme';
@@ -22,6 +23,12 @@ interface BottomSheetProps {
   accessibilityRole?: AccessibilityRole;
 }
 
+/**
+ * Bottom sheet modal. Absolute bottom positioning is preserved so children
+ * that use flex:1 (BookOptionsModal, FilterSortModal) still layout correctly.
+ * When the keyboard opens, the sheet is lifted by the keyboard height so
+ * TextInputs (e.g. TagEditorSheet) stay visible on iOS.
+ */
 export const BottomSheet: React.FC<BottomSheetProps> = ({
   visible,
   onClose,
@@ -34,6 +41,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   const insets = useSafeAreaInsets();
   const reduceMotion = useReduceMotion();
   const translateY = React.useRef(new Animated.Value(0)).current;
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
     const toValue = visible ? 0 : 1;
@@ -44,6 +52,29 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
       useNativeDriver: true,
     }).start();
   }, [visible, translateY, reduceMotion]);
+
+  // Lift the sheet above the keyboard (KAV + absolute bottom layout is unreliable on iOS)
+  useEffect(() => {
+    if (!visible) {
+      setKeyboardHeight(0);
+      return;
+    }
+
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const onShow = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const onHide = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      onShow.remove();
+      onHide.remove();
+    };
+  }, [visible]);
 
   const sheetTranslate = translateY.interpolate({
     inputRange: [0, 1],
@@ -71,7 +102,11 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
         style={[
           styles.sheetContainer,
           {
-            paddingBottom: Math.max(insets.bottom, 16),
+            // Safe area when keyboard is closed; keyboard height when open
+            // (keyboard frame already includes home-indicator inset on iOS)
+            paddingBottom: keyboardHeight > 0
+              ? Math.max(keyboardHeight, 16)
+              : Math.max(insets.bottom, 16),
             transform: [{ translateY: sheetTranslate }],
           },
         ]}
@@ -138,4 +173,3 @@ const styles = StyleSheet.create({
 });
 
 export default BottomSheet;
-

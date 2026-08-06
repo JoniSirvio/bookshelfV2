@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { FinnaSearchResult } from '../api/finna';
@@ -17,6 +17,8 @@ interface TagEditorSheetProps {
 /**
  * Bottom sheet for editing a single book's personal tags.
  * New tag names are kept pending locally and only persisted on save.
+ * Input + save stay pinned below the scroll area so they ride up with
+ * BottomSheet when the keyboard opens.
  */
 export const TagEditorSheet: React.FC<TagEditorSheetProps> = ({ visible, onClose, book }) => {
     const insets = useSafeAreaInsets();
@@ -94,122 +96,122 @@ export const TagEditorSheet: React.FC<TagEditorSheetProps> = ({ visible, onClose
             onClose={onClose}
             accessibilityLabel={`Kirjan ${book.title} tunnisteet`}
         >
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-                <View style={styles.header}>
-                    <View style={styles.headerText}>
-                        <Text style={styles.title}>Tunnisteet</Text>
-                        <Text style={styles.bookTitle} numberOfLines={1}>{book.title}</Text>
-                    </View>
-                    <TouchableOpacity
-                        onPress={onClose}
-                        style={styles.closeButton}
-                        accessibilityLabel="Sulje"
-                        accessibilityRole="button"
-                    >
-                        <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
-                    </TouchableOpacity>
+            <View style={styles.header}>
+                <View style={styles.headerText}>
+                    <Text style={styles.title}>Tunnisteet</Text>
+                    <Text style={styles.bookTitle} numberOfLines={1}>{book.title}</Text>
                 </View>
-
-                <ScrollView
-                    style={styles.scroll}
-                    contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) }}
-                    keyboardShouldPersistTaps="handled"
-                    showsVerticalScrollIndicator={false}
+                <TouchableOpacity
+                    onPress={onClose}
+                    style={styles.closeButton}
+                    accessibilityLabel="Sulje"
+                    accessibilityRole="button"
                 >
-                    {/* Current tags on this book */}
-                    <Text style={styles.sectionTitle}>Kirjan tunnisteet</Text>
-                    {hasSelection ? (
+                    <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
+                </TouchableOpacity>
+            </View>
+
+            <ScrollView
+                style={styles.scroll}
+                contentContainerStyle={styles.scrollContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+            >
+                {/* Current tags on this book */}
+                <Text style={styles.sectionTitle}>Kirjan tunnisteet</Text>
+                {hasSelection ? (
+                    <View style={styles.chipsWrap}>
+                        {selectedTags.map(tag => (
+                            <TouchableOpacity
+                                key={tag.id}
+                                style={styles.selectedChip}
+                                onPress={() => toggleExistingTag(tag.id)}
+                                accessibilityLabel={`Poista tunniste ${tag.name}`}
+                                accessibilityRole="button"
+                            >
+                                <Text style={styles.selectedChipText}>{tag.name}</Text>
+                                <MaterialCommunityIcons name="close-circle" size={16} color={colors.white} />
+                            </TouchableOpacity>
+                        ))}
+                        {pendingNewNames.map(name => (
+                            <TouchableOpacity
+                                key={name}
+                                style={[styles.selectedChip, styles.pendingChip]}
+                                onPress={() => removePendingName(name)}
+                                accessibilityLabel={`Poista uusi tunniste ${name}`}
+                                accessibilityRole="button"
+                            >
+                                <Text style={styles.selectedChipText}>{name}</Text>
+                                <MaterialCommunityIcons name="close-circle" size={16} color={colors.white} />
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                ) : (
+                    <Text style={styles.emptyText}>Ei tunnisteita vielä.</Text>
+                )}
+
+                {/* Suggestions from existing catalog */}
+                {suggestions.length > 0 && (
+                    <>
+                        <Text style={styles.sectionTitle}>Aiemmat tunnisteet</Text>
                         <View style={styles.chipsWrap}>
-                            {selectedTags.map(tag => (
+                            {suggestions.map(tag => (
                                 <TouchableOpacity
                                     key={tag.id}
-                                    style={styles.selectedChip}
+                                    style={styles.suggestionChip}
                                     onPress={() => toggleExistingTag(tag.id)}
-                                    accessibilityLabel={`Poista tunniste ${tag.name}`}
+                                    accessibilityLabel={`Lisää tunniste ${tag.name}`}
                                     accessibilityRole="button"
                                 >
-                                    <Text style={styles.selectedChipText}>{tag.name}</Text>
-                                    <MaterialCommunityIcons name="close-circle" size={16} color={colors.white} />
-                                </TouchableOpacity>
-                            ))}
-                            {pendingNewNames.map(name => (
-                                <TouchableOpacity
-                                    key={name}
-                                    style={[styles.selectedChip, styles.pendingChip]}
-                                    onPress={() => removePendingName(name)}
-                                    accessibilityLabel={`Poista uusi tunniste ${name}`}
-                                    accessibilityRole="button"
-                                >
-                                    <Text style={styles.selectedChipText}>{name}</Text>
-                                    <MaterialCommunityIcons name="close-circle" size={16} color={colors.white} />
+                                    <MaterialCommunityIcons name="plus" size={14} color={colors.primary} />
+                                    <Text style={styles.suggestionChipText}>{tag.name}</Text>
                                 </TouchableOpacity>
                             ))}
                         </View>
-                    ) : (
-                        <Text style={styles.emptyText}>Ei tunnisteita vielä.</Text>
-                    )}
+                    </>
+                )}
+                {tags.length === 0 && pendingNewNames.length === 0 && (
+                    <Text style={[styles.emptyText, { marginTop: 8 }]}>
+                        Luo ensimmäinen tunnisteesi kirjoittamalla nimi alle.
+                    </Text>
+                )}
+            </ScrollView>
 
-                    {/* Add new tag */}
-                    <Text style={styles.sectionTitle}>Lisää tunniste</Text>
-                    <View style={styles.inputRow}>
-                        <TextInput
-                            style={styles.input}
-                            value={inputValue}
-                            onChangeText={setInputValue}
-                            placeholder="Esim. Grimdark fantasy"
-                            placeholderTextColor={colors.placeholder}
-                            onSubmitEditing={handleAddFromInput}
-                            returnKeyType="done"
-                            autoCapitalize="sentences"
-                        />
-                        <TouchableOpacity
-                            style={[styles.addButton, !inputValue.trim() && styles.addButtonDisabled]}
-                            onPress={handleAddFromInput}
-                            disabled={!inputValue.trim()}
-                            accessibilityLabel="Lisää tunniste"
-                            accessibilityRole="button"
-                        >
-                            <MaterialCommunityIcons name="plus" size={24} color={colors.white} />
-                        </TouchableOpacity>
-                    </View>
-
-                    {/* Suggestions from existing catalog */}
-                    {suggestions.length > 0 && (
-                        <>
-                            <Text style={styles.sectionTitle}>Aiemmat tunnisteet</Text>
-                            <View style={styles.chipsWrap}>
-                                {suggestions.map(tag => (
-                                    <TouchableOpacity
-                                        key={tag.id}
-                                        style={styles.suggestionChip}
-                                        onPress={() => toggleExistingTag(tag.id)}
-                                        accessibilityLabel={`Lisää tunniste ${tag.name}`}
-                                        accessibilityRole="button"
-                                    >
-                                        <MaterialCommunityIcons name="plus" size={14} color={colors.primary} />
-                                        <Text style={styles.suggestionChipText}>{tag.name}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        </>
-                    )}
-                    {tags.length === 0 && pendingNewNames.length === 0 && (
-                        <Text style={styles.emptyText}>
-                            Luo ensimmäinen tunnisteesi kirjoittamalla nimi yllä.
-                        </Text>
-                    )}
-
+            {/* Sticky footer: stays above the keyboard via BottomSheet KAV */}
+            <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom > 0 ? 0 : 8, 0) }]}>
+                <Text style={styles.sectionTitleFooter}>Lisää tunniste</Text>
+                <View style={styles.inputRow}>
+                    <TextInput
+                        style={styles.input}
+                        value={inputValue}
+                        onChangeText={setInputValue}
+                        placeholder="Esim. Grimdark fantasy"
+                        placeholderTextColor={colors.placeholder}
+                        onSubmitEditing={handleAddFromInput}
+                        returnKeyType="done"
+                        autoCapitalize="sentences"
+                    />
                     <TouchableOpacity
-                        style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-                        onPress={handleSave}
-                        disabled={saving}
-                        accessibilityLabel="Tallenna tunnisteet"
+                        style={[styles.addButton, !inputValue.trim() && styles.addButtonDisabled]}
+                        onPress={handleAddFromInput}
+                        disabled={!inputValue.trim()}
+                        accessibilityLabel="Lisää tunniste"
                         accessibilityRole="button"
                     >
-                        <Text style={styles.saveButtonText}>{saving ? 'Tallennetaan...' : 'Tallenna'}</Text>
+                        <MaterialCommunityIcons name="plus" size={24} color={colors.white} />
                     </TouchableOpacity>
-                </ScrollView>
-            </KeyboardAvoidingView>
+                </View>
+
+                <TouchableOpacity
+                    style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+                    onPress={handleSave}
+                    disabled={saving}
+                    accessibilityLabel="Tallenna tunnisteet"
+                    accessibilityRole="button"
+                >
+                    <Text style={styles.saveButtonText}>{saving ? 'Tallennetaan...' : 'Tallenna'}</Text>
+                </TouchableOpacity>
+            </View>
         </BottomSheet>
     );
 };
@@ -244,7 +246,10 @@ const styles = StyleSheet.create({
         marginLeft: 8,
     },
     scroll: {
-        maxHeight: 420,
+        maxHeight: 260,
+    },
+    scrollContent: {
+        paddingBottom: 8,
     },
     sectionTitle: {
         fontSize: 15,
@@ -252,6 +257,13 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: colors.textSecondaryAlt,
         marginTop: 14,
+        marginBottom: 8,
+    },
+    sectionTitleFooter: {
+        fontSize: 15,
+        fontFamily: typography.fontFamilyBody,
+        fontWeight: '600',
+        color: colors.textSecondaryAlt,
         marginBottom: 8,
     },
     chipsWrap: {
@@ -298,6 +310,12 @@ const styles = StyleSheet.create({
         fontFamily: typography.fontFamilyBody,
         color: colors.textSecondary,
     },
+    footer: {
+        borderTopWidth: 1,
+        borderTopColor: colors.borderLight,
+        paddingTop: 12,
+        marginTop: 4,
+    },
     inputRow: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -331,7 +349,7 @@ const styles = StyleSheet.create({
         paddingVertical: 15,
         borderRadius: 12,
         alignItems: 'center',
-        marginTop: 20,
+        marginTop: 12,
     },
     saveButtonDisabled: {
         opacity: 0.7,
