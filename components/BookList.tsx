@@ -7,6 +7,9 @@ import { FinnaSearchResult } from '../api/finna';
 import BookOptionsModal from './BookOptionsModal';
 import { BookCoverPlaceholder } from './BookCoverPlaceholder';
 import { FormatBadge } from './FormatBadge';
+import { TagChips } from './TagChips';
+import { TagEditorSheet } from './TagEditorSheet';
+import { useUserTags } from '../hooks/useUserTags';
 import { colors, typography } from '../theme';
 
 type Mode = 'search' | 'home' | 'read' | 'recommendation';
@@ -98,7 +101,8 @@ const BookContent: React.FC<{
   readIds?: string[];
   recommendationExpanded?: boolean;
   onToggleRecommendation?: () => void;
-}> = ({ item, mode, toReadIds, readIds, recommendationExpanded, onToggleRecommendation }) => {
+  tags?: string[];
+}> = ({ item, mode, toReadIds, readIds, recommendationExpanded, onToggleRecommendation, tags }) => {
   const renderStars = (rating: number) => {
     const stars = [];
     for (let i = 1; i <= 5; i++) {
@@ -279,6 +283,7 @@ const BookContent: React.FC<{
               <Text style={styles.inShelfText}>{shelfLabel}</Text>
             </View>
           )}
+          {tags && tags.length > 0 && <TagChips tags={tags} />}
         </View>
       </View>
     </View>
@@ -300,6 +305,7 @@ function BookListItem<T extends FinnaSearchResult>({
   onRateAndReview,
   recommendationExpanded,
   onToggleRecommendation,
+  tags,
 }: {
   item: T;
   mode: Mode;
@@ -314,6 +320,7 @@ function BookListItem<T extends FinnaSearchResult>({
   onRateAndReview?: (book: T) => void;
   recommendationExpanded?: boolean;
   onToggleRecommendation?: () => void;
+  tags?: string[];
 }) {
 
   const itemRef = useRef<any>(null);
@@ -375,6 +382,7 @@ function BookListItem<T extends FinnaSearchResult>({
             readIds={readIds}
             recommendationExpanded={recommendationExpanded}
             onToggleRecommendation={onToggleRecommendation}
+            tags={tags}
           />
         </TouchableOpacity>
       </ScaleDecorator>
@@ -387,10 +395,24 @@ export const BookList = <T extends FinnaSearchResult>({ books, mode = 'search', 
   const [modalVisible, setModalVisible] = useState(false);
   const [expandedReasons, setExpandedReasons] = useState<Record<string, boolean>>({});
 
+  // Tag editing (opened from the options modal)
+  const { getTagsForBook } = useUserTags();
+  const [tagSheetVisible, setTagSheetVisible] = useState(false);
+  const [selectedBookForTags, setSelectedBookForTags] = useState<T | null>(null);
+
   const handleBookPress = (book: T) => {
     setSelectedBook(book);
     setModalVisible(true);
   };
+
+  const handleEditTags = useCallback((book: FinnaSearchResult) => {
+    setModalVisible(false);
+    // Close-then-open: iOS cannot present two modals at once (same pattern as rate & review)
+    setTimeout(() => {
+      setSelectedBookForTags(book as T);
+      setTagSheetVisible(true);
+    }, 500);
+  }, []);
 
   const toggleRecommendationReason = useCallback((itemId: string) => {
     setExpandedReasons(prev => ({ ...prev, [itemId]: !prev[itemId] }));
@@ -412,9 +434,10 @@ export const BookList = <T extends FinnaSearchResult>({ books, mode = 'search', 
         onRateAndReview={props.onRateAndReview}
         recommendationExpanded={expandedReasons[item.id]}
         onToggleRecommendation={() => toggleRecommendationReason(item.id)}
+        tags={getTagsForBook(item.id).map(t => t.name)}
       />
     );
-  }, [mode, props, expandedReasons, toggleRecommendationReason]);
+  }, [mode, props, expandedReasons, toggleRecommendationReason, getTagsForBook]);
 
   return (
     <>
@@ -445,6 +468,12 @@ export const BookList = <T extends FinnaSearchResult>({ books, mode = 'search', 
         readIds={props.readIds}
         onRateAndReview={props.onRateAndReview as any}
         onAskAI={props.onAskAI as any}
+        onEditTags={handleEditTags}
+      />
+      <TagEditorSheet
+        visible={tagSheetVisible}
+        onClose={() => setTagSheetVisible(false)}
+        book={selectedBookForTags}
       />
     </>
   );

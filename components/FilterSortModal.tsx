@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors, touchTargetMin, typography } from '../theme';
 import BottomSheet from './BottomSheet';
+import { UserTag } from '../firebase/tags';
 
 export type SortOption = 'added' | 'title' | 'author' | 'year' | 'duration';
 export type SortDirection = 'asc' | 'desc';
@@ -15,7 +16,14 @@ interface FilterSortModalProps {
     currentSort: SortOption;
     currentDirection: SortDirection;
     currentStatus: StatusFilter;
-    onApply: (sort: SortOption, direction: SortDirection, status: StatusFilter) => void;
+    onApply: (sort: SortOption, direction: SortDirection, status: StatusFilter, tagIds: string[]) => void;
+    /** User's tag catalog; when provided a "Tunnisteet" section is shown (multi-select OR). */
+    availableTags?: UserTag[];
+    currentTagIds?: string[];
+    /** Opens the global tag management sheet. */
+    onManageTags?: () => void;
+    /** Hide sort and status sections (tag-only filtering, e.g. shelf screens). */
+    showSortAndStatus?: boolean;
 }
 
 export const FilterSortModal: React.FC<FilterSortModalProps> = ({
@@ -25,10 +33,15 @@ export const FilterSortModal: React.FC<FilterSortModalProps> = ({
     currentDirection,
     currentStatus,
     onApply,
+    availableTags,
+    currentTagIds = [],
+    onManageTags,
+    showSortAndStatus = true,
 }) => {
     const [sort, setSort] = React.useState<SortOption>(currentSort);
     const [direction, setDirection] = React.useState<SortDirection>(currentDirection);
     const [status, setStatus] = React.useState<StatusFilter>(currentStatus);
+    const [tagIds, setTagIds] = React.useState<string[]>(currentTagIds);
 
     // Reset local state when modal opens
     React.useEffect(() => {
@@ -36,11 +49,19 @@ export const FilterSortModal: React.FC<FilterSortModalProps> = ({
             setSort(currentSort);
             setDirection(currentDirection);
             setStatus(currentStatus);
+            setTagIds(currentTagIds);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [visible, currentSort, currentDirection, currentStatus]);
 
+    const toggleTag = (tagId: string) => {
+        setTagIds(prev =>
+            prev.includes(tagId) ? prev.filter(id => id !== tagId) : [...prev, tagId]
+        );
+    };
+
     const handleApply = () => {
-        onApply(sort, direction, status);
+        onApply(sort, direction, status, tagIds);
         onClose();
     };
 
@@ -108,29 +129,75 @@ export const FilterSortModal: React.FC<FilterSortModalProps> = ({
 
     const sortAndFilterBody = (
         <>
-            <Text style={[styles.sectionTitle, styles.sectionTitleFirst]}>Järjestä</Text>
-            <View style={styles.listContainer}>
-                <SortItem label="Lisätty" value="added" />
-                <SortItem label="Nimi" value="title" />
-                <SortItem label="Kirjailija" value="author" />
-                <SortItem label="Julkaisuvuosi" value="year" />
-                <SortItem label="Kesto / Pituus" value="duration" />
-            </View>
+            {showSortAndStatus && (
+                <>
+                    <Text style={[styles.sectionTitle, styles.sectionTitleFirst]}>Järjestä</Text>
+                    <View style={styles.listContainer}>
+                        <SortItem label="Lisätty" value="added" />
+                        <SortItem label="Nimi" value="title" />
+                        <SortItem label="Kirjailija" value="author" />
+                        <SortItem label="Julkaisuvuosi" value="year" />
+                        <SortItem label="Kesto / Pituus" value="duration" />
+                    </View>
 
-            <Text style={styles.sectionTitle}>Tila</Text>
-            <View style={styles.pillsContainer}>
-                <StatusItem label="Kaikki" value="all" />
-                <StatusItem label="Ei aloitettu" value="unread" />
-                <StatusItem label="Kesken" value="in-progress" />
-                <StatusItem label="Luettu" value="finished" />
-            </View>
+                    <Text style={styles.sectionTitle}>Tila</Text>
+                    <View style={styles.pillsContainer}>
+                        <StatusItem label="Kaikki" value="all" />
+                        <StatusItem label="Ei aloitettu" value="unread" />
+                        <StatusItem label="Kesken" value="in-progress" />
+                        <StatusItem label="Luettu" value="finished" />
+                    </View>
+                </>
+            )}
+
+            {availableTags && (
+                <>
+                    <Text style={[styles.sectionTitle, !showSortAndStatus && styles.sectionTitleFirst]}>Tunnisteet</Text>
+                    {availableTags.length > 0 ? (
+                        <View style={styles.pillsContainer}>
+                            {availableTags.map(tag => {
+                                const selected = tagIds.includes(tag.id);
+                                return (
+                                    <TouchableOpacity
+                                        key={tag.id}
+                                        style={[styles.pill, selected && styles.activePill]}
+                                        onPress={() => toggleTag(tag.id)}
+                                        accessibilityLabel={`${selected ? 'Poista' : 'Valitse'} tunniste ${tag.name}`}
+                                        accessibilityRole="button"
+                                    >
+                                        <Text style={[styles.pillText, selected && styles.activePillText]}>{tag.name}</Text>
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </View>
+                    ) : (
+                        <Text style={styles.tagsEmptyText}>
+                            Ei tunnisteita vielä. Lisää kirjalle tunniste sen valikosta.
+                        </Text>
+                    )}
+                    {onManageTags && availableTags.length > 0 && (
+                        <TouchableOpacity
+                            style={styles.manageTagsLink}
+                            onPress={() => {
+                                onClose();
+                                onManageTags();
+                            }}
+                            accessibilityLabel="Hallinnoi tunnisteita"
+                            accessibilityRole="button"
+                        >
+                            <MaterialCommunityIcons name="tag-multiple-outline" size={18} color={colors.primary} />
+                            <Text style={styles.manageTagsLinkText}>Hallinnoi tunnisteita</Text>
+                        </TouchableOpacity>
+                    )}
+                </>
+            )}
         </>
     );
 
     const filterContent = (
         <View style={[styles.modalContent, styles.modalContentSheet]}>
             <View style={styles.header}>
-                <Text style={styles.title}>Järjestä ja Suodata</Text>
+                <Text style={styles.title}>{showSortAndStatus ? 'Järjestä ja Suodata' : 'Suodata tunnisteilla'}</Text>
                 <TouchableOpacity
                     onPress={onClose}
                     style={styles.closeButton}
@@ -181,6 +248,9 @@ export const FilterSortModal: React.FC<FilterSortModalProps> = ({
 };
 
 const styles = StyleSheet.create({
+    sheetContainer: {
+        maxHeight: '100%',
+    },
     modalContent: {
         backgroundColor: colors.surface,
         borderTopLeftRadius: 20,
@@ -300,5 +370,23 @@ const styles = StyleSheet.create({
         color: colors.white,
         fontSize: 16,
         fontFamily: typography.fontFamilyDisplay,
+    },
+    tagsEmptyText: {
+        fontSize: 14,
+        fontFamily: typography.fontFamilyBody,
+        color: colors.textSecondary,
+        marginBottom: 16,
+    },
+    manageTagsLink: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        alignSelf: 'flex-start',
+        paddingVertical: 8,
+    },
+    manageTagsLinkText: {
+        fontSize: 14,
+        fontFamily: typography.fontFamilyDisplay,
+        color: colors.primary,
     },
 });

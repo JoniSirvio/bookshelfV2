@@ -9,15 +9,21 @@ import { useNavigation } from "@react-navigation/native";
 import { BookGridItem } from "../components/BookGridItem";
 import { useViewMode } from "../hooks/useViewMode";
 import { useABSFinishedDates } from "../hooks/useABSFinishedDates";
+import { useUserTags } from "../hooks/useUserTags";
+import { FilterSortModal } from "../components/FilterSortModal";
+import { TagFilterBar } from "../components/TagFilterBar";
+import { TagEditorSheet } from "../components/TagEditorSheet";
+import { TagManagementSheet } from "../components/TagManagementSheet";
 import { FlashList } from "@shopify/flash-list";
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors, typography } from "../theme";
+import { colors, touchTargetMin, typography } from "../theme";
 import { AnimatedFadeInView } from "../components/AnimatedFadeInView";
 
 export default function PastReadScreen() {
   const navigation = useNavigation<any>();
   const { readBooks, removeReadBook, reorderBooks } = useBooksContext();
   const absFinishedDates = useABSFinishedDates();
+  const { tags, getTagsForBook, bookMatchesTagFilter } = useUserTags();
   const [viewMode, setViewMode] = useViewMode('history_view_mode', 'list');
 
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
@@ -29,6 +35,21 @@ export default function PastReadScreen() {
 
   // State for filtering
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+
+  // Tag filtering and editing
+  const [tagFilterIds, setTagFilterIds] = useState<string[]>([]);
+  const [isTagFilterVisible, setIsTagFilterVisible] = useState(false);
+  const [isTagManagementVisible, setIsTagManagementVisible] = useState(false);
+  const [tagSheetVisible, setTagSheetVisible] = useState(false);
+  const [selectedBookForTags, setSelectedBookForTags] = useState<FinnaSearchResult | null>(null);
+
+  const handleEditTags = (book: FinnaSearchResult) => {
+    setIsOptionsModalVisible(false);
+    setTimeout(() => {
+      setSelectedBookForTags(book);
+      setTagSheetVisible(true);
+    }, 500);
+  };
 
   // Sort by reading order: most recently finished first (finishedAt / finishedReading descending)
   // Use Firestore finishedReading, or ABS finishedAt for audiobooks when Firestore lacks it
@@ -76,21 +97,32 @@ export default function PastReadScreen() {
   }, [booksByMonth]);
 
   const filteredBooks = useMemo(() => {
-    if (!selectedMonth) return sortedReadBooks;
-    const getTime = (book: FinnaSearchResult) => {
-      if (book.finishedReading) return new Date(book.finishedReading).getTime();
-      if (book.id.startsWith('abs-') && absFinishedDates[book.id] != null) return absFinishedDates[book.id];
-      return 0;
-    };
-    return sortedReadBooks.filter(book => {
-      const time = getTime(book);
-      if (time <= 0) return false;
-      const date = new Date(time);
-      const key = date.toLocaleDateString('fi-FI', { month: 'long', year: 'numeric' });
-      const capitalizedKey = key.charAt(0).toUpperCase() + key.slice(1);
-      return capitalizedKey === selectedMonth;
-    });
-  }, [sortedReadBooks, selectedMonth, absFinishedDates]);
+    let result = sortedReadBooks;
+
+    if (selectedMonth) {
+      const getTime = (book: FinnaSearchResult) => {
+        if (book.finishedReading) return new Date(book.finishedReading).getTime();
+        if (book.id.startsWith('abs-') && absFinishedDates[book.id] != null) return absFinishedDates[book.id];
+        return 0;
+      };
+      result = result.filter(book => {
+        const time = getTime(book);
+        if (time <= 0) return false;
+        const date = new Date(time);
+        const key = date.toLocaleDateString('fi-FI', { month: 'long', year: 'numeric' });
+        const capitalizedKey = key.charAt(0).toUpperCase() + key.slice(1);
+        return capitalizedKey === selectedMonth;
+      });
+    }
+
+    if (tagFilterIds.length > 0) {
+      result = result.filter(book => bookMatchesTagFilter(book.id, tagFilterIds));
+    }
+
+    return result;
+  }, [sortedReadBooks, selectedMonth, absFinishedDates, tagFilterIds, bookMatchesTagFilter]);
+
+  const activeFilterTags = tags.filter(t => tagFilterIds.includes(t.id));
 
   const handleOpenDeleteModal = (book: FinnaSearchResult) => {
     setSelectedBookForDeletion(book);
@@ -130,12 +162,18 @@ export default function PastReadScreen() {
           color={colors.textSecondary}
         />
         <Text style={styles.emptyReadTitle}>
-          {noBooksAtAll ? 'Ei luettuja kirjoja vielä' : 'Ei kirjoja tässä kuussa'}
+          {noBooksAtAll
+            ? 'Ei luettuja kirjoja vielä'
+            : tagFilterIds.length > 0
+              ? 'Ei kirjoja näillä suodattimilla'
+              : 'Ei kirjoja tässä kuussa'}
         </Text>
         <Text style={styles.emptyReadSubtitle}>
           {noBooksAtAll
             ? 'Merkitse kirja luetuksi Luettavat-välilehdeltä (pyyhkäise oikealle tai avaa kirja ja valitse Luettu), niin se ilmestyy tänne.'
-            : 'Valitse toinen kuukausi yllä tai paina Kaikki nähdäksesi kaikki luetut.'}
+            : tagFilterIds.length > 0
+              ? 'Poista tunnistesuodatin tai valitse toinen tunniste.'
+              : 'Valitse toinen kuukausi yllä tai paina Kaikki nähdäksesi kaikki luetut.'}
         </Text>
       </AnimatedFadeInView>
     );
@@ -145,15 +183,29 @@ export default function PastReadScreen() {
     <View style={styles.container}>
       <View style={styles.headerContainer}>
         <Text style={styles.title}>Luettujen hylly</Text>
-        <TouchableOpacity
-          onPress={() => setViewMode(prev => prev === 'list' ? 'grid' : 'list')}
-          style={styles.viewToggleButton}
-          accessibilityLabel={viewMode === 'list' ? 'Vaihda ruudukkonäkymään' : 'Vaihda listanäkymään'}
-          accessibilityRole="button"
-        >
-          <MaterialCommunityIcons name={viewMode === 'list' ? 'view-grid' : 'view-list'} size={28} color={colors.textPrimary} />
-          <Text style={styles.viewToggleLabel}>{viewMode === 'list' ? 'Ruudukko' : 'Lista'}</Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            onPress={() => setIsTagFilterVisible(true)}
+            style={styles.filterButton}
+            accessibilityLabel="Suodata tunnisteilla"
+            accessibilityRole="button"
+          >
+            <MaterialCommunityIcons
+              name={tagFilterIds.length > 0 ? 'filter' : 'filter-outline'}
+              size={26}
+              color={tagFilterIds.length > 0 ? colors.primary : colors.textPrimary}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setViewMode(prev => prev === 'list' ? 'grid' : 'list')}
+            style={styles.viewToggleButton}
+            accessibilityLabel={viewMode === 'list' ? 'Vaihda ruudukkonäkymään' : 'Vaihda listanäkymään'}
+            accessibilityRole="button"
+          >
+            <MaterialCommunityIcons name={viewMode === 'list' ? 'view-grid' : 'view-list'} size={28} color={colors.textPrimary} />
+            <Text style={styles.viewToggleLabel}>{viewMode === 'list' ? 'Ruudukko' : 'Lista'}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.filterContainer}>
@@ -180,6 +232,13 @@ export default function PastReadScreen() {
         </ScrollView>
       </View>
 
+      <TagFilterBar
+        tags={activeFilterTags}
+        matchCount={filteredBooks.length}
+        onRemove={(tagId) => setTagFilterIds(prev => prev.filter(id => id !== tagId))}
+        onClear={() => setTagFilterIds([])}
+      />
+
       {viewMode === 'list' ? (
         <BookList
           books={filteredBooks}
@@ -202,6 +261,7 @@ export default function PastReadScreen() {
               coverUrl={item.images?.[0]?.url}
               publicationYear={item.publicationYear}
               format={item.id.startsWith('abs-') ? 'audiobook' : 'book'}
+              tags={getTagsForBook(item.id).map(t => t.name)}
               onPress={() => handleOpenOptionsModal(item)}
             />
           )}
@@ -227,8 +287,33 @@ export default function PastReadScreen() {
           onTriggerDelete={handleOpenDeleteModal}
           showStartReading={false}
           onAskAI={(book) => { handleCloseOptionsModal(); navigation.navigate('AskAIBook', { book }); }}
+          onEditTags={handleEditTags}
         />
       )}
+
+      <FilterSortModal
+        visible={isTagFilterVisible}
+        onClose={() => setIsTagFilterVisible(false)}
+        currentSort="added"
+        currentDirection="desc"
+        currentStatus="all"
+        showSortAndStatus={false}
+        availableTags={tags}
+        currentTagIds={tagFilterIds}
+        onManageTags={() => setTimeout(() => setIsTagManagementVisible(true), 500)}
+        onApply={(_sort, _dir, _status, tagIds) => setTagFilterIds(tagIds)}
+      />
+
+      <TagManagementSheet
+        visible={isTagManagementVisible}
+        onClose={() => setIsTagManagementVisible(false)}
+      />
+
+      <TagEditorSheet
+        visible={tagSheetVisible}
+        onClose={() => setTagSheetVisible(false)}
+        book={selectedBookForTags}
+      />
 
     </View>
   );
@@ -251,6 +336,16 @@ const styles = StyleSheet.create({
     fontWeight: typography.displayWeight,
     fontFamily: typography.fontFamilyDisplay,
     color: colors.textPrimary,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  filterButton: {
+    minWidth: touchTargetMin,
+    minHeight: touchTargetMin,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   viewToggleButton: {
     flexDirection: 'row',
