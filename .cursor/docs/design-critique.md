@@ -2,7 +2,7 @@
 
 **Date:** March 2025  
 **Scope:** Main app (screens, components).  
-**Reference:** frontend-design skill (DO/DON'Ts), Design Context in `.cursorrules`, theme.ts, audit-report.md and subsequent work (normalize, harden, adapt, onboard, animate, bolder, polish).
+**Reference:** frontend-design skill (DO/DON'Ts), `.cursor/rules/design.mdc`, theme.ts, audit-report.md and subsequent work (normalize, harden, adapt, onboard, animate, bolder, polish).
 
 ---
 
@@ -50,7 +50,7 @@
 
 ### 1. No distinctive typography — DONE
 
-- Plus Jakarta Sans applied app-wide (display/section/empty-state use Bold; body and lists use Regular). See `.cursor/docs/typography-plus-jakarta.md` and Design Context in `.cursorrules`.
+- Plus Jakarta Sans applied app-wide (display/section/empty-state use Bold; body and lists use Regular). See `.cursor/docs/typography-plus-jakarta.md` and `.cursor/rules/design.mdc`.
 
 ### 2. Two competing focal points on HomeScreen (Luettavat) — DONE
 

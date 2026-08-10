@@ -1,5 +1,5 @@
 /**
- * Design tokens aligned with main app theme.ts / .cursorrules.
+ * Design tokens aligned with main app theme.ts / .cursor/rules/design.mdc.
  */
 export const colors = {
   primary: "#636B2F",

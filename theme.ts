@@ -1,6 +1,6 @@
 /**
  * Shared theme colors and common UI patterns.
- * Aligned with .cursorrules design system and Design Context (warm, green-led, red for danger only).
+ * Aligned with the design system in .cursor/rules/design.mdc (warm, green-led, red for danger only).
  */
 export const colors = {
   primary: '#636B2F',

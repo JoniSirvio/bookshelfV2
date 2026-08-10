@@ -25,7 +25,7 @@ Reuse these for new list/grid screens where possible.
 ## Navigation
 
 - Bottom tabs in `components/BottomNavi.tsx`; stack screen NewBooks in `App.tsx`.
-- Header style and app title: see Common Patterns in `.cursorrules`.
+- Header style and app title: see `.cursor/rules/design.mdc` and `theme.ts`.
 
 ## Theme & Styling
 

@@ -2,7 +2,7 @@
 
 **Date:** March 14, 2026  
 **Scope:** Main app (screens/, components/) — excludes admin-app unless noted.  
-**Reference:** frontend-design skill (DO/DON'Ts), Design Context in `.cursorrules`, theme.ts.
+**Reference:** frontend-design skill (DO/DON'Ts), `.cursor/rules/design.mdc`, theme.ts.
 
 ---
 
