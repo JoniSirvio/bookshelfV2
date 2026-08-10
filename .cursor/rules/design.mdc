@@ -1,0 +1,41 @@
+---
+description: Design system, brand personality, and UI principles for Bookshelf V2
+globs: screens/**,components/**,*.tsx,theme.ts,App.tsx
+alwaysApply: false
+---
+
+# Bookshelf Design
+
+## Brand
+
+Personal, relaxed, inspiring. The app should feel like a private, well-kept library — calm, warm, and modern, never pushy or gamified. Distinct and recognizable; avoid generic mass-product aesthetics.
+
+Primary user: a heavy reader (physical books and audiobooks) managing a read list and to-be-read list at home. Personal library management and reading inspiration, not social or discovery-first.
+
+## Color
+
+All colors come from `theme.ts` — never hardcode hex values.
+
+- **Olive green (`colors.primary`) leads.** Headers, active tabs, primary buttons, loaders, badges. Consistent but not overwhelming.
+- **Red is for destruction only.** `colors.delete` for delete/remove/error. Never red for cancel buttons, generic accents, or non-destructive notifications (use `colors.badge` = primary for those).
+- **Warm neutrals over pure white.** `colors.surface` (beige) for screens and modals; `colors.surfaceVariant` for inputs, cards, active list rows.
+
+## Typography
+
+Plus Jakarta Sans app-wide via `typography` in `theme.ts`: Bold (700) for display/headlines, Regular (400) for body. App title renders as italic "Book" + bold "Shelf".
+
+## Components
+
+- Icons: `MaterialCommunityIcons` from `@expo/vector-icons`.
+- Forms: `react-native-paper` (e.g. `TextInput` with `mode="outlined"`).
+- Lists: `react-native-draggable-flatlist`; swipes: `react-native-swipeable-item`.
+- Headers: `headerStyle` + `headerTintColor` from `theme.ts`; loaders: `loaderColor`.
+- New screens must fit the existing `BottomNavi` and header pattern.
+
+## Principles
+
+1. **Personal, not generic** — every screen should feel like "my" bookshelf, with its own character.
+2. **Relaxed + modern** — space, clear hierarchy, restrained decoration; no visual noise.
+3. **Inspiring without pressure** — encourage reading through clarity and delight, not gamification or guilt.
+4. **Theme-ready** — a dark theme following system settings is planned; design new UI so it adapts without rework.
+5. **Accessibility** — respect contrast, `touchTargetMin` (44pt) for interactive elements, and reduced motion where relevant.
