@@ -1,6 +1,3 @@
-import { Storage } from 'expo-sqlite/kv-store';
-// Wait, user asked for MMKV in implementation plan, but I might as well use a simple wrapper or just AsyncStorage if MMKV setup is complex in one go. 
-// Actually I already have MMKV setup for QueryClient. Let's use it.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const NOTES_KEY = 'last_seen_new_books_timestamp';

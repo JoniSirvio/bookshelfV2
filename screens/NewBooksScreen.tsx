@@ -365,7 +365,6 @@ export default function NewBooksScreen() {
                     data={bookListItems}
                     renderItem={renderGridItem}
                     numColumns={3}
-                    estimatedItemSize={200}
                     ListHeaderComponent={<SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Suodata uutuuksia..." />}
                     contentContainerStyle={{ paddingBottom: 20 }}
                 />

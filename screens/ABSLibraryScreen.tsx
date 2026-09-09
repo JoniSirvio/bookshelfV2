@@ -506,7 +506,6 @@ export default function ABSLibraryScreen() {
                             key={selectedLibraryId ?? 'library'}
                             data={bookListItems}
                             renderItem={renderGridItem}
-                            estimatedItemSize={200}
                             numColumns={COLUMN_COUNT}
                             contentContainerStyle={styles.listContent}
                             onRefresh={refresh}

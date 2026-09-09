@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import SwipeableItem, { OpenDirection } from 'react-native-swipeable-item';
+import SwipeableItem, { OpenDirection, SwipeableItemImperativeRef } from 'react-native-swipeable-item';
 import { useAuth } from '../context/AuthContext';
 import { deleteAIChat, getAIChats, SavedAIChat } from '../firebase/aiChats';
 import { BookCoverPlaceholder } from '../components/BookCoverPlaceholder';
@@ -49,7 +49,7 @@ export default function AIChatListScreen() {
     const [searchQuery, setSearchQuery] = useState('');
     const [chatPendingDelete, setChatPendingDelete] = useState<SavedAIChat | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
-    const rowRefs = useRef<Record<string, SwipeableItem<SavedAIChat> | null>>({});
+    const rowRefs = useRef<Record<string, SwipeableItemImperativeRef | null>>({});
 
     const loadChats = useCallback(() => {
         if (!user?.uid) {

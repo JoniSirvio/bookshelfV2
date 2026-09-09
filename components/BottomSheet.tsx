@@ -36,7 +36,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   children,
   accessibilityLabel,
   showHandle = true,
-  accessibilityRole = 'dialog',
+  accessibilityRole,
 }) => {
   const insets = useSafeAreaInsets();
   const reduceMotion = useReduceMotion();
