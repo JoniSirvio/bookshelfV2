@@ -266,7 +266,6 @@ export default function PastReadScreen() {
             />
           )}
           numColumns={3}
-          estimatedItemSize={200}
           contentContainerStyle={{ paddingBottom: 20 }}
         />
       )}

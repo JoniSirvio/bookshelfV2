@@ -72,7 +72,6 @@ const AppContent = () => {
                     headerStyle,
                     headerTintColor,
                     headerTitleStyle: { fontFamily: typography.fontFamilyDisplay, fontSize: 18 },
-                    headerBackTitleVisible: false,
                     headerBackButtonDisplayMode: 'minimal',
                   }}
                 />

@@ -602,27 +602,41 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
           accessibilityLabel="Sulje valmiiden kysymysten valikko"
         />
         <View style={styles.presetMenu}>
-          {(isGeneralChat ? GENERAL_CHAT_PRESETS : BOOK_CHAT_MODES).map((m) => (
-            <TouchableOpacity
-              key={m.key}
-              style={styles.presetMenuItem}
-              onPress={() => (
-                isGeneralChat
-                  ? handleSelectGeneralPreset(m.key)
-                  : handleSelectPresetMode(m.key)
-              )}
-              accessibilityRole="button"
-              accessibilityLabel={m.label}
-            >
-              <MaterialCommunityIcons
-                name={m.icon as any}
-                size={18}
-                color={colors.primary}
-                style={styles.presetMenuItemIcon}
-              />
-              <Text style={styles.presetMenuItemLabel}>{m.label}</Text>
-            </TouchableOpacity>
-          ))}
+          {isGeneralChat
+            ? GENERAL_CHAT_PRESETS.map((m) => (
+                <TouchableOpacity
+                  key={m.key}
+                  style={styles.presetMenuItem}
+                  onPress={() => handleSelectGeneralPreset(m.key)}
+                  accessibilityRole="button"
+                  accessibilityLabel={m.label}
+                >
+                  <MaterialCommunityIcons
+                    name={m.icon as any}
+                    size={18}
+                    color={colors.primary}
+                    style={styles.presetMenuItemIcon}
+                  />
+                  <Text style={styles.presetMenuItemLabel}>{m.label}</Text>
+                </TouchableOpacity>
+              ))
+            : BOOK_CHAT_MODES.map((m) => (
+                <TouchableOpacity
+                  key={m.key}
+                  style={styles.presetMenuItem}
+                  onPress={() => handleSelectPresetMode(m.key)}
+                  accessibilityRole="button"
+                  accessibilityLabel={m.label}
+                >
+                  <MaterialCommunityIcons
+                    name={m.icon as any}
+                    size={18}
+                    color={colors.primary}
+                    style={styles.presetMenuItemIcon}
+                  />
+                  <Text style={styles.presetMenuItemLabel}>{m.label}</Text>
+                </TouchableOpacity>
+              ))}
         </View>
       </View>
     );
@@ -1257,11 +1271,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.disabled,
   },
   presetMenuLayer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 20,
   },
   presetMenuBackdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   presetMenu: {
     position: 'absolute',

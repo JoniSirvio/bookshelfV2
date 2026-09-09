@@ -349,7 +349,6 @@ const HomeScreen: React.FC = () => {
             />
           )}
           numColumns={3}
-          estimatedItemSize={200}
           ListHeaderComponent={renderHeader()}
           ListFooterComponent={combinedBooks.length > 0 ? renderFooter() : null}
           contentContainerStyle={{ paddingBottom: 20 }}
