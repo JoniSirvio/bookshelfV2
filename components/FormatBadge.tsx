@@ -4,13 +4,28 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '../theme';
 
 interface FormatBadgeProps {
-    format: 'audiobook' | 'ebook' | 'book';
+    format: 'audiobook' | 'ebook' | 'book' | 'both';
     compact?: boolean;
 }
 
 export const FormatBadge: React.FC<FormatBadgeProps> = ({ format, compact = false }) => {
-    // Only show badge for audiobook or ebook
+    // Only show badge for audiobook, ebook or both
     if (format === 'book') return null;
+
+    const iconSize = compact ? 12 : 14;
+    const padding = compact ? 2 : 4;
+    const top = compact ? 4 : 6;
+    const right = compact ? 4 : 6;
+
+    if (format === 'both') {
+        return (
+            <View style={[styles.container, styles.bothContainer, { padding, top, right }]}>
+                <MaterialCommunityIcons name="headphones" size={iconSize} color={colors.white} />
+                <View style={{ width: 2 }} />
+                <MaterialCommunityIcons name="cellphone" size={iconSize} color={colors.white} />
+            </View>
+        );
+    }
 
     let iconName: keyof typeof MaterialCommunityIcons.glyphMap = 'book';
     if (format === 'audiobook') {
@@ -18,11 +33,6 @@ export const FormatBadge: React.FC<FormatBadgeProps> = ({ format, compact = fals
     } else if (format === 'ebook') {
         iconName = 'cellphone'; // UX Choice: "Digital Edition" look
     }
-
-    const iconSize = compact ? 12 : 14;
-    const padding = compact ? 2 : 4;
-    const top = compact ? 4 : 6;
-    const right = compact ? 4 : 6;
 
     return (
         <View style={[styles.container, { padding, top, right }]}>
@@ -39,5 +49,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 10,
+    },
+    bothContainer: {
+        flexDirection: 'row',
+        paddingHorizontal: 4,
     },
 });

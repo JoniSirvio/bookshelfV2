@@ -19,7 +19,10 @@ export default function AskAIBookScreen() {
 
   return (
     <View style={styles.container}>
-      <BookAIChat book={book} initialConversation={initialConversation} />
+      <BookAIChat
+        book={book}
+        initialConversation={initialConversation}
+      />
     </View>
   );
 }

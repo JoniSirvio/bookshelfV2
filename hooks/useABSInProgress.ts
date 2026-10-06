@@ -1,4 +1,4 @@
-import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useABSCredentials } from './useABSCredentials';
 import { fetchABSMe, fetchABSItem, fetchABSItemsInProgress, getABSCoverUrl, ABSItem } from '../api/abs';
 import { FinnaSearchResult } from '../api/finna';
@@ -41,6 +41,25 @@ function mapAbsItemToFinnaResult(
         if (Math.abs(timeLeftSeconds) < 60) timeLeftString = 'Alle 1min';
     }
 
+    const hasAudio = Boolean(
+        (itemDetails.media.numAudioFiles && itemDetails.media.numAudioFiles > 0) ||
+        (itemDetails.media.audioFiles && itemDetails.media.audioFiles.length > 0) ||
+        (itemDetails.media.duration && itemDetails.media.duration > 0)
+    );
+    const hasEbook = Boolean(
+        itemDetails.media.ebookFile ||
+        (itemDetails.media.numPages && itemDetails.media.numPages > 0)
+    );
+
+    let format: 'audiobook' | 'ebook' | 'both' = 'audiobook';
+    if (hasAudio && hasEbook) {
+        format = 'both';
+    } else if (hasEbook && !hasAudio) {
+        format = 'ebook';
+    } else {
+        format = 'audiobook';
+    }
+
     return {
         id: `abs-${itemDetails.id}`,
         title: itemDetails.media.metadata.title,
@@ -53,6 +72,12 @@ function mapAbsItemToFinnaResult(
         images: itemDetails.media.coverPath
             ? [{ url: getABSCoverUrl(url, token, itemDetails.id) }]
             : [],
+        format,
+        absMediaTypes: {
+            hasAudio,
+            hasEbook,
+        },
+        readOrListened: hasAudio ? 'listened' : 'read',
         absProgress: {
             percentage,
             timeLeft: timeLeftString,
@@ -70,6 +95,7 @@ function mapAbsItemToFinnaResult(
 
 export const useABSInProgress = (readBooks: any[] = []) => {
     const { url, token } = useABSCredentials();
+    const queryClient = useQueryClient();
 
     const { data: user } = useQuery({
         queryKey: ['absMe', url],
@@ -109,11 +135,23 @@ export const useABSInProgress = (readBooks: any[] = []) => {
                     !inProgressIds.has(p.libraryItemId)
             );
 
+            // Populate from memory cache first so finished items don't require individual HTTP requests
+            const cachedItemsMap = new Map<string, ABSItem>();
+            const cachedQueries = queryClient.getQueriesData<ABSItem[]>({ queryKey: ['absItems'] });
+            for (const [, items] of cachedQueries) {
+                if (Array.isArray(items)) {
+                    for (const it of items) {
+                        if (it?.id) cachedItemsMap.set(it.id, it);
+                    }
+                }
+            }
+
             const finishedResults = await mapWithConcurrency(
                 finishedCandidates,
                 async (progressItem) => {
                     try {
-                        const itemDetails = await fetchABSItem(url!, token!, progressItem.libraryItemId);
+                        const cached = cachedItemsMap.get(progressItem.libraryItemId);
+                        const itemDetails = cached ?? (await fetchABSItem(url!, token!, progressItem.libraryItemId));
                         return mapAbsItemToFinnaResult(itemDetails, progressItem, url!, token!);
                     } catch (err) {
                         console.warn(

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { withAbsRetry } from '../utils/absRequest';
 
-const LIBRARY_PAGE_SIZE = 200;
+const LIBRARY_PAGE_SIZE = 250;
 const NEW_BOOKS_PAGE_SIZE = 100;
 
 export interface ABSLibrary {
@@ -77,13 +77,106 @@ export const fetchABSLibraries = async (baseUrl: string, token: string): Promise
     return response.data.libraries;
 };
 
+export const searchABSLibrary = async (
+    baseUrl: string,
+    token: string,
+    libraryId: string,
+    query: string
+): Promise<ABSItem[]> => {
+    if (!baseUrl || !token) throw new Error("Missing credentials");
+    const cleanUrl = baseUrl.replace(/\/$/, "");
+    const cleanLibId = libraryId.replace(/^abs-/, "");
+    try {
+        const response = await withAbsRetry(() =>
+            axios.get(`${cleanUrl}/api/libraries/${cleanLibId}/search`, {
+                headers: { Authorization: `Bearer ${token}` },
+                params: {
+                    q: query,
+                    limit: 50,
+                },
+                timeout: 5000,
+            })
+        );
+        const items: ABSItem[] = [];
+        const seenIds = new Set<string>();
+
+        const addItem = (item: any) => {
+            const libItem = item?.libraryItem ?? item;
+            if (libItem && libItem.id && !seenIds.has(libItem.id)) {
+                seenIds.add(libItem.id);
+                items.push(libItem);
+            }
+        };
+
+        // 1. Direct book matches
+        const bookMatches = Array.isArray(response.data)
+            ? response.data
+            : (response.data?.book ?? []);
+        bookMatches.forEach(addItem);
+
+        // 2. Series matches (e.g. searching "Stormlight Archive" returns series and its books)
+        const seriesMatches = response.data?.series ?? [];
+        for (const s of seriesMatches) {
+            const seriesBooks = s?.books ?? s?.items ?? [];
+            seriesBooks.forEach(addItem);
+        }
+
+        // 3. Author matches (e.g. searching "Brandon Sanderson")
+        const authorMatches = response.data?.authors ?? [];
+        for (const a of authorMatches) {
+            const authorBooks = a?.books ?? a?.items ?? [];
+            authorBooks.forEach(addItem);
+        }
+
+        return items;
+    } catch (err: any) {
+        console.warn(`[ABS Search] Search failed for library ${libraryId}:`, err?.message);
+        return [];
+    }
+};
+
+export interface ABSLibrarySearchResult {
+    libraryId: string;
+    libraryName: string;
+    items: ABSItem[];
+}
+
+export const searchAllABSBookLibraries = async (
+    baseUrl: string,
+    token: string,
+    query: string
+): Promise<ABSLibrarySearchResult[]> => {
+    if (!baseUrl || !token) return [];
+    try {
+        const libraries = await fetchABSLibraries(baseUrl, token);
+        // Include all book and audiobook libraries (everything except podcasts)
+        const bookLibs = libraries.filter(lib => lib.mediaType !== 'podcast');
+        
+        const searchPromises = bookLibs.map(async (lib) => {
+            const items = await searchABSLibrary(baseUrl, token, lib.id, query);
+            return {
+                libraryId: lib.id,
+                libraryName: lib.name,
+                items,
+            };
+        });
+
+        const results = await Promise.all(searchPromises);
+        return results.filter(r => r.items.length > 0);
+    } catch (err: any) {
+        console.warn('[ABS Search] Search across all book libraries failed:', err?.message);
+        return [];
+    }
+};
+
+
 async function fetchABSLibraryItemsPage(
     baseUrl: string,
     token: string,
     libraryId: string,
     page: number,
     pageSize: number
-): Promise<ABSItem[]> {
+): Promise<{ results: ABSItem[]; total: number }> {
     const cleanUrl = baseUrl.replace(/\/$/, "");
     const cleanLibId = libraryId.replace(/^abs-/, "");
     const response = await withAbsRetry(() =>
@@ -97,23 +190,90 @@ async function fetchABSLibraryItemsPage(
             },
         })
     );
-    return response.data.results ?? [];
+    return {
+        results: response.data.results ?? [],
+        total: typeof response.data.total === 'number' ? response.data.total : 0,
+    };
 }
 
 export const fetchABSLibraryItems = async (baseUrl: string, token: string, libraryId: string): Promise<ABSItem[]> => {
     if (!baseUrl || !token) throw new Error("Missing credentials");
 
-    const all: ABSItem[] = [];
-    let page = 0;
+    // 1. Fetch page 0 first to get initial slice and read total item count
+    const firstPage = await fetchABSLibraryItemsPage(baseUrl, token, libraryId, 0, LIBRARY_PAGE_SIZE);
+    const all: ABSItem[] = [...firstPage.results];
 
-    while (true) {
-        const results = await fetchABSLibraryItemsPage(baseUrl, token, libraryId, page, LIBRARY_PAGE_SIZE);
-        all.push(...results);
-        if (results.length < LIBRARY_PAGE_SIZE) break;
-        page++;
+    // If all items fit in page 0 or total reached, return immediately (1 request!)
+    if (firstPage.results.length < LIBRARY_PAGE_SIZE || (firstPage.total > 0 && all.length >= firstPage.total)) {
+        return all;
     }
 
-    return all;
+    // 2. If total is known from response, fetch remaining pages concurrently
+    if (firstPage.total > 0) {
+        const totalPages = Math.ceil(firstPage.total / LIBRARY_PAGE_SIZE);
+        const remainingPageNumbers: number[] = [];
+        for (let p = 1; p < totalPages; p++) {
+            remainingPageNumbers.push(p);
+        }
+
+        // Fetch remaining pages in parallel batches (max 4 concurrent requests to not overload the server)
+        const CONCURRENCY = 4;
+        for (let i = 0; i < remainingPageNumbers.length; i += CONCURRENCY) {
+            const chunk = remainingPageNumbers.slice(i, i + CONCURRENCY);
+            const chunkResults = await Promise.all(
+                chunk.map((p) => fetchABSLibraryItemsPage(baseUrl, token, libraryId, p, LIBRARY_PAGE_SIZE))
+            );
+            for (const res of chunkResults) {
+                all.push(...res.results);
+            }
+        }
+    } else {
+        // Fallback for servers that omit total: sequential pagination
+        let page = 1;
+        while (true) {
+            const pageRes = await fetchABSLibraryItemsPage(baseUrl, token, libraryId, page, LIBRARY_PAGE_SIZE);
+            all.push(...pageRes.results);
+            if (pageRes.results.length < LIBRARY_PAGE_SIZE) break;
+            page++;
+        }
+    }
+
+    // De-duplicate items by ID
+    const seen = new Set<string>();
+    const deduplicated: ABSItem[] = [];
+    for (const item of all) {
+        if (item && item.id && !seen.has(item.id)) {
+            seen.add(item.id);
+            deduplicated.push(item);
+        }
+    }
+
+    return deduplicated;
+};
+
+/**
+ * Fetches recent/sample items across all book libraries in Audiobookshelf for browsing and recommendations.
+ */
+export const getRecentABSBookLibraryItems = async (
+    baseUrl: string,
+    token: string,
+    limit: number = 25
+): Promise<ABSItem[]> => {
+    if (!baseUrl || !token) return [];
+    try {
+        const libraries = await fetchABSLibraries(baseUrl, token);
+        const bookLibs = libraries.filter(lib => lib.mediaType !== 'podcast');
+        const allItems: ABSItem[] = [];
+        for (const lib of bookLibs) {
+            const pageData = await fetchABSLibraryItemsPage(baseUrl, token, lib.id, 0, limit);
+            allItems.push(...pageData.results);
+            if (allItems.length >= limit) break;
+        }
+        return allItems.slice(0, limit);
+    } catch (err: any) {
+        console.warn('[ABS] Failed to fetch recent library items:', err?.message);
+        return [];
+    }
 };
 
 /** Fetches only items added after `sinceMs`, stopping early when older items are reached. */
@@ -129,7 +289,8 @@ export const fetchABSLibraryItemsAddedSince = async (
     let page = 0;
 
     while (true) {
-        const results = await fetchABSLibraryItemsPage(baseUrl, token, libraryId, page, NEW_BOOKS_PAGE_SIZE);
+        const pageData = await fetchABSLibraryItemsPage(baseUrl, token, libraryId, page, NEW_BOOKS_PAGE_SIZE);
+        const results = pageData.results;
         if (!results.length) break;
 
         for (const item of results) {

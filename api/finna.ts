@@ -16,6 +16,13 @@ export interface FinnaSearchResult {
     startedReading?: string; // ISO Date string
     finishedReading?: string; // ISO Date string
     daysRead?: number;
+    summary?: string; // Short book description / synopsis
+    recommendationReason?: string; // Recommendation explanation
+    format?: 'book' | 'audiobook' | 'ebook' | 'both';
+    absMediaTypes?: {
+        hasAudio: boolean;
+        hasEbook: boolean;
+    };
     absProgress?: {
         percentage: number;
         timeLeft: string;
@@ -43,15 +50,26 @@ export const searchFinna = async (query: string): Promise<FinnaSearchResult[]> =
             return [];
         }
 
-        const results = response.data.records.map((record: any) => ({
-            id: record.id,
-            title: record.title,
-            authors: record.nonPresenterAuthors?.map((a: any) => String(a.name || '')) ?? [],
-            publicationYear: record.year,
-            images: record.images?.map((img: string) => ({
-                url: img.startsWith('http') ? img : `https://api.finna.fi${img}`
-            })) ?? [],
-        }));
+        const results = response.data.records.map((record: any) => {
+            const rawSummary = Array.isArray(record.summary)
+                ? record.summary[0]
+                : (typeof record.summary === 'string' ? record.summary : undefined);
+            const cleanSummary = rawSummary
+                ? String(rawSummary).replace(/<[^>]*>/g, '').trim()
+                : undefined;
+
+            return {
+                id: record.id,
+                title: record.title,
+                authors: record.nonPresenterAuthors?.map((a: any) => String(a.name || '')) ?? [],
+                publicationYear: record.year,
+                images: record.images?.map((img: string) => ({
+                    url: img.startsWith('http') ? img : `https://api.finna.fi${img}`
+                })) ?? [],
+                summary: cleanSummary,
+                format: 'book' as const,
+            };
+        });
 
         //Sort by image availability
         const sortedResults = results.sort((a: FinnaSearchResult, b: FinnaSearchResult) => {
