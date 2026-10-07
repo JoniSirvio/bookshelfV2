@@ -59,7 +59,10 @@ export default function AIChatListScreen() {
         setLoading(true);
         getAIChats(user.uid)
             .then(setChats)
-            .catch(() => setChats([]))
+            .catch((err) => {
+                console.error('[AIChatListScreen] Failed to load chats:', err);
+                setChats([]);
+            })
             .finally(() => setLoading(false));
     }, [user?.uid]);
 
@@ -71,10 +74,10 @@ export default function AIChatListScreen() {
 
     const handlePress = (chat: SavedAIChat) => {
         const bookAsFinna: FinnaSearchResult = {
-            id: chat.book.id,
-            title: chat.book.title,
-            authors: chat.book.authors,
-            images: chat.book.images,
+            id: chat.book?.id || chat.bookId,
+            title: chat.book?.title || 'Keskustelu',
+            authors: chat.book?.authors || [],
+            images: chat.book?.images,
         };
         navigation.navigate('AskAIBook', { book: bookAsFinna, initialConversation: chat.messages });
     };

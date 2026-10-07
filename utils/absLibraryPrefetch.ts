@@ -14,7 +14,7 @@ function sortLibrariesForPrefetch(
     return [preferred, ...libraries.filter((lib) => lib.id !== preferredLibraryId)];
 }
 
-function isQueryFresh(queryClient: QueryClient, url: string, libraryId: string): boolean {
+export function isQueryFresh(queryClient: QueryClient, url: string, libraryId: string): boolean {
     const state = queryClient.getQueryState(absItemsKey(url, libraryId));
     if (!state?.dataUpdatedAt) return false;
     return Date.now() - state.dataUpdatedAt < ABS_ITEMS_STALE_TIME;
@@ -35,13 +35,30 @@ export async function prefetchABSLibraries(
               )
             : sortLibrariesForPrefetch(libraries, options?.preferredLibraryId);
 
-    for (const lib of targetLibraries) {
-        if (isQueryFresh(queryClient, url, lib.id)) continue;
+    if (targetLibraries.length === 0) return;
 
+    // 1. Prioritize preferred/first library so user sees it immediately
+    const [primary, ...secondary] = targetLibraries;
+
+    if (primary && !isQueryFresh(queryClient, url, primary.id)) {
         await queryClient.prefetchQuery({
-            queryKey: absItemsKey(url, lib.id),
-            queryFn: () => fetchABSLibraryItems(url, token, lib.id),
+            queryKey: absItemsKey(url, primary.id),
+            queryFn: () => fetchABSLibraryItems(url, token, primary.id),
             staleTime: ABS_ITEMS_STALE_TIME,
         });
+    }
+
+    // 2. Prefetch any secondary libraries concurrently in parallel
+    const staleSecondary = secondary.filter((lib) => !isQueryFresh(queryClient, url, lib.id));
+    if (staleSecondary.length > 0) {
+        await Promise.all(
+            staleSecondary.map((lib) =>
+                queryClient.prefetchQuery({
+                    queryKey: absItemsKey(url, lib.id),
+                    queryFn: () => fetchABSLibraryItems(url, token, lib.id),
+                    staleTime: ABS_ITEMS_STALE_TIME,
+                })
+            )
+        );
     }
 }

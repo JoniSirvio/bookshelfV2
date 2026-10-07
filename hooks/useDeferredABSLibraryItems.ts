@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect } from '@react-navigation/native';
 import { ABSItem, fetchABSLibraryItems } from '../api/abs';
 import { absItemsKey } from '../utils/absQueryKeys';
-import { ABS_ITEMS_STALE_TIME } from '../utils/absLibraryPrefetch';
+import { ABS_ITEMS_STALE_TIME, isQueryFresh } from '../utils/absLibraryPrefetch';
 import { absItemsListDiffers } from '../utils/absItemsDiff';
 
 interface UseDeferredABSLibraryItemsOptions {
@@ -80,9 +80,11 @@ export function useDeferredABSLibraryItems({
 
     useFocusEffect(
         useCallback(() => {
-            if (!enabled) return;
-            void refetch();
-        }, [enabled, refetch])
+            if (!enabled || !url || !selectedLibraryId) return;
+            if (!isQueryFresh(queryClient, url, selectedLibraryId)) {
+                void refetch();
+            }
+        }, [enabled, url, selectedLibraryId, queryClient, refetch])
     );
 
     const applyPendingUpdate = useCallback(() => {

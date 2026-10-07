@@ -1,5 +1,18 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView, TextInput, Keyboard, Image, KeyboardAvoidingView, Platform, InteractionManager } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  ScrollView,
+  TextInput,
+  Keyboard,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  InteractionManager,
+} from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import Markdown from 'react-native-markdown-display';
@@ -11,8 +24,13 @@ import ConfirmDeleteModal from './ConfirmDeleteModal';
 import { BookCoverPlaceholder } from './BookCoverPlaceholder';
 import { FormatBadge } from './FormatBadge';
 import { colors, loaderColor, typography, touchTargetMin } from '../theme';
-import { deleteAIChat } from '../firebase/aiChats';
+import { deleteAIChat, AIChatBookSnapshot } from '../firebase/aiChats';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import BookOptionsModal from './BookOptionsModal';
+import ReviewModal from './ReviewModal';
+import { TagEditorSheet } from './TagEditorSheet';
+import { useABSCredentials } from '../hooks/useABSCredentials';
+import { ToolStatusUpdate, ToolContext } from '../api/geminiTools';
 
 const READ_BOOKS_FALLBACK_TEXT = 'No read books found for this user yet.';
 const READ_BOOKS_PRESET_MODE = 'readBooksList';
@@ -231,16 +249,27 @@ interface BookAIChatProps {
   initialConversation?: ChatMessage[];
 }
 
-export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversation = [] }) => {
+export const BookAIChat: React.FC<BookAIChatProps> = ({
+  book,
+  initialConversation = [],
+}) => {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
-  const { readBooks } = useBooksContext();
+  const { readBooks, myBooks, addBook, markAsRead, startReading } = useBooksContext();
+  const { url: absUrl, token: absToken } = useABSCredentials();
   const [mode, setMode] = useState<BookChatMode>('custom');
   const [conversation, setConversation] = useState<ChatMessage[]>([]);
   const [userQuestion, setUserQuestion] = useState('');
   const [generalPreset, setGeneralPreset] = useState<typeof READ_BOOKS_PRESET_MODE | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeToolStatus, setActiveToolStatus] = useState<ToolStatusUpdate | null>(null);
+  const [selectedBookForOptions, setSelectedBookForOptions] = useState<FinnaSearchResult | null>(null);
+  const [isOptionsModalVisible, setIsOptionsModalVisible] = useState(false);
+  const [selectedBookForReview, setSelectedBookForReview] = useState<FinnaSearchResult | null>(null);
+  const [isReviewModalVisible, setIsReviewModalVisible] = useState(false);
+  const [selectedBookForTags, setSelectedBookForTags] = useState<FinnaSearchResult | null>(null);
+  const [tagSheetVisible, setTagSheetVisible] = useState(false);
   const [isPresetSheetVisible, setIsPresetSheetVisible] = useState(false);
   /** On follow-up turns, show the in-composer preset pill only after user picks from + menu. */
   const [followUpPresetPill, setFollowUpPresetPill] = useState(false);
@@ -248,6 +277,42 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
   const [isDeletingConversation, setIsDeletingConversation] = useState(false);
   const [loadingPhraseOrder, setLoadingPhraseOrder] = useState<string[]>([]);
   const [loadingPhraseStep, setLoadingPhraseStep] = useState(0);
+  const [inputKey, setInputKey] = useState(0);
+  const [expandedBookIds, setExpandedBookIds] = useState<Record<string, boolean>>({});
+
+  const handleSaveReview = (
+    _bookId: string,
+    review: string,
+    rating: number,
+    readOrListened: string,
+    finishedDate?: string
+  ) => {
+    if (selectedBookForReview) {
+      markAsRead(selectedBookForReview, review, rating, readOrListened, finishedDate);
+    }
+    setIsReviewModalVisible(false);
+    setSelectedBookForReview(null);
+  };
+
+  const handleMarkAsReadWithoutReview = (
+    _bookId: string,
+    readOrListened: string,
+    finishedDate?: string
+  ) => {
+    if (selectedBookForReview) {
+      addBook({ ...selectedBookForReview, readOrListened } as FinnaSearchResult, 'read', finishedDate);
+    }
+    setIsReviewModalVisible(false);
+    setSelectedBookForReview(null);
+  };
+
+  const toggleBookExpanded = (bookId: string) => {
+    setExpandedBookIds((prev) => ({
+      ...prev,
+      [bookId]: !prev[bookId],
+    }));
+  };
+
   const scrollViewRef = useRef<ScrollView | null>(null);
   const scrollYRef = useRef(0);
   const contentHeightRef = useRef(0);
@@ -353,9 +418,21 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
     const baseConversation = conversation;
     const selectedGeneralPreset = generalPreset;
     setUserQuestion('');
+    setInputKey((k) => k + 1);
     if (isGeneralChat) {
       setGeneralPreset(null);
     }
+
+    const toolContext: ToolContext = {
+      absCredentials: absUrl && absToken ? { url: absUrl, token: absToken } : null,
+      userBooks: {
+        readBooks,
+        myBooks,
+      },
+      onStatusUpdate: (status) => {
+        setActiveToolStatus(status);
+      },
+    };
 
     try {
       if (isGeneralChat) {
@@ -381,6 +458,7 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
           displayLabel,
           displayIcon,
           displayText,
+          toolContext,
         });
         const history = Array.isArray(newHistory) ? newHistory : [];
         setConversation(history);
@@ -428,6 +506,7 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
             displayLabel,
             displayIcon,
             displayText,
+            toolContext,
           },
           baseConversation
         );
@@ -441,8 +520,14 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
           if (book.id) {
             const { saveAIChat } = await import('../firebase/aiChats');
             const authorsArr = Array.isArray(book.authors) ? book.authors : (book.authors ? [String(book.authors)] : []);
+            const bookSnapshot: AIChatBookSnapshot = {
+              id: book.id,
+              title: book.title,
+              authors: authorsArr,
+              ...(book.images && book.images.length > 0 ? { images: book.images } : {}),
+            };
             try {
-              await saveAIChat(user.uid, book.id, { id: book.id, title: book.title, authors: authorsArr, images: book.images }, newHistory);
+              await saveAIChat(user.uid, book.id, bookSnapshot, newHistory);
             } catch (err) {
               console.warn('Failed to save AI chat:', err);
             }
@@ -454,6 +539,7 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
     } catch (e) {
       setError('Vastaus epäonnistui. Tarkista verkko ja kokeile uudelleen.');
     } finally {
+      setActiveToolStatus(null);
       setLoading(false);
     }
   };
@@ -574,6 +660,7 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
     setIsPresetSheetVisible(false);
     if (selectedPreset === READ_BOOKS_PRESET_MODE) {
       setGeneralPreset(READ_BOOKS_PRESET_MODE);
+      setUserQuestion('');
     }
   };
 
@@ -585,6 +672,24 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
   const handleClearGeneralPresetPill = () => {
     setGeneralPreset(null);
   };
+
+  const activePill = isGeneralChat
+    ? (showGeneralPresetPill && activeGeneralPresetConfig
+        ? {
+            icon: activeGeneralPresetConfig.icon,
+            label: activeGeneralPresetConfig.label,
+            onClear: handleClearGeneralPresetPill,
+            accessibilityLabel: `Valmis kysymys: ${activeGeneralPresetConfig.label}`,
+          }
+        : null)
+    : (showPresetPill && activeModeConfig
+        ? {
+            icon: activeModeConfig.icon,
+            label: activeModeConfig.label,
+            onClear: handleClearPresetPill,
+            accessibilityLabel: `Valmis kysymys: ${activeModeConfig.label}`,
+          }
+        : null);
 
   const handleDismissKeyboard = () => {
     Keyboard.dismiss();
@@ -712,6 +817,7 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
             style={[
               styles.messageBubble,
               isUser ? styles.messageUser : styles.messageAssistant,
+              !isUser && msg.attachedBooks && msg.attachedBooks.length > 0 && styles.messageAssistantWithBooks,
             ]}
           >
             {isUser && hasPromptHeader && (
@@ -738,19 +844,219 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
                 <Text style={styles.aiLabel}>AI</Text>
               </View>
             )}
-            <Markdown style={isUser ? markdownStylesUser : markdownStyles}>{visibleText}</Markdown>
+            {visibleText.trim().length > 0 && (
+              <Markdown style={isUser ? markdownStylesUser : markdownStyles}>{visibleText}</Markdown>
+            )}
+            {!isUser && msg.attachedBooks && msg.attachedBooks.length > 0 && (
+              <View
+                style={[
+                  styles.attachedBooksContainer,
+                  visibleText.trim().length === 0 && { borderTopWidth: 0, marginTop: 4, paddingTop: 0 },
+                ]}
+              >
+                <Text style={styles.attachedBooksHeading}>Löydetyt ja varmistetut teokset:</Text>
+                {msg.attachedBooks.map((attachedBook) => {
+                  const isRead = readBooks.some((b) => b.id === attachedBook.id);
+                  const isOnTBR = myBooks.some((b) => b.id === attachedBook.id);
+                  const imageUrl = attachedBook.images?.[0]?.url;
+
+                  const isAbs = attachedBook.id.startsWith('abs-');
+                  const hasAudio = attachedBook.absMediaTypes?.hasAudio ?? (attachedBook.format === 'audiobook' || attachedBook.format === 'both' || isAbs);
+                  const hasEbook = attachedBook.absMediaTypes?.hasEbook ?? (attachedBook.format === 'ebook' || attachedBook.format === 'both');
+
+                  let cardFormat: 'book' | 'audiobook' | 'ebook' | 'both' = 'book';
+                  if (hasAudio && hasEbook) {
+                    cardFormat = 'both';
+                  } else if (hasAudio) {
+                    cardFormat = 'audiobook';
+                  } else if (hasEbook) {
+                    cardFormat = 'ebook';
+                  } else if (attachedBook.format) {
+                    cardFormat = attachedBook.format;
+                  }
+
+                  const rawYear = attachedBook.publicationYear ? attachedBook.publicationYear.split('-')[0].trim() : '';
+                  const yearText = rawYear.toLowerCase().includes('tuntematon') ? '' : rawYear;
+
+                  const descriptionText = isAbs ? undefined : (attachedBook.summary || attachedBook.recommendationReason);
+                  const isLong = Boolean(descriptionText && descriptionText.length > 130);
+                  const isExpanded = Boolean(expandedBookIds[attachedBook.id]);
+                  const displayText = descriptionText
+                    ? isLong && !isExpanded
+                      ? descriptionText.slice(0, 130).trim() + '…'
+                      : descriptionText
+                    : '';
+
+                  return (
+                    <View key={attachedBook.id} style={styles.bookCard}>
+                      <View style={styles.bookCardTopRow}>
+                        <TouchableOpacity
+                          style={styles.bookCardMainTouchable}
+                          onPress={() => {
+                            setSelectedBookForOptions(attachedBook);
+                            setIsOptionsModalVisible(true);
+                          }}
+                          activeOpacity={0.7}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Avaa kirjan ${attachedBook.title} toiminnot`}
+                        >
+                          <View style={styles.bookCoverWrapper}>
+                            {imageUrl ? (
+                              <Image source={{ uri: imageUrl }} style={styles.bookCover} resizeMode="cover" />
+                            ) : (
+                              <BookCoverPlaceholder
+                                id={attachedBook.id}
+                                title={attachedBook.title}
+                                authors={attachedBook.authors}
+                                compact
+                              />
+                            )}
+                            <FormatBadge format={cardFormat} compact />
+                          </View>
+
+                          <View style={styles.bookCardContent}>
+                            <Text style={styles.bookCardTitle} numberOfLines={2}>
+                              {attachedBook.title}
+                            </Text>
+                            <Text style={styles.bookCardAuthors} numberOfLines={1}>
+                              {(attachedBook.authors || []).join(', ') || 'Tuntematon tekijä'}
+                            </Text>
+                            {yearText ? (
+                              <Text style={styles.bookCardYear}>{yearText}</Text>
+                            ) : null}
+
+                            <View style={styles.bookCardBadgesRow}>
+                              {isAbs && (
+                                <View style={[styles.badge, styles.badgeAbs]}>
+                                  {cardFormat === 'both' ? (
+                                    <>
+                                      <MaterialCommunityIcons name="headphones" size={11} color={colors.primary} />
+                                      <MaterialCommunityIcons name="cellphone" size={11} color={colors.primary} style={{ marginLeft: 2 }} />
+                                      <Text style={styles.badgeTextAbs}>Ääni & e-kirja</Text>
+                                    </>
+                                  ) : cardFormat === 'ebook' ? (
+                                    <>
+                                      <MaterialCommunityIcons name="cellphone" size={11} color={colors.primary} />
+                                      <Text style={styles.badgeTextAbs}>E-kirja · ABS</Text>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <MaterialCommunityIcons name="headphones" size={11} color={colors.primary} />
+                                      <Text style={styles.badgeTextAbs}>Äänikirja · ABS</Text>
+                                    </>
+                                  )}
+                                </View>
+                              )}
+                              {!isAbs && cardFormat !== 'book' && (
+                                <View style={[styles.badge, styles.badgeAbs]}>
+                                  <MaterialCommunityIcons
+                                    name={cardFormat === 'ebook' ? 'cellphone' : 'headphones'}
+                                    size={11}
+                                    color={colors.primary}
+                                  />
+                                  <Text style={styles.badgeTextAbs}>
+                                    {cardFormat === 'ebook' ? 'E-kirja' : 'Äänikirja'}
+                                  </Text>
+                                </View>
+                              )}
+                              {isRead && (
+                                <View style={[styles.badge, styles.badgeRead]}>
+                                  <MaterialCommunityIcons name="check" size={11} color={colors.textSecondary} />
+                                  <Text style={styles.badgeText}>Luettu</Text>
+                                </View>
+                              )}
+                              {isOnTBR && (
+                                <View style={[styles.badge, styles.badgeTbr]}>
+                                  <MaterialCommunityIcons name="bookmark" size={11} color={colors.primary} />
+                                  <Text style={styles.badgeTextPrimary}>Lukulistalla</Text>
+                                </View>
+                              )}
+                            </View>
+                          </View>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={[styles.cardCircleButton, (isOnTBR || isRead) && styles.cardCircleButtonInShelf]}
+                          onPress={() => {
+                            setSelectedBookForOptions(attachedBook);
+                            setIsOptionsModalVisible(true);
+                          }}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Kirjan ${attachedBook.title} valinnat`}
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                          <MaterialCommunityIcons
+                            name={isOnTBR || isRead ? 'check' : 'plus'}
+                            size={14}
+                            color={isOnTBR || isRead ? colors.primary : colors.textSecondary}
+                          />
+                        </TouchableOpacity>
+                      </View>
+
+                      {descriptionText ? (
+                        <View style={styles.bookDescriptionBox}>
+                          <Text style={styles.bookDescriptionText}>{displayText}</Text>
+                          {isLong && (
+                            <TouchableOpacity
+                              onPress={() => toggleBookExpanded(attachedBook.id)}
+                              style={styles.descriptionToggle}
+                              accessibilityRole="button"
+                              accessibilityLabel={isExpanded ? 'Näytä vähemmän' : 'Lue lisää'}
+                            >
+                              <Text style={styles.descriptionToggleText}>
+                                {isExpanded ? 'Näytä vähemmän' : 'Lue lisää'}
+                              </Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      ) : null}
+                    </View>
+                  );
+                })}
+              </View>
+            )}
           </View>
         );
       })}
       {loading && (
         <View style={styles.loadingRow}>
-          <View style={styles.loadingRowIcons}>
-            <MaterialCommunityIcons name="robot-outline" size={16} color={colors.textSecondary} />
-            <ActivityIndicator size="small" color={loaderColor} />
-          </View>
-          <Text style={styles.loadingText}>
-            {loadingPhraseOrder[loadingPhraseStep] ?? LOADING_MESSAGES[0]}
-          </Text>
+          {activeToolStatus ? (
+            <View style={styles.toolStatusPill}>
+              <MaterialCommunityIcons
+                name={
+                  activeToolStatus.status === 'failed'
+                    ? 'alert-circle-outline'
+                    : activeToolStatus.status === 'done'
+                    ? 'check-circle-outline'
+                    : activeToolStatus.toolName === 'check_audiobookshelf'
+                    ? 'headphones'
+                    : activeToolStatus.toolName === 'get_user_shelf'
+                    ? 'bookshelf'
+                    : 'magnify'
+                }
+                size={16}
+                color={
+                  activeToolStatus.status === 'failed'
+                    ? colors.delete
+                    : colors.primary
+                }
+              />
+              <Text style={styles.toolStatusText}>{activeToolStatus.displayLabel}</Text>
+              {activeToolStatus.status !== 'failed' && (
+                <ActivityIndicator size="small" color={loaderColor} style={{ marginLeft: 6 }} />
+              )}
+            </View>
+          ) : (
+            <>
+              <View style={styles.loadingRowIcons}>
+                <MaterialCommunityIcons name="robot-outline" size={16} color={colors.textSecondary} />
+                <ActivityIndicator size="small" color={loaderColor} />
+              </View>
+              <Text style={styles.loadingText}>
+                {loadingPhraseOrder[loadingPhraseStep] ?? LOADING_MESSAGES[0]}
+              </Text>
+            </>
+          )}
         </View>
       )}
       {error && (
@@ -805,6 +1111,34 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
           {renderHeader()}
         {renderModes()}
         {renderMessages()}
+        {activePill && (
+          <View style={styles.pillBar}>
+            <View
+              style={styles.presetPill}
+              accessible
+              accessibilityLabel={activePill.accessibilityLabel}
+            >
+              <MaterialCommunityIcons
+                name={activePill.icon as any}
+                size={17}
+                color={colors.primary}
+                style={styles.presetPillLeadingIcon}
+              />
+              <Text style={styles.presetPillLabel} numberOfLines={1}>
+                {activePill.label}
+              </Text>
+              <TouchableOpacity
+                onPress={activePill.onClear}
+                style={styles.presetPillClear}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                accessibilityRole="button"
+                accessibilityLabel="Poista valmis kysymys"
+              >
+                <MaterialCommunityIcons name="close-circle" size={22} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
         <View style={styles.inputRow}>
           {showPresetPlus && (
             <TouchableOpacity
@@ -816,87 +1150,16 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
               <MaterialCommunityIcons name="plus" size={20} color={colors.white} />
             </TouchableOpacity>
           )}
-          {isGeneralChat ? (
-            <View style={styles.inputComposerShell} accessibilityLabel="Viestikenttä">
-              <View style={styles.inputComposerRow}>
-                {showGeneralPresetPill && activeGeneralPresetConfig && (
-                  <View
-                    style={styles.presetPill}
-                    accessible
-                    accessibilityLabel={`Valmis kysymys: ${activeGeneralPresetConfig.label}`}
-                  >
-                    <MaterialCommunityIcons
-                      name={activeGeneralPresetConfig.icon as any}
-                      size={17}
-                      color={colors.primary}
-                      style={styles.presetPillLeadingIcon}
-                    />
-                    <Text style={styles.presetPillLabel} numberOfLines={1}>
-                      {activeGeneralPresetConfig.label}
-                    </Text>
-                    <TouchableOpacity
-                      onPress={handleClearGeneralPresetPill}
-                      style={styles.presetPillClear}
-                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                      accessibilityRole="button"
-                      accessibilityLabel="Poista valmis kysymys"
-                    >
-                      <MaterialCommunityIcons name="close-circle" size={22} color={colors.primary} />
-                    </TouchableOpacity>
-                  </View>
-                )}
-                <TextInput
-                  style={[styles.inputInner, showGeneralPresetPill && styles.inputInnerBelowPill]}
-                  value={userQuestion}
-                  onChangeText={setUserQuestion}
-                  placeholder={inputPlaceholder}
-                  placeholderTextColor={colors.placeholder}
-                  multiline
-                  underlineColorAndroid="transparent"
-                />
-              </View>
-            </View>
-          ) : (
-            <View style={styles.inputComposerShell} accessibilityLabel="Viestikenttä">
-              <View style={styles.inputComposerRow}>
-                {showPresetPill && activeModeConfig && (
-                  <View
-                    style={styles.presetPill}
-                    accessible
-                    accessibilityLabel={`Valmis kysymys: ${activeModeConfig.label}`}
-                  >
-                    <MaterialCommunityIcons
-                      name={activeModeConfig.icon as any}
-                      size={17}
-                      color={colors.primary}
-                      style={styles.presetPillLeadingIcon}
-                    />
-                    <Text style={styles.presetPillLabel} numberOfLines={1}>
-                      {activeModeConfig.label}
-                    </Text>
-                    <TouchableOpacity
-                      onPress={handleClearPresetPill}
-                      style={styles.presetPillClear}
-                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                      accessibilityRole="button"
-                      accessibilityLabel="Poista valmis kysymys"
-                    >
-                      <MaterialCommunityIcons name="close-circle" size={22} color={colors.primary} />
-                    </TouchableOpacity>
-                  </View>
-                )}
-                <TextInput
-                  style={[styles.inputInner, showPresetPill && styles.inputInnerBelowPill]}
-                  value={userQuestion}
-                  onChangeText={setUserQuestion}
-                  placeholder={inputPlaceholder}
-                  placeholderTextColor={colors.placeholder}
-                  multiline
-                  underlineColorAndroid="transparent"
-                />
-              </View>
-            </View>
-          )}
+          <TextInput
+            key={`chat-input-${inputKey}`}
+            style={styles.chatInput}
+            value={userQuestion}
+            onChangeText={setUserQuestion}
+            placeholder={inputPlaceholder}
+            placeholderTextColor={colors.placeholder}
+            multiline
+            underlineColorAndroid="transparent"
+          />
           <TouchableOpacity
             style={[styles.sendButton, !canSend && styles.sendButtonDisabled]}
             onPress={handleAsk}
@@ -920,6 +1183,67 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({ book, initialConversatio
           message={`Haluatko varmasti poistaa tallennetun keskustelun "${isGeneralChat ? 'Yleinen keskustelu' : book.title}"?`}
           confirmButtonLabel={isDeletingConversation ? 'Poistetaan...' : 'Vahvista poisto'}
           accessibilityLabel="Poista AI-keskustelu"
+        />
+        <BookOptionsModal
+          isVisible={isOptionsModalVisible}
+          onClose={() => setIsOptionsModalVisible(false)}
+          book={selectedBookForOptions}
+          mode="search"
+          toReadIds={myBooks.map((b) => b.id)}
+          readIds={readBooks.map((b) => b.id)}
+          onAdd={(b) => {
+            addBook(b, 'unread');
+          }}
+          onMarkAsRead={(b) => {
+            markAsRead(b);
+          }}
+          onStartReading={(b) => {
+            startReading(b.id);
+          }}
+          showStartReading={true}
+          onRateAndReview={(b) => {
+            setIsOptionsModalVisible(false);
+            setTimeout(() => {
+              setSelectedBookForReview(b);
+              setIsReviewModalVisible(true);
+            }, 500);
+          }}
+          onEditTags={(b) => {
+            setIsOptionsModalVisible(false);
+            setSelectedBookForTags(b);
+            setTagSheetVisible(true);
+          }}
+          onAskAI={(b) => {
+            setIsOptionsModalVisible(false);
+            if (typeof navigation.push === 'function') {
+              navigation.push('AskAIBook', { book: b });
+            } else {
+              navigation.navigate('AskAIBook', { book: b });
+            }
+          }}
+        />
+        {selectedBookForReview && (
+          <ReviewModal
+            isVisible={isReviewModalVisible}
+            onClose={() => {
+              setIsReviewModalVisible(false);
+              setSelectedBookForReview(null);
+            }}
+            bookTitle={selectedBookForReview.title}
+            bookAuthors={selectedBookForReview.authors}
+            bookId={selectedBookForReview.id}
+            onSaveReview={handleSaveReview}
+            onMarkAsReadWithoutReview={handleMarkAsReadWithoutReview}
+            initialReadOrListened={selectedBookForReview.readOrListened}
+          />
+        )}
+        <TagEditorSheet
+          visible={tagSheetVisible}
+          onClose={() => {
+            setTagSheetVisible(false);
+            setSelectedBookForTags(null);
+          }}
+          book={selectedBookForTags}
         />
         </View>
       </View>
@@ -1091,6 +1415,12 @@ const styles = StyleSheet.create({
   messageAssistant: {
     alignSelf: 'flex-start',
     backgroundColor: colors.surfaceVariant,
+    maxWidth: '92%',
+  },
+  messageAssistantWithBooks: {
+    alignSelf: 'stretch',
+    width: '100%',
+    maxWidth: '100%',
   },
   promptHeaderRow: {
     flexDirection: 'row',
@@ -1187,24 +1517,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.primary,
   },
-  inputComposerShell: {
-    flex: 1,
-    minWidth: 0,
-    minHeight: 44,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    justifyContent: 'center',
-  },
-  inputComposerRow: {
+  pillBar: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     alignItems: 'center',
-    alignContent: 'center',
-    gap: 8,
+    marginBottom: 6,
+    paddingHorizontal: 2,
   },
   presetPill: {
     flexDirection: 'row',
@@ -1240,24 +1557,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  inputInner: {
+  chatInput: {
     flex: 1,
-    flexGrow: 1,
-    minWidth: 120,
-    minHeight: 32,
-    maxHeight: 100,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
+    minHeight: 44,
+    maxHeight: 120,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingHorizontal: 12,
+    paddingTop: Platform.OS === 'ios' ? 12 : 8,
+    paddingBottom: Platform.OS === 'ios' ? 12 : 8,
     fontFamily: typography.fontFamilyBody,
     fontSize: 15,
-    lineHeight: 20,
     color: colors.textPrimary,
-    backgroundColor: 'transparent',
-  },
-  inputInnerBelowPill: {
-    flexBasis: '100%',
-    width: '100%',
-    minWidth: '100%',
   },
   sendButton: {
     width: 40,
@@ -1306,6 +1619,176 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamilyBody,
     fontSize: 14,
     color: colors.textPrimary,
+  },
+  attachedBooksContainer: {
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    width: '100%',
+    alignSelf: 'stretch',
+  },
+  attachedBooksHeading: {
+    fontSize: 13,
+    fontFamily: typography.fontFamilyDisplay,
+    color: colors.textSecondary,
+    marginBottom: 8,
+  },
+  bookCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    width: '100%',
+    alignSelf: 'stretch',
+  },
+  bookCardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  bookCardMainTouchable: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginRight: 8,
+    minWidth: 0,
+  },
+  bookCoverWrapper: {
+    width: 54,
+    height: 81,
+    borderRadius: 6,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: colors.surfaceVariant,
+    flexShrink: 0,
+  },
+  bookCover: {
+    width: '100%',
+    height: '100%',
+  },
+  bookCardContent: {
+    flex: 1,
+    marginLeft: 10,
+    justifyContent: 'flex-start',
+    minWidth: 0,
+  },
+  bookCardTitle: {
+    fontSize: 15,
+    fontFamily: typography.fontFamilyDisplay,
+    color: colors.textPrimary,
+    lineHeight: 19,
+    marginBottom: 2,
+  },
+  bookCardAuthors: {
+    fontSize: 13,
+    fontFamily: typography.fontFamilyBody,
+    color: colors.textSecondary,
+    marginBottom: 2,
+  },
+  bookCardYear: {
+    fontSize: 12,
+    fontFamily: typography.fontFamilyBody,
+    color: colors.textSecondary,
+    marginBottom: 4,
+  },
+  bookCardBadgesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    backgroundColor: colors.surfaceVariant,
+  },
+  badgeAbs: {
+    backgroundColor: colors.bgRec,
+  },
+  badgeRead: {
+    backgroundColor: colors.surfaceVariant,
+  },
+  badgeTbr: {
+    backgroundColor: colors.bgLight,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontFamily: typography.fontFamilyBody,
+    color: colors.textSecondary,
+    marginLeft: 2,
+  },
+  badgeTextPrimary: {
+    fontSize: 10,
+    fontFamily: typography.fontFamilyBody,
+    color: colors.primary,
+    marginLeft: 2,
+    fontWeight: '600',
+  },
+  badgeTextAbs: {
+    fontSize: 11,
+    fontFamily: typography.fontFamilyBody,
+    color: colors.primary,
+    marginLeft: 3,
+    fontWeight: '600',
+  },
+  cardCircleButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.surfaceVariant,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardCircleButtonInShelf: {
+    backgroundColor: colors.surfaceVariant,
+    borderColor: colors.border,
+  },
+  bookDescriptionBox: {
+    marginTop: 8,
+    backgroundColor: colors.bgRec,
+    padding: 8,
+    borderRadius: 8,
+  },
+  bookDescriptionText: {
+    fontFamily: typography.fontFamilyBody,
+    fontSize: 12.5,
+    lineHeight: 17,
+    color: colors.textPrimary,
+  },
+  descriptionToggle: {
+    marginTop: 4,
+    alignSelf: 'flex-start',
+  },
+  descriptionToggleText: {
+    fontFamily: typography.fontFamilyDisplay,
+    fontSize: 12,
+    color: colors.primary,
+    fontWeight: '700',
+  },
+  toolStatusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.bgRec,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  toolStatusText: {
+    fontSize: 13,
+    fontFamily: typography.fontFamilyBody,
+    color: colors.textPrimary,
+    marginLeft: 6,
   },
 });
 

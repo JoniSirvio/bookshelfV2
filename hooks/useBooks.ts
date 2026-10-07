@@ -220,15 +220,22 @@ export const useBooks = () => {
         const { incrementAIUsage } = await import('../firebase/aiUsage');
         incrementAIUsage(user.uid, 'recommendation').catch(() => {});
 
-        for (const rec of newRecs) {
+        const searchPromises = newRecs.map(async (rec) => {
             const query = `${rec.title} ${rec.author}`;
             const searchResults = await searchFinna(query);
-            const bestMatch = searchResults[0];
+            return {
+                rec,
+                bestMatch: searchResults[0] || null,
+            };
+        });
 
-            if (bestMatch) {
-                const exists = allBooks.some(b => b.id === bestMatch.id);
+        const verifiedMatches = await Promise.all(searchPromises);
+
+        for (const item of verifiedMatches) {
+            if (item.bestMatch) {
+                const exists = allBooks.some(b => b.id === item.bestMatch.id);
                 if (!exists) {
-                    await addBookToFirestore(user.uid, bestMatch, 'recommendation', rec.reason);
+                    await addBookToFirestore(user.uid, item.bestMatch, 'recommendation', item.rec.reason);
                 }
             }
         }
