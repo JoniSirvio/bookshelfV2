@@ -8,7 +8,7 @@ import ABSLibraryScreen from '../screens/ABSLibraryScreen';
 
 const Tab = createBottomTabNavigator();
 
-import { TouchableOpacity, View, StyleSheet, Modal, TouchableWithoutFeedback, InteractionManager } from 'react-native';
+import { TouchableOpacity, View, StyleSheet, Modal, TouchableWithoutFeedback } from 'react-native';
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -237,17 +237,26 @@ function ABSLibraryPrefetcher() {
     let cancelled = false;
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
-    const interactionTask = InteractionManager.runAfterInteractions(() => {
+    const schedulePrefetch = () => {
       timeoutId = setTimeout(async () => {
         if (cancelled) return;
         const preferredLibraryId = getCachedLastLibraryId();
         await prefetchABSLibraries(queryClient, url, token, libraries, { preferredLibraryId });
       }, LIBRARY_PREFETCH_DELAY_MS);
-    });
+    };
+
+    const idleId =
+      typeof requestIdleCallback !== 'undefined'
+        ? requestIdleCallback(schedulePrefetch)
+        : setTimeout(schedulePrefetch, 0);
 
     return () => {
       cancelled = true;
-      interactionTask.cancel();
+      if (typeof cancelIdleCallback !== 'undefined' && typeof idleId === 'number') {
+        cancelIdleCallback(idleId);
+      } else if (typeof idleId !== 'undefined') {
+        clearTimeout(idleId as any);
+      }
       if (timeoutId) clearTimeout(timeoutId);
     };
   }, [url, token, libraries, queryClient]);

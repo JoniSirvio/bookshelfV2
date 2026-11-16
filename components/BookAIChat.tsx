@@ -6,12 +6,12 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
+  type ScrollViewInstance,
   TextInput,
   Keyboard,
   Image,
   KeyboardAvoidingView,
   Platform,
-  InteractionManager,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -313,7 +313,7 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({
     }));
   };
 
-  const scrollViewRef = useRef<ScrollView | null>(null);
+  const scrollViewRef = useRef<ScrollViewInstance | null>(null);
   const scrollYRef = useRef(0);
   const contentHeightRef = useRef(0);
   const layoutHeightRef = useRef(0);
@@ -349,12 +349,17 @@ export const BookAIChat: React.FC<BookAIChatProps> = ({
       scrollViewRef.current?.scrollToEnd({ animated: true });
     };
     const raf = requestAnimationFrame(scrollToBottom);
-    const afterInteractions = InteractionManager.runAfterInteractions(scrollToBottom);
+    const idleId =
+      typeof requestIdleCallback !== 'undefined'
+        ? requestIdleCallback(scrollToBottom)
+        : undefined;
     const t1 = setTimeout(scrollToBottom, 80);
     const t2 = setTimeout(scrollToBottom, 250);
     return () => {
       cancelAnimationFrame(raf);
-      afterInteractions.cancel?.();
+      if (idleId !== undefined && typeof cancelIdleCallback !== 'undefined') {
+        cancelIdleCallback(idleId);
+      }
       clearTimeout(t1);
       clearTimeout(t2);
     };

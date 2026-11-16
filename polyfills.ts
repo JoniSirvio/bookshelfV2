@@ -1,4 +1,5 @@
-import { StyleSheet } from 'react-native';
+import * as RN from 'react-native';
+const { StyleSheet } = RN;
 
 /**
  * Polyfill StyleSheet.absoluteFillObject.
@@ -23,3 +24,60 @@ if (!(StyleSheet as any).absoluteFillObject) {
     value: absoluteFillStyle,
   });
 }
+
+/**
+ * Polyfill InteractionManager.
+ *
+ * React Native 0.88 removed InteractionManager from core.
+ * Libraries such as react-native-draggable-flatlist still rely on
+ * InteractionManager.runAfterInteractions.
+ */
+const InteractionManagerPolyfill = {
+  runAfterInteractions(task?: () => any) {
+    let cancelled = false;
+    const handle =
+      typeof requestIdleCallback !== 'undefined'
+        ? requestIdleCallback(() => {
+            if (!cancelled && task) task();
+          })
+        : setTimeout(() => {
+            if (!cancelled && task) task();
+          }, 0);
+
+    return {
+      then(onFulfilled?: any, onRejected?: any) {
+        return Promise.resolve()
+          .then(() => {
+            if (!cancelled && task) return task();
+          })
+          .then(onFulfilled, onRejected);
+      },
+      done(..._args: any[]) {},
+      cancel() {
+        cancelled = true;
+        if (typeof cancelIdleCallback !== 'undefined') {
+          cancelIdleCallback(handle as any);
+        } else {
+          clearTimeout(handle as any);
+        }
+      },
+    };
+  },
+  createInteractionHandle() {
+    return 1;
+  },
+  clearInteractionHandle(_handle: number) {},
+  setDeadline(_deadline: number) {},
+};
+
+try {
+  Object.defineProperty(RN, 'InteractionManager', {
+    configurable: true,
+    enumerable: true,
+    writable: true,
+    value: InteractionManagerPolyfill,
+  });
+} catch {
+  (RN as any).InteractionManager = InteractionManagerPolyfill;
+}
+
